@@ -8,12 +8,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { C, S } from "../constants/theme";
 import { PHOTOS } from "../data/mockData";
-import { useAndroidBack } from "../hooks/useAndroidBack";
 
-export function MapScreen({ onBack, onStartSwipe }) {
+export function MapScreen({ navigation }) {
   const [selectedPhotos, setSelectedPhotos] = useState(PHOTOS);
   const [selectedCity, setSelectedCity] = useState(null);
-  useAndroidBack(onBack);
 
   const cityGroups = {};
   PHOTOS.forEach(p => { if (!cityGroups[p.city]) cityGroups[p.city] = { lat: p.lat, lng: p.lng, city: p.city, count: 0 }; cityGroups[p.city].count++; });
@@ -47,7 +45,7 @@ export function MapScreen({ onBack, onStartSwipe }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={onBack} style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}>
           <Text style={{ color: C.textMuted, fontSize: 16 }}>←</Text>
         </TouchableOpacity>
         <View>
@@ -67,7 +65,7 @@ export function MapScreen({ onBack, onStartSwipe }) {
             {selectedPhotos.slice(0, 8).map(p => <Image key={p.id} source={{ uri: p.url }} style={{ width: 56, height: 56, borderRadius: 10 }} />)}
           </View>
         </ScrollView>
-        <TouchableOpacity onPress={() => onStartSwipe(selectedPhotos)} style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4 }}>
+        <TouchableOpacity onPress={() => navigation.navigate("Swipe", { queue: selectedPhotos })} style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4 }}>
           <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>🔀 Trier ces {selectedPhotos.length} photos</Text>
         </TouchableOpacity>
       </View>
