@@ -2,7 +2,7 @@
 // screens/SettingsScreen.js
 // ─────────────────────────────────────────────
 import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Modal, StatusBar } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Modal, StatusBar, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { Toggle } from "../components/Toggle";
@@ -13,7 +13,6 @@ export function SettingsScreen({ navigation }) {
   const [notifMonthly, setNotifMonthly] = useState(false);
   const [autoDelete,   setAutoDelete]   = useState(false);
   const [aiEnabled,    setAiEnabled]    = useState(true);
-  const [printPartner, setPrintPartner] = useState("CEWE");
   const [showPremium,  setShowPremium]  = useState(false);
 
   const Section = ({ title }) => (
@@ -51,15 +50,7 @@ export function SettingsScreen({ navigation }) {
         <RowSetting emoji="🗑" label="Suppression automatique" desc="Vider la corbeille après 30 jours" right={<Toggle value={autoDelete} onToggle={() => setAutoDelete(v => !v)} />} />
         <RowSetting emoji="🧠" label="Assistant IA" desc="Conseil et amélioration photo" right={<Toggle value={aiEnabled} onToggle={() => setAiEnabled(v => !v)} />} />
 
-        <Section title="Impression" />
-        <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 10 }}>Partenaire d'impression par défaut</Text>
-        {["CEWE", "Cheerz", "Photobox"].map(p => (
-          <TouchableOpacity key={p} onPress={() => setPrintPartner(p)} style={{ backgroundColor: printPartner === p ? `${C.accent}15` : C.bgCard, borderRadius: S.radius, padding: 14, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8, borderWidth: printPartner === p ? 2 : 1, borderColor: printPartner === p ? C.accent : C.border }}>
-            <Text style={{ fontSize: 20 }}>{p === "CEWE" ? "🏆" : p === "Cheerz" ? "🌸" : "🎁"}</Text>
-            <Text style={{ fontWeight: "700", fontSize: 14, color: C.text, flex: 1 }}>{p}</Text>
-            {printPartner === p && <Text style={{ color: C.accent, fontWeight: "800", fontSize: 16 }}>✓</Text>}
-          </TouchableOpacity>
-        ))}
+        {/* Section "Impression" masquée pour le MVP — réactivation quand un vrai partenaire sera intégré */}
 
         <Section title="Compte" />
         <RowSetting emoji="📊" label="Mes statistiques" desc="Espace libéré depuis l'installation" onPress={() => {}} right={<Text style={{ color: C.textMuted }}>›</Text>} />
@@ -92,7 +83,13 @@ export function SettingsScreen({ navigation }) {
                 </View>
               </View>
             ))}
-            <TouchableOpacity style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", marginTop: 8, elevation: 4 }}>
+            <TouchableOpacity
+              onPress={() => {
+                setShowPremium(false);
+                Alert.alert("Bientôt disponible", "Phototri Premium arrive bientôt 🌸 Merci de ton intérêt — on te tient au courant !");
+              }}
+              style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", marginTop: 8, elevation: 4 }}
+            >
               <Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>Commencer l'essai gratuit</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowPremium(false)} style={{ marginTop: 14, alignItems: "center" }}>
