@@ -10,11 +10,11 @@ import {
   TouchableOpacity,
 } from "react-native";
 
-import { C, S } from "../constants/theme";
+import { C, S, FILTERS } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
-import { PHOTOS, FILTERS } from "../data/mockData";
+import { PHOTOS } from "../data/mockData";
 
 export function HomeScreen({ navigation }) {
 const kept    = usePhotoStore((state) => state.kept);
