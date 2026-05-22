@@ -7,10 +7,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { Toggle } from "../components/Toggle";
 import { RowSetting } from "../components/RowSetting";
-import { useAndroidBack } from "../hooks/useAndroidBack";
 
-export function SettingsScreen({ onBack }) {
-  useAndroidBack(onBack);
+export function SettingsScreen({ navigation }) {
   const [notifWeekly,  setNotifWeekly]  = useState(true);
   const [notifMonthly, setNotifMonthly] = useState(false);
   const [autoDelete,   setAutoDelete]   = useState(false);
@@ -26,7 +24,7 @@ export function SettingsScreen({ onBack }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 8 }}>
-        <TouchableOpacity onPress={onBack} style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}>
           <Text style={{ color: C.textMuted, fontSize: 16 }}>←</Text>
         </TouchableOpacity>
         <Text style={{ fontWeight: "900", fontSize: 22, color: C.text }}>Paramètres</Text>
