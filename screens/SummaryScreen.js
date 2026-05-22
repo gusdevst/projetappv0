@@ -2,7 +2,7 @@
 // ─────────────────────────────────────────────
 // screens/SummaryScreen.js
 // ─────────────────────────────────────────────
-import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
@@ -44,7 +44,10 @@ export function SummaryScreen({ navigation }) {
                 {printed.map(p => <Image key={p.id} source={{ uri: p.url }} style={{ width: 70, height: 70, borderRadius: 12 }} />)}
               </View>
             </ScrollView>
-            <TouchableOpacity style={{ marginTop: 12, backgroundColor: C.accent, borderRadius: 12, padding: 13, alignItems: "center" }}>
+            <TouchableOpacity
+              onPress={() => Alert.alert("Bientôt disponible", "L'impression chez nos partenaires arrive très vite 🌸 Merci de ton intérêt !")}
+              style={{ marginTop: 12, backgroundColor: C.accent, borderRadius: 12, padding: 13, alignItems: "center" }}
+            >
               <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>Commander chez CEWE →</Text>
             </TouchableOpacity>
           </View>
