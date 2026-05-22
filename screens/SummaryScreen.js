@@ -5,13 +5,15 @@
 import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
-import { useAndroidBack } from "../hooks/useAndroidBack";
+import { usePhotoStore } from "../store/usePhotoStore";
 
 const { width: SW } = Dimensions.get("window");
 
-export function SummaryScreen({ kept, deleted, printed, onHome }) {
+export function SummaryScreen({ navigation }) {
+  const kept    = usePhotoStore((state) => state.kept);
+  const deleted = usePhotoStore((state) => state.deleted);
+  const printed = usePhotoStore((state) => state.printed);
   const deletedSize = deleted.reduce((a, p) => a + p.size, 0);
-  useAndroidBack(onHome);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
@@ -47,7 +49,7 @@ export function SummaryScreen({ kept, deleted, printed, onHome }) {
             </TouchableOpacity>
           </View>
         )}
-        <TouchableOpacity onPress={onHome} style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4 }}>
+        <TouchableOpacity onPress={() => navigation.popToTop()} style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4 }}>
           <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>← Retour à l'accueil</Text>
         </TouchableOpacity>
       </ScrollView>
