@@ -2,13 +2,13 @@
 import React, { useState } from "react";
 
 import {
-  SafeAreaView,
   ScrollView,
   StatusBar,
   View,
   Text,
   TouchableOpacity,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { C, S, FILTERS } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
