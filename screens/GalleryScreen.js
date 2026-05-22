@@ -6,19 +6,30 @@ import { View, Text, ScrollView, TouchableOpacity, Image, Modal, Dimensions, Sta
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { PhotoGrid } from "../components/PhotoGrid";
-import { useAndroidBack } from "../hooks/useAndroidBack";
+import { usePhotoStore } from "../store/usePhotoStore";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 
-export function GalleryScreen({ title, photos, accent, onBack, showEmpty, onEmpty }) {
+// Mapping section (passé via route.params) → titre, couleur d'accent, et clé du store
+const SECTION_CONFIG = {
+  kept:    { title: "Photos conservées", accent: C.green,  storeKey: "kept",    showEmpty: false },
+  deleted: { title: "Corbeille",         accent: C.red,    storeKey: "deleted", showEmpty: true  },
+  album:   { title: "Album souvenirs",   accent: C.purple, storeKey: "printed", showEmpty: false },
+};
+
+export function GalleryScreen({ navigation, route }) {
+  const section = route?.params?.section ?? "kept";
+  const config  = SECTION_CONFIG[section] ?? SECTION_CONFIG.kept;
+  const photos     = usePhotoStore((state) => state[config.storeKey]);
+  const emptyTrash = usePhotoStore((state) => state.emptyTrash);
+  const { title, accent, showEmpty } = config;
   const [selected, setSelected] = useState(null);
-  useAndroidBack(onBack);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={onBack} style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}>
           <Text style={{ color: C.textMuted, fontSize: 16 }}>←</Text>
         </TouchableOpacity>
         <Text style={{ fontWeight: "800", fontSize: 20, color: C.text, flex: 1 }}>{title}</Text>
@@ -30,7 +41,7 @@ export function GalleryScreen({ title, photos, accent, onBack, showEmpty, onEmpt
           : <PhotoGrid photos={photos} onPress={p => setSelected(p)} />
         }
         {showEmpty && photos.length > 0 && (
-          <TouchableOpacity onPress={onEmpty} style={{ backgroundColor: C.red, borderRadius: S.radius, padding: 14, alignItems: "center", marginTop: 20 }}>
+          <TouchableOpacity onPress={emptyTrash} style={{ backgroundColor: C.red, borderRadius: S.radius, padding: 14, alignItems: "center", marginTop: 20 }}>
             <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>Vider la corbeille ({photos.reduce((a, p) => a + p.size, 0).toFixed(1)} Mo)</Text>
           </TouchableOpacity>
         )}
