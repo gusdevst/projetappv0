@@ -13,33 +13,26 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { C, S, FILTERS } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
-import { PHOTOS } from "../data/mockData";
 
 export function HomeScreen({ navigation }) {
-const kept    = usePhotoStore((state) => state.kept);
-const deleted = usePhotoStore((state) => state.deleted);
-const printed = usePhotoStore((state) => state.printed);
+  const kept          = usePhotoStore((state) => state.kept);
+  const deleted       = usePhotoStore((state) => state.deleted);
+  const printed       = usePhotoStore((state) => state.printed);
+  const libraryPhotos = usePhotoStore((state) => state.libraryPhotos);
+  const libraryLoading = usePhotoStore((state) => state.libraryLoading);
   const [activeFilter, setActiveFilter] = useState("Toutes");
-useFocusEffect(
-  useCallback(() => {
-    // Rien à faire — Zustand met à jour automatiquement
-  }, [])
-);
+
   const deletedSize = deleted.reduce((a, p) => a + p.size, 0);
 
-  const triees =
-    kept.length +
-    deleted.length +
-    printed.length;
+  const triees = kept.length + deleted.length + printed.length;
 
-  const queue = PHOTOS.filter(
-    (p) =>
-      !kept.map((x) => x.id).includes(p.id) &&
-      !deleted.map((x) => x.id).includes(p.id) &&
-      !printed.map((x) => x.id).includes(p.id)
-  );
+  // File des photos à trier = photothèque réelle, moins celles déjà triées
+  const triedIds = new Set([
+    ...kept.map((x) => x.id),
+    ...deleted.map((x) => x.id),
+    ...printed.map((x) => x.id),
+  ]);
+  const queue = libraryPhotos.filter((p) => !triedIds.has(p.id));
 
   return (
     <SafeAreaView
@@ -109,7 +102,8 @@ useFocusEffect(
 
         {/* CTA principal */}
         <TouchableOpacity
-          onPress={() => navigation.navigate("Swipe", { queue })}
+          onPress={() => queue.length > 0 && navigation.navigate("Swipe", { queue })}
+          disabled={libraryLoading || queue.length === 0}
           style={{
             backgroundColor: C.accent,
             borderRadius: 20,
@@ -121,22 +115,18 @@ useFocusEffect(
             marginBottom: 12,
             elevation: 6,
             shadowColor: C.accent,
-            shadowOffset: {
-              width: 0,
-              height: 6,
-            },
+            shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.35,
             shadowRadius: 12,
+            opacity: libraryLoading || queue.length === 0 ? 0.6 : 1,
           }}
         >
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "800",
-              color: "#fff",
-            }}
-          >
-            🔀 Démarrer le tri · {queue.length} photos
+          <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>
+            {libraryLoading
+              ? "Chargement de tes photos…"
+              : queue.length === 0
+              ? "🎉 Tout est trié !"
+              : `🔀 Démarrer le tri · ${queue.length} photos`}
           </Text>
         </TouchableOpacity>
 
@@ -198,7 +188,7 @@ useFocusEffect(
           }}
         >
           <TouchableOpacity
-            onPress={() => navigation.navigate("Faces")}
+            onPress={() => navigation.navigate("Moments")}
             style={{
               flex: 1,
               backgroundColor: C.bgCard,
@@ -208,12 +198,12 @@ useFocusEffect(
               borderColor: C.border,
             }}
           >
-            <Text style={{ fontSize: 22, marginBottom: 6 }}>👤</Text>
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>📅</Text>
             <Text style={{ fontWeight: "700", fontSize: 13, color: C.text }}>
-              Par visage
+              Par moment
             </Text>
             <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-              Famille, amis…
+              Soirée, voyage…
             </Text>
           </TouchableOpacity>
 
@@ -238,12 +228,7 @@ useFocusEffect(
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() =>
-              Alert.alert(
-                "Bientôt disponible",
-                "La détection des doublons arrive en même temps que l'accès à tes vraies photos 🌸"
-              )
-            }
+            onPress={() => navigation.navigate("Duplicates")}
             style={{
               flex: 1,
               backgroundColor: C.bgCard,
@@ -278,7 +263,7 @@ useFocusEffect(
           {[
             {
               label: "Photos",
-              val: PHOTOS.length,
+              val: libraryPhotos.length,
               color: C.accent,
             },
             {

@@ -2,7 +2,7 @@
 // screens/GalleryScreen.js
 // ─────────────────────────────────────────────
 import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, Modal, Dimensions, StatusBar } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, Modal, Dimensions, StatusBar, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { PhotoGrid } from "../components/PhotoGrid";
@@ -24,6 +24,31 @@ export function GalleryScreen({ navigation, route }) {
   const emptyTrash = usePhotoStore((state) => state.emptyTrash);
   const { title, accent, showEmpty } = config;
   const [selected, setSelected] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Confirme avant de vraiment supprimer (suppression définitive côté MediaLibrary,
+  // même si iOS met d'abord dans "Récemment supprimées" 30 jours).
+  const confirmEmptyTrash = () => {
+    Alert.alert(
+      "Vider la corbeille",
+      `Supprimer définitivement ${photos.length} photo(s) ? Sur iOS, elles seront récupérables 30 jours dans "Récemment supprimées".`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            const ok = await emptyTrash();
+            setDeleting(false);
+            if (!ok) {
+              Alert.alert("Erreur", "La suppression a échoué. Vérifie que tu as bien autorisé Phototri à supprimer des photos.");
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
@@ -41,8 +66,14 @@ export function GalleryScreen({ navigation, route }) {
           : <PhotoGrid photos={photos} onPress={p => setSelected(p)} />
         }
         {showEmpty && photos.length > 0 && (
-          <TouchableOpacity onPress={emptyTrash} style={{ backgroundColor: C.red, borderRadius: S.radius, padding: 14, alignItems: "center", marginTop: 20 }}>
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>Vider la corbeille ({photos.reduce((a, p) => a + p.size, 0).toFixed(1)} Mo)</Text>
+          <TouchableOpacity
+            onPress={confirmEmptyTrash}
+            disabled={deleting}
+            style={{ backgroundColor: C.red, borderRadius: S.radius, padding: 14, alignItems: "center", marginTop: 20, opacity: deleting ? 0.6 : 1 }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>
+              {deleting ? "Suppression…" : `Vider la corbeille (${photos.reduce((a, p) => a + p.size, 0).toFixed(1)} Mo)`}
+            </Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -53,7 +84,7 @@ export function GalleryScreen({ navigation, route }) {
           </TouchableOpacity>
           {selected && <>
             <Image source={{ uri: selected.url }} style={{ width: SW - 40, height: SH * 0.65, borderRadius: S.radius }} resizeMode="contain" />
-            <Text style={{ color: "#fff", fontWeight: "700", marginTop: 16, fontSize: 15 }}>{selected.location} · {selected.year}</Text>
+            <Text style={{ color: "#fff", fontWeight: "700", marginTop: 16, fontSize: 15 }}>{selected.location ? `${selected.location} · ${selected.year}` : selected.year}</Text>
           </>}
         </View>
       </Modal>
