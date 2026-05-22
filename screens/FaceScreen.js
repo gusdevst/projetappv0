@@ -6,15 +6,13 @@ import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Sta
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { PHOTOS, FACE_DATA } from "../data/mockData";
-import { useAndroidBack } from "../hooks/useAndroidBack";
 
 const { width: SW } = Dimensions.get("window");
 
-export function FaceScreen({ onBack, onStartSwipe }) {
+export function FaceScreen({ navigation }) {
   const [selected, setSelected] = useState([]);
   const [scanning, setScanning] = useState(true);
   useEffect(() => { setTimeout(() => setScanning(false), 1800); }, []);
-  useAndroidBack(onBack);
 
   const toggle = name => setSelected(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
   const photosTri = selected.length > 0 ? PHOTOS.filter(p => selected.some(n => p.faces.includes(n))) : [];
@@ -32,7 +30,7 @@ export function FaceScreen({ onBack, onStartSwipe }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={onBack} style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}>
           <Text style={{ color: C.textMuted, fontSize: 16 }}>←</Text>
         </TouchableOpacity>
         <View>
@@ -66,7 +64,7 @@ export function FaceScreen({ onBack, onStartSwipe }) {
                 {photosTri.slice(0, 6).map(p => <Image key={p.id} source={{ uri: p.url }} style={{ width: 52, height: 52, borderRadius: 10 }} />)}
               </View>
             </ScrollView>
-            <TouchableOpacity onPress={() => onStartSwipe(photosTri)} style={{ backgroundColor: C.accent, borderRadius: 14, padding: 14, alignItems: "center" }}>
+            <TouchableOpacity onPress={() => navigation.navigate("Swipe", { queue: photosTri })} style={{ backgroundColor: C.accent, borderRadius: 14, padding: 14, alignItems: "center" }}>
               <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>Trier les {photosTri.length} photos →</Text>
             </TouchableOpacity>
           </View>
