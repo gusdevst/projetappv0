@@ -234,32 +234,8 @@ const handleBack = () => {
             </Text>
           </View>
 
-          <TouchableOpacity
-            onPress={() => {
-              setAiPanel(!aiPanel);
-              setAdvice(null);
-              setEnhanced(null);
-              setAiMode(null);
-            }}
-            style={{
-              backgroundColor: "rgba(244,132,95,0.4)",
-              borderRadius: S.radiusFull,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderWidth: 1,
-              borderColor: "rgba(244,132,95,.6)",
-            }}
-          >
-            <Text
-              style={{
-                color: "#ffc8a8",
-                fontWeight: "700",
-                fontSize: 12,
-              }}
-            >
-              ✨ IA
-            </Text>
-          </TouchableOpacity>
+          {/* Bouton IA masqué pour le MVP — réactivation en Phase 4 quand le backend proxy sera en place */}
+          <View style={{ width: 56 }} />
         </View>
       </View>
 
