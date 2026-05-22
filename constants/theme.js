@@ -32,6 +32,7 @@ export const FILTERS = [
   "Mois dernier",
   "2026",
   "2025",
+  "Screenshots",
 ];
 
 // Espacements standard

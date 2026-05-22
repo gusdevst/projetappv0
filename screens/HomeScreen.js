@@ -7,12 +7,44 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { C, S, FILTERS } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
+
+/**
+ * Applique le filtre sélectionné à la liste de photos.
+ * - "Toutes" : pas de filtre
+ * - "4 derniers jours" : photos prises il y a moins de 4 jours
+ * - "Mois dernier" : photos du mois calendaire précédent
+ * - "2026" / "2025" : photos prises cette année-là
+ * - "Screenshots" : uniquement les captures d'écran
+ */
+function applyFilter(photos, filter) {
+  if (filter === "Toutes") return photos;
+  if (filter === "Screenshots") return photos.filter((p) => p.isScreenshot);
+
+  const now = new Date();
+
+  if (filter === "4 derniers jours") {
+    const cutoff = now.getTime() - 4 * 24 * 60 * 60 * 1000;
+    return photos.filter((p) => p.creationTime >= cutoff);
+  }
+
+  if (filter === "Mois dernier") {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+    const end   = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).getTime();
+    return photos.filter((p) => p.creationTime >= start && p.creationTime <= end);
+  }
+
+  // Filtres année (ex: "2025", "2026")
+  if (/^\d{4}$/.test(filter)) {
+    return photos.filter((p) => p.year === filter);
+  }
+
+  return photos;
+}
 
 export function HomeScreen({ navigation }) {
   const kept          = usePhotoStore((state) => state.kept);
@@ -26,13 +58,14 @@ export function HomeScreen({ navigation }) {
 
   const triees = kept.length + deleted.length + printed.length;
 
-  // File des photos à trier = photothèque réelle, moins celles déjà triées
+  // File des photos à trier = photothèque réelle, moins celles déjà triées, puis filtrée
   const triedIds = new Set([
     ...kept.map((x) => x.id),
     ...deleted.map((x) => x.id),
     ...printed.map((x) => x.id),
   ]);
-  const queue = libraryPhotos.filter((p) => !triedIds.has(p.id));
+  const remaining = libraryPhotos.filter((p) => !triedIds.has(p.id));
+  const queue = applyFilter(remaining, activeFilter);
 
   return (
     <SafeAreaView
@@ -124,8 +157,10 @@ export function HomeScreen({ navigation }) {
           <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>
             {libraryLoading
               ? "Chargement de tes photos…"
-              : queue.length === 0
+              : remaining.length === 0
               ? "🎉 Tout est trié !"
+              : queue.length === 0
+              ? `Aucune photo dans "${activeFilter}"`
               : `🔀 Démarrer le tri · ${queue.length} photos`}
           </Text>
         </TouchableOpacity>

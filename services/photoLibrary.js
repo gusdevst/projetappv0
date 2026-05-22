@@ -96,11 +96,13 @@ function mapAssetToPhoto(asset) {
   return {
     id: asset.id,
     url: asset.uri,
+    filename: asset.filename ?? "",
     creationTime: asset.creationTime, // ms epoch — utilisé par photoAnalysis pour clusters/doublons
     year,
     size: Number(approxSizeMo.toFixed(1)),
     width: asset.width,
     height: asset.height,
+    isScreenshot: detectScreenshot(asset),
     // Champs "legacy" attendus par les écrans, à enrichir plus tard via loadPhotoLocation/reverse geocoding
     location: "",
     city: "",
@@ -108,4 +110,19 @@ function mapAssetToPhoto(asset) {
     lng: null,
     faces: [], // vide — feature retirée du MVP
   };
+}
+
+/**
+ * Détecte si une photo est une capture d'écran.
+ * - iOS : asset.mediaSubtypes inclut "screenshot"
+ * - Android : nom de fichier contient "screenshot" (insensible à la casse)
+ */
+function detectScreenshot(asset) {
+  if (Array.isArray(asset.mediaSubtypes) && asset.mediaSubtypes.includes("screenshot")) {
+    return true;
+  }
+  if (typeof asset.filename === "string" && asset.filename.toLowerCase().includes("screenshot")) {
+    return true;
+  }
+  return false;
 }
