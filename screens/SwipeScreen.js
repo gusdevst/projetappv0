@@ -13,7 +13,6 @@ import {
 } from "react-native";
 
 import { C, S } from "../constants/theme";
-import { useAndroidBack } from "../hooks/useAndroidBack";
 import { getPhotoAdvice, enhancePhoto } from "../services/aiService";
 import { usePhotoStore } from "../store/usePhotoStore";
 const { width: SW, height: SH } = Dimensions.get("window");
@@ -32,8 +31,6 @@ export function SwipeScreen({ navigation, route }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [advice, setAdvice] = useState(null);
   const [enhanced, setEnhanced] = useState(null);
-
-useAndroidBack(() => handleBack());
 
   const pan = useRef(new Animated.ValueXY()).current;
 
