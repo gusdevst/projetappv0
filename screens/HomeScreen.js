@@ -7,6 +7,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -188,6 +189,80 @@ useFocusEffect(
           </View>
         </ScrollView>
 
+        {/* Tri (par visage / par lieu / doublons) */}
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 10,
+            marginBottom: 14,
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Faces")}
+            style={{
+              flex: 1,
+              backgroundColor: C.bgCard,
+              borderRadius: 20,
+              padding: 14,
+              borderWidth: 1,
+              borderColor: C.border,
+            }}
+          >
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>👤</Text>
+            <Text style={{ fontWeight: "700", fontSize: 13, color: C.text }}>
+              Par visage
+            </Text>
+            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+              Famille, amis…
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate("Map")}
+            style={{
+              flex: 1,
+              backgroundColor: C.bgCard,
+              borderRadius: 20,
+              padding: 14,
+              borderWidth: 1,
+              borderColor: C.border,
+            }}
+          >
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>🗺</Text>
+            <Text style={{ fontWeight: "700", fontSize: 13, color: C.text }}>
+              Par lieu
+            </Text>
+            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+              Carte interactive
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() =>
+              Alert.alert(
+                "Bientôt disponible",
+                "La détection des doublons arrive en même temps que l'accès à tes vraies photos 🌸"
+              )
+            }
+            style={{
+              flex: 1,
+              backgroundColor: C.bgCard,
+              borderRadius: 20,
+              padding: 14,
+              borderWidth: 1,
+              borderColor: C.border,
+            }}
+          >
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>🪞</Text>
+            <Text style={{ fontWeight: "700", fontSize: 13, color: C.text }}>
+              Doublons
+            </Text>
+            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+              Photos similaires
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Stats */}
         <View
           style={{
@@ -247,97 +322,6 @@ useFocusEffect(
               </Text>
             </View>
           ))}
-        </View>
-
-        {/* Tri */}
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 10,
-            marginBottom: 14,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Faces")}
-            style={{
-              flex: 1,
-              backgroundColor: C.bgCard,
-              borderRadius: 20,
-              padding: 16,
-              borderWidth: 1,
-              borderColor: C.border,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 24,
-                marginBottom: 8,
-              }}
-            >
-              👤
-            </Text>
-
-            <Text
-              style={{
-                fontWeight: "700",
-                fontSize: 13,
-                color: C.text,
-              }}
-            >
-              Par visage
-            </Text>
-
-            <Text
-              style={{
-                fontSize: 11,
-                color: C.textMuted,
-                marginTop: 2,
-              }}
-            >
-              Famille, amis…
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Map")}
-            style={{
-              flex: 1,
-              backgroundColor: C.bgCard,
-              borderRadius: 20,
-              padding: 16,
-              borderWidth: 1,
-              borderColor: C.border,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 24,
-                marginBottom: 8,
-              }}
-            >
-              🗺
-            </Text>
-
-            <Text
-              style={{
-                fontWeight: "700",
-                fontSize: 13,
-                color: C.text,
-              }}
-            >
-              Par lieu
-            </Text>
-
-            <Text
-              style={{
-                fontSize: 11,
-                color: C.textMuted,
-                marginTop: 2,
-              }}
-            >
-              Carte interactive
-            </Text>
-          </TouchableOpacity>
         </View>
 {/* Sections */}
 {[
