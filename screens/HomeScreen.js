@@ -14,6 +14,15 @@ import { C, S, FILTERS } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 
 /**
+ * Formate une taille en Mo vers une chaîne lisible (Mo ou Go selon l'ordre de grandeur).
+ */
+function formatSize(mo) {
+  if (mo < 1) return "0 Mo";
+  if (mo < 1024) return `${mo.toFixed(0)} Mo`;
+  return `${(mo / 1024).toFixed(1)} Go`;
+}
+
+/**
  * Applique le filtre sélectionné à la liste de photos.
  * - "Toutes" : pas de filtre
  * - "4 derniers jours" : photos prises il y a moins de 4 jours
@@ -59,8 +68,12 @@ export function HomeScreen({ navigation }) {
   const showLimitNote = libraryTotalCount > libraryPhotos.length && libraryPhotos.length > 0;
 
   const deletedSize = deleted.reduce((a, p) => a + p.size, 0);
+  const librarySize = libraryPhotos.reduce((a, p) => a + p.size, 0);
 
   const triees = kept.length + deleted.length + printed.length;
+  const progressPct = libraryPhotos.length > 0
+    ? Math.min(100, (triees / libraryPhotos.length) * 100)
+    : 0;
 
   // File des photos à trier = photothèque réelle, moins celles déjà triées, puis filtrée
   const triedIds = new Set([
@@ -182,6 +195,66 @@ export function HomeScreen({ navigation }) {
           >
             Affichage des {libraryPhotos.length} photos les plus récentes sur {libraryTotalCount} au total.
           </Text>
+        )}
+
+        {/* Avancement global du tri */}
+        {libraryPhotos.length > 0 && (
+          <View
+            style={{
+              backgroundColor: C.bgCard,
+              borderRadius: 20,
+              padding: 16,
+              borderWidth: 1,
+              borderColor: C.border,
+              marginBottom: 14,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 10,
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "800", color: C.text }}>
+                {progressPct >= 100 ? "🎉 Bravo, tout est trié !" : "Avancement du tri"}
+              </Text>
+              <Text style={{ fontSize: 14, fontWeight: "900", color: C.accent }}>
+                {Math.round(progressPct)}%
+              </Text>
+            </View>
+
+            <View
+              style={{
+                height: 8,
+                backgroundColor: C.border,
+                borderRadius: 4,
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  height: 8,
+                  width: `${progressPct}%`,
+                  backgroundColor: C.accent,
+                  borderRadius: 4,
+                }}
+              />
+            </View>
+
+            <Text
+              style={{
+                fontSize: 11,
+                color: C.textMuted,
+                marginTop: 8,
+              }}
+            >
+              {triees} sur {libraryPhotos.length} photos triées
+              {libraryTotalCount > libraryPhotos.length &&
+                ` · ${libraryTotalCount - libraryPhotos.length} non chargées`}
+            </Text>
+          </View>
         )}
 
         {/* Filtres */}
@@ -318,6 +391,7 @@ export function HomeScreen({ navigation }) {
             {
               label: "Photos",
               val: libraryPhotos.length,
+              subval: formatSize(librarySize),
               color: C.accent,
             },
             {
@@ -327,7 +401,7 @@ export function HomeScreen({ navigation }) {
             },
             {
               label: "À libérer",
-              val: `${deletedSize.toFixed(1)}Mo`,
+              val: formatSize(deletedSize),
               color: C.red,
             },
           ].map((s, i) => (
@@ -349,6 +423,20 @@ export function HomeScreen({ navigation }) {
               >
                 {s.val}
               </Text>
+
+              {s.subval && (
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontWeight: "700",
+                    color: s.color,
+                    opacity: 0.75,
+                    marginTop: 1,
+                  }}
+                >
+                  {s.subval}
+                </Text>
+              )}
 
               <Text
                 style={{

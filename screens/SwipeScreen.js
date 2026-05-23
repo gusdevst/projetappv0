@@ -10,6 +10,9 @@ import {
   Dimensions,
   Platform,
   StatusBar,
+  Modal,
+  TextInput,
+  ScrollView,
 } from "react-native";
 
 // Import défensif : si le module natif n'est pas dans le dev build (build pré-installation),
@@ -29,7 +32,7 @@ const { width: SW, height: SH } = Dimensions.get("window");
 export function SwipeScreen({ navigation, route }) {
   const queue = route.params?.queue ?? [];
   const [idx, setIdx] = useState(0);
- const { addKept, addDeleted, addPrinted, undoLast } = usePhotoStore();
+ const { addKept, addDeleted, addPrinted, undoLast, albums, createAlbum, addPhotoToAlbum } = usePhotoStore();
 
   const [history, setHistory] = useState([]);
   const [showTip, setShowTip] = useState(true);
@@ -40,6 +43,10 @@ export function SwipeScreen({ navigation, route }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [advice, setAdvice] = useState(null);
   const [enhanced, setEnhanced] = useState(null);
+
+  // Picker d'album déclenché par appui long sur l'icône 🖨 (album souvenirs)
+  const [showAlbumPicker, setShowAlbumPicker] = useState(false);
+  const [newAlbumName, setNewAlbumName] = useState("");
 
   // Sur Android : on cache la nav bar pendant le swipe pour une expérience immersive.
   // "overlay-swipe" permet à l'utilisateur de la faire réapparaître en glissant depuis le bas.
@@ -165,6 +172,31 @@ const undo = () => {
     setEnhanced(result);
 
     setAiLoading(false);
+  };
+
+  // Ajoute la photo courante à un album existant, puis déclenche le swipe vers le haut
+  // (= ajout à "printed" + passage à la photo suivante).
+  const handlePickAlbum = (albumId) => {
+    if (!photo) return;
+    addPhotoToAlbum(albumId, photo.id);
+    setShowAlbumPicker(false);
+    setNewAlbumName("");
+    swipe("up");
+  };
+
+  // Crée un nouvel album avec la photo courante dedans, puis swipe up.
+  const handleCreateAndAdd = () => {
+    if (!photo) return;
+    const trimmed = newAlbumName.trim();
+    if (!trimmed) return;
+    createAlbum(trimmed);
+    // createAlbum push en fin de tableau — on récupère l'id du dernier album créé.
+    const fresh = usePhotoStore.getState().albums;
+    const newAlbumId = fresh[fresh.length - 1]?.id;
+    if (newAlbumId) addPhotoToAlbum(newAlbumId, photo.id);
+    setShowAlbumPicker(false);
+    setNewAlbumName("");
+    swipe("up");
   };
 
   if (!photo) {
@@ -349,6 +381,8 @@ const handleBack = () => {
 
         <TouchableOpacity
           onPress={() => swipe("up")}
+          onLongPress={() => setShowAlbumPicker(true)}
+          delayLongPress={350}
           style={{
             backgroundColor: "rgba(176,122,216,0.2)",
             borderWidth: 2,
@@ -377,6 +411,173 @@ const handleBack = () => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modal : picker d'album (déclenché par long-press sur 🖨) */}
+      <Modal
+        visible={showAlbumPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAlbumPicker(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            justifyContent: "flex-end",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: C.bg,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              padding: 22,
+              paddingBottom: 36,
+              maxHeight: SH * 0.75,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 4,
+              }}
+            >
+              <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }}>
+                Ajouter à un album
+              </Text>
+              <TouchableOpacity onPress={() => setShowAlbumPicker(false)}>
+                <Text style={{ fontSize: 22, color: C.textMuted }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text
+              style={{
+                fontSize: 12,
+                color: C.textMuted,
+                marginBottom: 16,
+              }}
+            >
+              La photo sera ajoutée à l'album souvenirs et à l'album choisi.
+            </Text>
+
+            {/* Liste des albums existants */}
+            <ScrollView style={{ maxHeight: SH * 0.35 }}>
+              {albums.length === 0 ? (
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color: C.textMuted,
+                    fontStyle: "italic",
+                    textAlign: "center",
+                    paddingVertical: 16,
+                  }}
+                >
+                  Aucun album pour l'instant. Crée le premier ci-dessous.
+                </Text>
+              ) : (
+                albums.map((a) => (
+                  <TouchableOpacity
+                    key={a.id}
+                    onPress={() => handlePickAlbum(a.id)}
+                    style={{
+                      backgroundColor: C.bgCard,
+                      borderRadius: 14,
+                      padding: 14,
+                      borderWidth: 1,
+                      borderColor: C.border,
+                      marginBottom: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: "700",
+                          color: C.text,
+                        }}
+                      >
+                        {a.name}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          color: C.textMuted,
+                          marginTop: 2,
+                        }}
+                      >
+                        {a.photoIds.length} photo{a.photoIds.length > 1 ? "s" : ""}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 18, color: C.accent }}>＋</Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+
+            {/* Création d'un nouvel album */}
+            <View
+              style={{
+                marginTop: 16,
+                paddingTop: 16,
+                borderTopWidth: 1,
+                borderTopColor: C.border,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "700",
+                  color: C.textMuted,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  marginBottom: 10,
+                }}
+              >
+                Nouvel album
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TextInput
+                  value={newAlbumName}
+                  onChangeText={setNewAlbumName}
+                  placeholder="Ex. Vacances 2026"
+                  placeholderTextColor={C.textMuted}
+                  style={{
+                    flex: 1,
+                    backgroundColor: C.bgCard,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: C.border,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    fontSize: 14,
+                    color: C.text,
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={handleCreateAndAdd}
+                  disabled={!newAlbumName.trim()}
+                  style={{
+                    backgroundColor: C.accent,
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    justifyContent: "center",
+                    opacity: newAlbumName.trim() ? 1 : 0.4,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>
+                    Créer
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
