@@ -11,7 +11,15 @@ import {
   Platform,
   StatusBar,
 } from "react-native";
-import * as NavigationBar from "expo-navigation-bar";
+
+// Import défensif : si le module natif n'est pas dans le dev build (build pré-installation),
+// on continue sans planter. Une fois le dev build rebuild, la fonctionnalité s'active toute seule.
+let NavigationBar = null;
+try {
+  NavigationBar = require("expo-navigation-bar");
+} catch (e) {
+  // Module absent du build natif — on tournera sans nav bar hiding
+}
 
 import { C, S } from "../constants/theme";
 import { getPhotoAdvice, enhancePhoto } from "../services/aiService";
@@ -35,13 +43,14 @@ export function SwipeScreen({ navigation, route }) {
 
   // Sur Android : on cache la nav bar pendant le swipe pour une expérience immersive.
   // "overlay-swipe" permet à l'utilisateur de la faire réapparaître en glissant depuis le bas.
+  // Skip si NavigationBar est null (module pas dans le dev build).
   useEffect(() => {
-    if (Platform.OS === "android") {
+    if (Platform.OS === "android" && NavigationBar) {
       NavigationBar.setVisibilityAsync("hidden").catch(() => {});
       NavigationBar.setBehaviorAsync("overlay-swipe").catch(() => {});
     }
     return () => {
-      if (Platform.OS === "android") {
+      if (Platform.OS === "android" && NavigationBar) {
         NavigationBar.setVisibilityAsync("visible").catch(() => {});
       }
     };

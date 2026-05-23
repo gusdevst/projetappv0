@@ -49,7 +49,18 @@
           "isAccessMediaLocationEnabled": true
         }
       ],
-      "expo-tracking-transparency"
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Phototri n'utilise pas le tracking publicitaire — cette autorisation reste désactivée par défaut."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#E8637A"
+        }
+      ]
     ],
     "extra": {
       "eas": {
