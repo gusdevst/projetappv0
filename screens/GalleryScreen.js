@@ -8,8 +8,10 @@
 import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image, Modal, Dimensions, StatusBar, Alert, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { C, S } from "../constants/theme";
 import { PhotoGrid } from "../components/PhotoGrid";
+import { ZoomableImage } from "../components/ZoomableImage";
 import { usePhotoStore } from "../store/usePhotoStore";
 
 const { width: SW, height: SH } = Dimensions.get("window");
@@ -35,11 +37,40 @@ export function GalleryScreen({ navigation, route }) {
   const addPhotoToAlbum      = usePhotoStore((s) => s.addPhotoToAlbum);
   const removePhotoFromAlbum = usePhotoStore((s) => s.removePhotoFromAlbum);
 
-  const [selected, setSelected]         = useState(null); // photo affichée en plein écran
+  // Photo affichée en plein écran : on stocke le groupe (= ensemble de photos navigables)
+  // et l'index dans ce groupe. Permet le swipe horizontal pour passer d'une photo à l'autre.
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const selected = selectedGroup ? selectedGroup[selectedIndex] : null;
+
   const [deleting, setDeleting]         = useState(false);
   const [showAlbumPicker, setShowAlbumPicker] = useState(false); // modal "Ajouter à un album"
   const [newAlbumModal, setNewAlbumModal]     = useState(false); // modal "Nouvel album"
   const [newAlbumName, setNewAlbumName]       = useState("");
+
+  // Ouvre une photo en plein écran depuis un groupe donné
+  const openPhoto = (group, photo) => {
+    const idx = group.findIndex((p) => p.id === photo.id);
+    if (idx >= 0) {
+      setSelectedGroup(group);
+      setSelectedIndex(idx);
+    }
+  };
+
+  const closePhoto = () => {
+    setSelectedGroup(null);
+    setSelectedIndex(0);
+  };
+
+  const showNext = () => {
+    if (!selectedGroup) return;
+    setSelectedIndex((i) => Math.min(selectedGroup.length - 1, i + 1));
+  };
+
+  const showPrev = () => {
+    if (!selectedGroup) return;
+    setSelectedIndex((i) => Math.max(0, i - 1));
+  };
 
   // ─── Helpers album ──────────────────────────────────────────────────────
   const photoIdsInAlbums = new Set(albums.flatMap((a) => a.photoIds));
@@ -70,7 +101,7 @@ export function GalleryScreen({ navigation, route }) {
 
   const handleRestore = (photoId) => {
     restorePhoto(photoId, config.storeKey);
-    setSelected(null);
+    closePhoto();
   };
 
   // ─── Actions albums ─────────────────────────────────────────────────────
@@ -150,7 +181,7 @@ export function GalleryScreen({ navigation, route }) {
                 <Text style={{ fontWeight: "800", fontSize: 14, color: C.text, marginBottom: 10, marginLeft: 4 }}>
                   📦 Sans album · {photosSansAlbum.length}
                 </Text>
-                <PhotoGrid photos={photosSansAlbum} onPress={(p) => setSelected(p)} />
+                <PhotoGrid photos={photosSansAlbum} onPress={(p) => openPhoto(photosSansAlbum, p)} />
               </View>
             )}
 
@@ -172,7 +203,7 @@ export function GalleryScreen({ navigation, route }) {
                       Aucune photo dans cet album. Appuie sur une photo "Sans album" pour l'ajouter.
                     </Text>
                   ) : (
-                    <PhotoGrid photos={albumPhotos} onPress={(p) => setSelected(p)} />
+                    <PhotoGrid photos={albumPhotos} onPress={(p) => openPhoto(albumPhotos, p)} />
                   )}
                 </View>
               );
@@ -180,7 +211,7 @@ export function GalleryScreen({ navigation, route }) {
           </>
         ) : (
           // ─── Vue par défaut : grille simple ─────────────────────────────
-          <PhotoGrid photos={photos} onPress={(p) => setSelected(p)} />
+          <PhotoGrid photos={photos} onPress={(p) => openPhoto(photos, p)} />
         )}
 
         {/* Bouton "Vider la corbeille" (uniquement section deleted) */}
@@ -198,20 +229,66 @@ export function GalleryScreen({ navigation, route }) {
       </ScrollView>
 
       {/* ─── Modal Photo en grand ─────────────────────────────────────── */}
-      <Modal visible={!!selected} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" }}>
-          <TouchableOpacity onPress={() => setSelected(null)} style={{ position: "absolute", top: 52, right: 20, backgroundColor: "rgba(255,255,255,.2)", borderRadius: S.radiusFull, padding: 10, zIndex: 10 }}>
+      {/* onRequestClose : nécessaire pour que le bouton retour Android ferme le modal */}
+      {/* GestureHandlerRootView : nécessaire pour que pinch/pan/double-tap fonctionnent
+          dans le modal (l'arbre du modal est séparé de celui de l'app). */}
+      <Modal visible={!!selected} transparent animationType="fade" onRequestClose={closePhoto}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#000" }}>
+          {/* Bouton fermer */}
+          <TouchableOpacity
+            onPress={closePhoto}
+            style={{
+              position: "absolute",
+              top: 52,
+              left: 20,
+              backgroundColor: "rgba(255,255,255,.2)",
+              borderRadius: S.radiusFull,
+              padding: 10,
+              zIndex: 10,
+            }}
+          >
             <Text style={{ color: "#fff", fontSize: 18 }}>✕</Text>
           </TouchableOpacity>
+
+          {/* Compteur position (ex. "3 / 12") */}
+          {selectedGroup && selectedGroup.length > 1 && (
+            <View
+              style={{
+                position: "absolute",
+                top: 56,
+                left: 0,
+                right: 0,
+                alignItems: "center",
+                zIndex: 9,
+              }}
+            >
+              <View style={{ backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 12, paddingVertical: 4, borderRadius: S.radiusFull }}>
+                <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
+                  {selectedIndex + 1} / {selectedGroup.length}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Image zoomable + swipe-able */}
           {selected && (
-            <>
-              <Image source={{ uri: selected.url }} style={{ width: SW - 40, height: SH * 0.55, borderRadius: S.radius }} resizeMode="contain" />
-              <Text style={{ color: "#fff", fontWeight: "700", marginTop: 16, fontSize: 15 }}>
+            <View style={{ flex: 1 }}>
+              <ZoomableImage
+                uri={selected.url}
+                onSwipeNext={selectedIndex < (selectedGroup?.length ?? 0) - 1 ? showNext : undefined}
+                onSwipePrev={selectedIndex > 0 ? showPrev : undefined}
+              />
+            </View>
+          )}
+
+          {/* Bas : infos + actions */}
+          {selected && (
+            <View style={{ paddingHorizontal: 20, paddingBottom: 36, paddingTop: 8, backgroundColor: "rgba(0,0,0,0.6)" }}>
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14, textAlign: "center", marginBottom: 14 }}>
                 {selected.location ? `${selected.location} · ${selected.year}` : selected.year}
               </Text>
 
-              {/* Actions selon la section */}
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 24, paddingHorizontal: 20 }}>
+              <View style={{ flexDirection: "row", gap: 10 }}>
                 {section === "deleted" && (
                   <TouchableOpacity
                     onPress={() => handleRestore(selected.id)}
@@ -245,13 +322,18 @@ export function GalleryScreen({ navigation, route }) {
                   </>
                 )}
               </View>
-            </>
+            </View>
           )}
-        </View>
+        </GestureHandlerRootView>
       </Modal>
 
       {/* ─── Modal "Nouvel album" ──────────────────────────────────────── */}
-      <Modal visible={newAlbumModal} transparent animationType="slide">
+      <Modal
+        visible={newAlbumModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => { setNewAlbumModal(false); setNewAlbumName(""); }}
+      >
         <View style={{ flex: 1, backgroundColor: "rgba(60,20,0,0.5)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: C.bgCard, borderRadius: S.radiusLg, padding: S.padLg, paddingBottom: 44 }}>
             <Text style={{ fontSize: 20, fontWeight: "900", color: C.text, marginBottom: 8 }}>Nouvel album</Text>
@@ -301,7 +383,12 @@ export function GalleryScreen({ navigation, route }) {
       </Modal>
 
       {/* ─── Modal "Choisir un album" ──────────────────────────────────── */}
-      <Modal visible={showAlbumPicker} transparent animationType="slide">
+      <Modal
+        visible={showAlbumPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAlbumPicker(false)}
+      >
         <View style={{ flex: 1, backgroundColor: "rgba(60,20,0,0.5)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: C.bgCard, borderRadius: S.radiusLg, padding: S.padLg, paddingBottom: 44, maxHeight: SH * 0.7 }}>
             <Text style={{ fontSize: 20, fontWeight: "900", color: C.text, marginBottom: 16 }}>Ajouter à un album</Text>

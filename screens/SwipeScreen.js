@@ -24,9 +24,29 @@ try {
   // Module absent du build natif — on tournera sans nav bar hiding
 }
 
+import { LinearGradient } from "expo-linear-gradient";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { C, S } from "../constants/theme";
 import { getPhotoAdvice, enhancePhoto } from "../services/aiService";
 import { usePhotoStore } from "../store/usePhotoStore";
+import { ZoomableImage } from "../components/ZoomableImage";
+
+// Helpers halo : position + orientation du dégradé selon la direction du swipe
+function getEdgeContainerStyle(edge) {
+  if (edge === "up")    return { position: "absolute", top: 0,    left: 0, right: 0, height: 220 };
+  if (edge === "down")  return { position: "absolute", bottom: 0, left: 0, right: 0, height: 220 };
+  if (edge === "left")  return { position: "absolute", top: 0, bottom: 0, left: 0,  width: 200 };
+  if (edge === "right") return { position: "absolute", top: 0, bottom: 0, right: 0, width: 200 };
+  return null;
+}
+function getEdgeGradient(edge, color) {
+  // Couleur pleine côté edge, transparente vers l'intérieur
+  if (edge === "up")    return { colors: [color, "transparent"], start: { x: 0, y: 0 }, end: { x: 0, y: 1 } };
+  if (edge === "down")  return { colors: ["transparent", color], start: { x: 0, y: 0 }, end: { x: 0, y: 1 } };
+  if (edge === "left")  return { colors: [color, "transparent"], start: { x: 0, y: 0 }, end: { x: 1, y: 0 } };
+  if (edge === "right") return { colors: ["transparent", color], start: { x: 0, y: 0 }, end: { x: 1, y: 0 } };
+  return { colors: ["transparent", "transparent"] };
+}
 const { width: SW, height: SH } = Dimensions.get("window");
 
 export function SwipeScreen({ navigation, route }) {
@@ -50,6 +70,9 @@ export function SwipeScreen({ navigation, route }) {
 
   // Indicateur visuel : la photo courante a-t-elle été marquée "coup de cœur" ?
   const [heartedThisPhoto, setHeartedThisPhoto] = useState(false);
+
+  // Modal zoom plein-écran (déclenché par le bouton 🔍)
+  const [showZoom, setShowZoom] = useState(false);
 
   // Sur Android : on cache la nav bar pendant le swipe pour une expérience immersive.
   // "overlay-swipe" permet à l'utilisateur de la faire réapparaître en glissant depuis le bas.
@@ -77,6 +100,21 @@ export function SwipeScreen({ navigation, route }) {
     inputRange: [-SW / 2, 0, SW / 2],
     outputRange: ["-15deg", "0deg", "15deg"],
   });
+
+  // Halo de feedback action — dégradé coloré sur l'edge correspondant à la direction du swipe.
+  // L'edge suit animDir (haut/bas/gauche/droite), la couleur suit l'action (rouge=delete, vert=skip).
+  const feedbackOpacity = useRef(new Animated.Value(0)).current;
+  const [feedbackColor, setFeedbackColor] = useState("rgba(232,99,122,0.7)");
+  const [feedbackEdge, setFeedbackEdge]   = useState(null);
+
+  const flashFeedback = (color, edge) => {
+    setFeedbackColor(color);
+    setFeedbackEdge(edge);
+    Animated.sequence([
+      Animated.timing(feedbackOpacity, { toValue: 1, duration: 120, useNativeDriver: false }),
+      Animated.timing(feedbackOpacity, { toValue: 0, duration: 450, useNativeDriver: false }),
+    ]).start();
+  };
 
   const photo = queue[idx] || null;
 
@@ -143,6 +181,11 @@ export function SwipeScreen({ navigation, route }) {
         skippedSnap: stateNow.skipped,
       },
     ]);
+
+    // Halo de feedback : couleur = action, edge = direction du swipe (adaptatif si l'utilisateur
+    // remappe une direction dans Settings — ex. swipe droite = delete → halo rouge à droite).
+    if (actionKey === "delete") flashFeedback("rgba(232,99,122,0.7)", animDir); // rouge
+    if (actionKey === "skip")   flashFeedback("rgba(92,184,122,0.7)", animDir); // vert
 
     const toX = animDir === "left" ? -SW * 1.5 : animDir === "right" ? SW * 1.5 : 0;
     const toY = animDir === "up" ? -SH : animDir === "down" ? SH : 0;
@@ -260,6 +303,22 @@ const handleBack = () => {
         barStyle="light-content"
       />
 
+      {/* Halo de feedback action — dégradé sur l'edge correspondant à la direction du swipe */}
+      {feedbackEdge && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            getEdgeContainerStyle(feedbackEdge),
+            { opacity: feedbackOpacity, zIndex: 25 },
+          ]}
+        >
+          <LinearGradient
+            {...getEdgeGradient(feedbackEdge, feedbackColor)}
+            style={{ flex: 1 }}
+          />
+        </Animated.View>
+      )}
+
       {/* Barre progression */}
       <View
         style={{
@@ -345,8 +404,20 @@ const handleBack = () => {
             </Text>
           </View>
 
-          {/* Bouton IA masqué pour le MVP — réactivation en Phase 4 quand le backend proxy sera en place */}
-          <View style={{ width: 56 }} />
+          {/* Bouton zoom : ouvre la photo en plein-écran zoomable */}
+          <TouchableOpacity
+            onPress={() => setShowZoom(true)}
+            style={{
+              width: 56,
+              height: 36,
+              backgroundColor: "rgba(255,255,255,0.2)",
+              borderRadius: S.radiusFull,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 16 }}>🔍</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -409,15 +480,19 @@ const handleBack = () => {
           onPress={undo}
           disabled={!history.length}
           style={{
-            backgroundColor: "rgba(255,255,255,0.15)",
+            backgroundColor: history.length ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.4)",
             borderWidth: 2,
-            borderColor: "rgba(255,255,255,.2)",
+            borderColor: "rgba(0,0,0,0.08)",
             borderRadius: S.radiusFull,
-            padding: 12,
-            opacity: history.length ? 1 : 0.3,
+            padding: 14,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.35,
+            shadowRadius: 6,
+            elevation: 6,
           }}
         >
-          <Text style={{ fontSize: 18 }}>
+          <Text style={{ fontSize: 20, color: "#222", fontWeight: "800" }}>
             ↩
           </Text>
         </TouchableOpacity>
@@ -454,6 +529,39 @@ const handleBack = () => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Modal zoom plein-écran (pinch + pan + double-tap)
+          IMPORTANT : le contenu d'un Modal RN est dans un arbre natif séparé, donc
+          le GestureHandlerRootView de App.js ne le couvre pas. On en rajoute un ici. */}
+      <Modal
+        visible={showZoom}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowZoom(false)}
+      >
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <View style={{ flex: 1, backgroundColor: "#000" }}>
+            <TouchableOpacity
+              onPress={() => setShowZoom(false)}
+              style={{
+                position: "absolute",
+                top: 52,
+                right: 20,
+                zIndex: 10,
+                backgroundColor: "rgba(255,255,255,0.2)",
+                borderRadius: S.radiusFull,
+                padding: 10,
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 18 }}>✕</Text>
+            </TouchableOpacity>
+
+            {showZoom && photo && (
+              <ZoomableImage uri={photo.url} />
+            )}
+          </View>
+        </GestureHandlerRootView>
+      </Modal>
 
       {/* Modal : picker d'album (déclenché par long-press sur 🖨) */}
       <Modal
