@@ -127,7 +127,12 @@ export function SettingsScreen({ navigation }) {
       </ScrollView>
 
       {/* Modal Premium */}
-      <Modal visible={showPremium} transparent animationType="slide">
+      <Modal
+        visible={showPremium}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPremium(false)}
+      >
         <View style={{ flex: 1, backgroundColor: "rgba(60,20,0,0.5)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: C.bgCard, borderRadius: S.radiusLg, padding: S.padLg, paddingBottom: 44 }}>
             <Text style={{ fontSize: 28, textAlign: "center", marginBottom: 8 }}>⭐</Text>
