@@ -5,15 +5,13 @@ import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Modal, StatusBar, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
-import { Toggle } from "../components/Toggle";
 import { RowSetting } from "../components/RowSetting";
 
 export function SettingsScreen({ navigation }) {
-  const [notifWeekly,  setNotifWeekly]  = useState(true);
-  const [notifMonthly, setNotifMonthly] = useState(false);
-  const [autoDelete,   setAutoDelete]   = useState(false);
-  const [aiEnabled,    setAiEnabled]    = useState(true);
-  const [showPremium,  setShowPremium]  = useState(false);
+  const [showPremium, setShowPremium] = useState(false);
+
+  const comingSoon = (feature) =>
+    Alert.alert("Bientôt disponible", `${feature} arrive très vite 🌸`);
 
   const Section = ({ title }) => (
     <Text style={{ fontSize: 11, fontWeight: "800", color: C.textMuted, letterSpacing: 1.5, marginTop: 24, marginBottom: 10, textTransform: "uppercase" }}>{title}</Text>
@@ -42,22 +40,13 @@ export function SettingsScreen({ navigation }) {
           </View>
         </TouchableOpacity>
 
-        <Section title="Notifications" />
-        <RowSetting emoji="🔔" label="Rappel hebdomadaire" desc="Trier ses photos chaque semaine" right={<Toggle value={notifWeekly} onToggle={() => setNotifWeekly(v => !v)} />} />
-        <RowSetting emoji="📅" label="Bilan mensuel" desc="Résumé de l'espace libéré" right={<Toggle value={notifMonthly} onToggle={() => setNotifMonthly(v => !v)} />} />
-
-        <Section title="Tri & stockage" />
-        <RowSetting emoji="🗑" label="Suppression automatique" desc="Vider la corbeille après 30 jours" right={<Toggle value={autoDelete} onToggle={() => setAutoDelete(v => !v)} />} />
-        <RowSetting emoji="🧠" label="Assistant IA" desc="Conseil et amélioration photo" right={<Toggle value={aiEnabled} onToggle={() => setAiEnabled(v => !v)} />} />
-
-        {/* Section "Impression" masquée pour le MVP — réactivation quand un vrai partenaire sera intégré */}
+        {/* Notifications, Suppression auto, Assistant IA : masqués pour le MVP — */}
+        {/* à réactiver quand expo-notifications + scheduling + backend IA seront en place. */}
 
         <Section title="Compte" />
-        <RowSetting emoji="📊" label="Mes statistiques" desc="Espace libéré depuis l'installation" onPress={() => {}} right={<Text style={{ color: C.textMuted }}>›</Text>} />
-        <RowSetting emoji="🌍" label="Langue" desc="Français" onPress={() => {}} right={<Text style={{ color: C.textMuted }}>›</Text>} />
-        <RowSetting emoji="💬" label="Nous contacter" desc="Support & feedback" onPress={() => {}} right={<Text style={{ color: C.textMuted }}>›</Text>} />
-        <RowSetting emoji="⭐" label="Noter l'app" desc="5 étoiles ça aide vraiment 🙏" onPress={() => {}} right={<Text style={{ color: C.textMuted }}>›</Text>} />
-        <RowSetting emoji="🔒" label="Politique de confidentialité" onPress={() => {}} right={<Text style={{ color: C.textMuted }}>›</Text>} />
+        <RowSetting emoji="💬" label="Nous contacter" desc="Support & feedback" onPress={() => comingSoon("Le formulaire de contact")} right={<Text style={{ color: C.textMuted }}>›</Text>} />
+        <RowSetting emoji="⭐" label="Noter l'app" desc="5 étoiles ça aide vraiment 🙏" onPress={() => comingSoon("La note dans le store")} right={<Text style={{ color: C.textMuted }}>›</Text>} />
+        <RowSetting emoji="🔒" label="Politique de confidentialité" onPress={() => comingSoon("La page de confidentialité")} right={<Text style={{ color: C.textMuted }}>›</Text>} />
 
         <Text style={{ textAlign: "center", color: C.textMuted, fontSize: 11, marginTop: 24 }}>Phototri v1.0.0 · Fait avec 🌸 en France</Text>
       </ScrollView>

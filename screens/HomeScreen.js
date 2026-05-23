@@ -47,12 +47,16 @@ function applyFilter(photos, filter) {
 }
 
 export function HomeScreen({ navigation }) {
-  const kept          = usePhotoStore((state) => state.kept);
-  const deleted       = usePhotoStore((state) => state.deleted);
-  const printed       = usePhotoStore((state) => state.printed);
-  const libraryPhotos = usePhotoStore((state) => state.libraryPhotos);
-  const libraryLoading = usePhotoStore((state) => state.libraryLoading);
+  const kept              = usePhotoStore((state) => state.kept);
+  const deleted           = usePhotoStore((state) => state.deleted);
+  const printed           = usePhotoStore((state) => state.printed);
+  const libraryPhotos     = usePhotoStore((state) => state.libraryPhotos);
+  const libraryTotalCount = usePhotoStore((state) => state.libraryTotalCount);
+  const libraryLoading    = usePhotoStore((state) => state.libraryLoading);
   const [activeFilter, setActiveFilter] = useState("Toutes");
+
+  // Si l'utilisateur a plus de photos que ce qu'on charge, on affichera une note.
+  const showLimitNote = libraryTotalCount > libraryPhotos.length && libraryPhotos.length > 0;
 
   const deletedSize = deleted.reduce((a, p) => a + p.size, 0);
 
@@ -164,6 +168,21 @@ export function HomeScreen({ navigation }) {
               : `🔀 Démarrer le tri · ${queue.length} photos`}
           </Text>
         </TouchableOpacity>
+
+        {/* Note quand on n'affiche qu'une partie de la photothèque */}
+        {showLimitNote && (
+          <Text
+            style={{
+              fontSize: 11,
+              color: C.textMuted,
+              textAlign: "center",
+              marginBottom: 12,
+              fontStyle: "italic",
+            }}
+          >
+            Affichage des {libraryPhotos.length} photos les plus récentes sur {libraryTotalCount} au total.
+          </Text>
+        )}
 
         {/* Filtres */}
         <ScrollView

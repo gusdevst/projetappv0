@@ -4,9 +4,9 @@
 
 import * as MediaLibrary from "expo-media-library";
 
-// Plafond de sécurité : on charge au max 500 photos pour éviter de figer l'app
+// Plafond de sécurité : on charge au max 1500 photos pour éviter de figer l'app
 // chez les utilisateurs avec 50000+ photos. À ajuster post-MVP si besoin.
-const MAX_PHOTOS = 500;
+export const MAX_PHOTOS = 1500;
 const BATCH_SIZE = 100;
 
 /**
@@ -29,15 +29,15 @@ export async function requestPermission() {
 }
 
 /**
- * Charge les photos de la photothèque (paginée par batch de 100, max 500 total).
- * Retourne un tableau de photos au format attendu par les écrans :
- * { id, url, creationTime, year, size, width, height }
- * Les coordonnées GPS ne sont PAS incluses ici (trop coûteux) — fetch via loadPhotoLocation.
+ * Charge les photos de la photothèque (paginée par batch de 100, max MAX_PHOTOS total).
+ * Retourne { photos, totalInLibrary } — photos est limité à MAX_PHOTOS,
+ * totalInLibrary est le nombre TOTAL de photos sur le téléphone.
  */
 export async function loadPhotos() {
   const allAssets = [];
   let after = undefined;
   let hasMore = true;
+  let totalInLibrary = 0;
 
   while (hasMore && allAssets.length < MAX_PHOTOS) {
     const result = await MediaLibrary.getAssetsAsync({
@@ -46,12 +46,16 @@ export async function loadPhotos() {
       mediaType: MediaLibrary.MediaType.photo,
       sortBy: MediaLibrary.SortBy.creationTime,
     });
+    totalInLibrary = result.totalCount ?? totalInLibrary;
     allAssets.push(...result.assets);
     hasMore = result.hasNextPage;
     after = result.endCursor;
   }
 
-  return allAssets.slice(0, MAX_PHOTOS).map(mapAssetToPhoto);
+  return {
+    photos: allAssets.slice(0, MAX_PHOTOS).map(mapAssetToPhoto),
+    totalInLibrary,
+  };
 }
 
 /**
@@ -86,9 +90,14 @@ export async function deletePhotos(assetIds) {
 // ─── Helpers internes ────────────────────────────────────────────────────
 
 function mapAssetToPhoto(asset) {
-  // Approximation grossière de la taille en Mo : 3 bytes par pixel (RGB) × dimensions / 1024^2
-  // Pour avoir la vraie taille fichier il faudrait expo-file-system getInfoAsync, trop coûteux ici.
-  const approxSizeMo = (asset.width * asset.height * 3) / (1024 * 1024);
+  // Estimation de la taille en Mo. On part de l'hypothèse JPEG / HEIC compressé.
+  // - JPEG qualité ~80 : ~0.5 byte/pixel en moyenne sur photos naturelles
+  // - HEIC (iOS récent) : ~0.3 byte/pixel
+  // On retient 0.4 byte/pixel comme moyenne raisonnable, ce qui donne ~5 Mo
+  // pour une photo 12MP — proche de la réalité (vs 36 Mo en non compressé).
+  // Pour la vraie taille fichier il faudrait expo-file-system par photo, ce qui
+  // ajouterait plusieurs secondes au chargement initial → on reste sur l'approximation.
+  const approxSizeMo = (asset.width * asset.height * 0.4) / (1024 * 1024);
 
   const date = new Date(asset.creationTime);
   const year = String(date.getFullYear());

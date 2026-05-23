@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Platform,
   StatusBar,
 } from "react-native";
+import * as NavigationBar from "expo-navigation-bar";
 
 import { C, S } from "../constants/theme";
 import { getPhotoAdvice, enhancePhoto } from "../services/aiService";
@@ -31,6 +32,20 @@ export function SwipeScreen({ navigation, route }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [advice, setAdvice] = useState(null);
   const [enhanced, setEnhanced] = useState(null);
+
+  // Sur Android : on cache la nav bar pendant le swipe pour une expérience immersive.
+  // "overlay-swipe" permet à l'utilisateur de la faire réapparaître en glissant depuis le bas.
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      NavigationBar.setVisibilityAsync("hidden").catch(() => {});
+      NavigationBar.setBehaviorAsync("overlay-swipe").catch(() => {});
+    }
+    return () => {
+      if (Platform.OS === "android") {
+        NavigationBar.setVisibilityAsync("visible").catch(() => {});
+      }
+    };
+  }, []);
 
   const pan = useRef(new Animated.ValueXY()).current;
 
@@ -79,6 +94,18 @@ export function SwipeScreen({ navigation, route }) {
 const swipe = (dir) => {
     if (!photo) return;
     setAiPanel(false); setAdvice(null); setEnhanced(null); setAiMode(null);
+
+    // Avant de modifier le store, on snapshot l'état actuel pour permettre l'undo.
+    const stateNow = usePhotoStore.getState();
+    setHistory((h) => [
+      ...h,
+      {
+        keptSnap:    stateNow.kept,
+        deletedSnap: stateNow.deleted,
+        printedSnap: stateNow.printed,
+      },
+    ]);
+
     const toX = dir === "left" ? -SW * 1.5 : dir === "right" ? SW * 1.5 : 0;
     const toY = dir === "up" ? -SH : 0;
     Animated.timing(pan, { toValue: { x: toX, y: toY }, duration: 300, useNativeDriver: false }).start(() => {

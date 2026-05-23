@@ -17,9 +17,10 @@ export const usePhotoStore = create(
 
       // ─── État de la photothèque (NON persisté — rechargé à chaque ouverture) ─
       permission:      "undetermined", // "undetermined" | "granted" | "denied"
-      libraryPhotos:   [],
-      libraryLoading:  false,
-      libraryError:    null,
+      libraryPhotos:     [],
+      libraryTotalCount: 0,            // total réel sur le téléphone (peut dépasser MAX_PHOTOS)
+      libraryLoading:    false,
+      libraryError:      null,
 
       // ─── Actions de tri ─────────────────────────────────────────────────
       addKept:    (photo) => set((state) => ({ kept:    [...state.kept,    photo] })),
@@ -110,8 +111,12 @@ export const usePhotoStore = create(
         if (permission !== "granted") return;
         set({ libraryLoading: true, libraryError: null });
         try {
-          const photos = await PhotoLibrary.loadPhotos();
-          set({ libraryPhotos: photos, libraryLoading: false });
+          const { photos, totalInLibrary } = await PhotoLibrary.loadPhotos();
+          set({
+            libraryPhotos:     photos,
+            libraryTotalCount: totalInLibrary,
+            libraryLoading:    false,
+          });
         } catch (err) {
           console.warn("loadLibrary failed:", err);
           set({ libraryError: String(err), libraryLoading: false });
