@@ -8,12 +8,23 @@ export const usePhotoStore = create(
   persist(
     subscribeWithSelector((set, get) => ({
       // ─── État du tri (persisté) ─────────────────────────────────────────
-      kept:    [],
-      deleted: [],
-      printed: [],
+      kept:    [], // "Photos coup de cœur" — favoris (additif, ne change pas la décision de tri)
+      deleted: [], // Corbeille (décision destructrice prioritaire — vide les autres piles)
+      printed: [], // À imprimer / album souvenirs
+      skipped: [], // Photos passées en revue mais sans décision — exclues de la file
+                   // jusqu'à la fin d'un tri complet (auto-reset au SummaryScreen)
       // Albums créés par l'utilisateur dans "Album souvenirs".
       // Format : [{ id, name, photoIds: [] }]
       albums:  [],
+
+      // Mapping des 4 directions de swipe vers une action. Customisable via Settings.
+      // Actions possibles : "skip" | "delete" | "album" | "favorite" | "none"
+      swipeMappings: {
+        up:    "skip",
+        down:  "delete",
+        left:  "none",
+        right: "album",
+      },
 
       // ─── État de la photothèque (NON persisté — rechargé à chaque ouverture) ─
       permission:      "undetermined", // "undetermined" | "granted" | "denied"
@@ -22,18 +33,71 @@ export const usePhotoStore = create(
       libraryLoading:    false,
       libraryError:      null,
 
-      // ─── Actions de tri ─────────────────────────────────────────────────
-      addKept:    (photo) => set((state) => ({ kept:    [...state.kept,    photo] })),
-      addDeleted: (photo) => set((state) => ({ deleted: [...state.deleted, photo] })),
-      addPrinted: (photo) => set((state) => ({ printed: [...state.printed, photo] })),
+      // ─── Actions de tri (idempotentes — pas de doublon si déjà présent) ──
+      // addKept = "coup de cœur" : additif. Retire juste de deleted si présente
+      // (incohérent d'avoir une favorite dans la corbeille).
+      addKept: (photo) => set((state) => {
+        if (state.kept.some((p) => p.id === photo.id)) return state;
+        return {
+          kept:    [...state.kept, photo],
+          deleted: state.deleted.filter((p) => p.id !== photo.id),
+        };
+      }),
 
-      undoLast: (keptSnap, deletedSnap, printedSnap) => set({
+      // addDeleted = corbeille : décision destructrice, vide kept + printed pour cette photo.
+      addDeleted: (photo) => set((state) => {
+        if (state.deleted.some((p) => p.id === photo.id)) return state;
+        return {
+          deleted: [...state.deleted, photo],
+          kept:    state.kept.filter((p) => p.id !== photo.id),
+          printed: state.printed.filter((p) => p.id !== photo.id),
+        };
+      }),
+
+      // addPrinted = album : retire de deleted (album = "garder").
+      addPrinted: (photo) => set((state) => {
+        if (state.printed.some((p) => p.id === photo.id)) return state;
+        return {
+          printed: [...state.printed, photo],
+          deleted: state.deleted.filter((p) => p.id !== photo.id),
+        };
+      }),
+
+      // addSkipped = "j'ai vu, je garde sur le téléphone sans tag". Additif, neutre.
+      addSkipped: (photo) => set((state) =>
+        state.skipped.some((p) => p.id === photo.id)
+          ? state
+          : { skipped: [...state.skipped, photo] }
+      ),
+
+      // Réinitialise la pile "skipped" — appelé automatiquement à la fin d'un tri complet
+      // (SummaryScreen). Permet aux photos passées de revenir dans la file la prochaine fois.
+      resetSkipped: () => set({ skipped: [] }),
+
+      // Modifie le mapping d'une direction de swipe (utilisé par Settings).
+      setSwipeMapping: (direction, action) => set((state) => ({
+        swipeMappings: { ...state.swipeMappings, [direction]: action },
+      })),
+
+      // Remet les mappings de swipe par défaut.
+      resetSwipeMappings: () => set({
+        swipeMappings: {
+          up:    "skip",
+          down:  "delete",
+          left:  "none",
+          right: "album",
+        },
+      }),
+
+      undoLast: (keptSnap, deletedSnap, printedSnap, skippedSnap) => set((state) => ({
         kept:    keptSnap,
         deleted: deletedSnap,
         printed: printedSnap,
-      }),
+        // skippedSnap est optionnel (rétrocompat avec snapshots pré-skip)
+        skipped: skippedSnap !== undefined ? skippedSnap : state.skipped,
+      })),
 
-      reset: () => set({ kept: [], deleted: [], printed: [], albums: [] }),
+      reset: () => set({ kept: [], deleted: [], printed: [], skipped: [], albums: [] }),
 
       // Retire une photo d'une section (kept/deleted/printed). Elle redevient
       // disponible pour le tri dans la file principale.
@@ -126,12 +190,15 @@ export const usePhotoStore = create(
     {
       name: "phototri-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      // On persiste UNIQUEMENT le tri + les albums — la photothèque est rechargée à chaque ouverture.
+      // On persiste UNIQUEMENT le tri + les albums + le mapping swipe.
+      // La photothèque est rechargée à chaque ouverture.
       partialize: (state) => ({
-        kept:    state.kept,
-        deleted: state.deleted,
-        printed: state.printed,
-        albums:  state.albums,
+        kept:           state.kept,
+        deleted:        state.deleted,
+        printed:        state.printed,
+        skipped:        state.skipped,
+        albums:         state.albums,
+        swipeMappings:  state.swipeMappings,
       }),
     }
   )

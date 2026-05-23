@@ -2,6 +2,7 @@
 // ─────────────────────────────────────────────
 // screens/SummaryScreen.js
 // ─────────────────────────────────────────────
+import { useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
@@ -10,10 +11,17 @@ import { usePhotoStore } from "../store/usePhotoStore";
 const { width: SW } = Dimensions.get("window");
 
 export function SummaryScreen({ navigation }) {
-  const kept    = usePhotoStore((state) => state.kept);
-  const deleted = usePhotoStore((state) => state.deleted);
-  const printed = usePhotoStore((state) => state.printed);
-  const deletedSize = deleted.reduce((a, p) => a + p.size, 0);
+  const kept         = usePhotoStore((state) => state.kept);
+  const deleted      = usePhotoStore((state) => state.deleted);
+  const printed      = usePhotoStore((state) => state.printed);
+  const resetSkipped = usePhotoStore((state) => state.resetSkipped);
+  const deletedSize  = deleted.reduce((a, p) => a + p.size, 0);
+
+  // Arrivée sur Summary = tri complet terminé → on libère les photos "skipped"
+  // pour qu'elles puissent réapparaître au prochain démarrage du tri.
+  useEffect(() => {
+    resetSkipped();
+  }, [resetSkipped]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
@@ -24,7 +32,7 @@ export function SummaryScreen({ navigation }) {
         <Text style={{ fontSize: 14, color: C.textMuted, textAlign: "center", marginBottom: 24 }}>Voici ton bilan</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
           {[
-            { label: "Conservées", val: kept.length,          color: C.green,  emoji: "❤️" },
+            { label: "Coups de cœur", val: kept.length,          color: C.green,  emoji: "❤️" },
             { label: "Supprimées", val: deleted.length,        color: C.red,    emoji: "🗑" },
             { label: "À imprimer", val: printed.length,        color: C.purple, emoji: "🖨" },
             { label: "Mo libérés", val: deletedSize.toFixed(1),color: C.yellow, emoji: "✨" },

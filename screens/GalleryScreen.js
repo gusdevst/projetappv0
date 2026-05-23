@@ -16,7 +16,7 @@ const { width: SW, height: SH } = Dimensions.get("window");
 
 // Mapping section (passé via route.params) → titre, couleur d'accent, et clé du store
 const SECTION_CONFIG = {
-  kept:    { title: "Photos conservées", accent: C.green,  storeKey: "kept",    showEmpty: false },
+  kept:    { title: "Photos coup de cœur", accent: C.green,  storeKey: "kept",    showEmpty: false },
   deleted: { title: "Corbeille",         accent: C.red,    storeKey: "deleted", showEmpty: true  },
   album:   { title: "Album souvenirs",   accent: C.purple, storeKey: "printed", showEmpty: false },
 };
@@ -225,7 +225,7 @@ export function GalleryScreen({ navigation, route }) {
                     onPress={() => handleRestore(selected.id)}
                     style={{ flex: 1, backgroundColor: "rgba(255,255,255,.2)", borderRadius: S.radius, padding: 14, alignItems: "center" }}
                   >
-                    <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>↩ Retirer des conservées</Text>
+                    <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>↩ Retirer des coups de cœur</Text>
                   </TouchableOpacity>
                 )}
                 {section === "album" && (

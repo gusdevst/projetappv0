@@ -32,7 +32,7 @@ const { width: SW, height: SH } = Dimensions.get("window");
 export function SwipeScreen({ navigation, route }) {
   const queue = route.params?.queue ?? [];
   const [idx, setIdx] = useState(0);
- const { addKept, addDeleted, addPrinted, undoLast, albums, createAlbum, addPhotoToAlbum } = usePhotoStore();
+ const { addKept, addDeleted, addPrinted, addSkipped, undoLast, albums, createAlbum, addPhotoToAlbum, swipeMappings } = usePhotoStore();
 
   const [history, setHistory] = useState([]);
   const [showTip, setShowTip] = useState(true);
@@ -48,6 +48,9 @@ export function SwipeScreen({ navigation, route }) {
   const [showAlbumPicker, setShowAlbumPicker] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
 
+  // Indicateur visuel : la photo courante a-t-elle été marquée "coup de cœur" ?
+  const [heartedThisPhoto, setHeartedThisPhoto] = useState(false);
+
   // Sur Android : on cache la nav bar pendant le swipe pour une expérience immersive.
   // "overlay-swipe" permet à l'utilisateur de la faire réapparaître en glissant depuis le bas.
   // Skip si NavigationBar est null (module pas dans le dev build).
@@ -62,6 +65,11 @@ export function SwipeScreen({ navigation, route }) {
       }
     };
   }, []);
+
+  // Reset l'état "hearted" à chaque nouvelle photo
+  useEffect(() => {
+    setHeartedThisPhoto(false);
+  }, [idx]);
 
   const pan = useRef(new Animated.ValueXY()).current;
 
@@ -92,26 +100,39 @@ export function SwipeScreen({ navigation, route }) {
     ),
 
     onPanResponderRelease: (_, g) => {
-      if (g.dx > 100) {
-        swipe("right");
-      } else if (g.dx < -100) {
-        swipe("left");
-      } else if (g.dy < -100) {
-        swipe("up");
+      // On choisit la direction dominante selon la valeur absolue la plus grande
+      const absX = Math.abs(g.dx);
+      const absY = Math.abs(g.dy);
+      const threshold = 100;
+
+      if (absX < threshold && absY < threshold) {
+        Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
+        return;
+      }
+
+      if (absX > absY) {
+        swipe(g.dx > 0 ? "right" : "left");
       } else {
-        Animated.spring(pan, {
-          toValue: { x: 0, y: 0 },
-          useNativeDriver: false,
-        }).start();
+        swipe(g.dy > 0 ? "down" : "up");
       }
     },
   });
 
-const swipe = (dir) => {
+// Exécute une action de tri qui FAIT AVANCER la file (skip, delete, album).
+  // Heart est séparé (handleHeartPress) car il n'avance pas.
+  // - actionKey : "skip" | "delete" | "album" | "favorite" | "none"
+  // - animDir   : "up" | "down" | "left" | "right" (sens de sortie visuelle)
+  const performAction = (actionKey, animDir) => {
     if (!photo) return;
     setAiPanel(false); setAdvice(null); setEnhanced(null); setAiMode(null);
 
-    // Avant de modifier le store, on snapshot l'état actuel pour permettre l'undo.
+    // "none" → rebond, aucune action
+    if (actionKey === "none") {
+      Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
+      return;
+    }
+
+    // Snapshot pour undo (inclut skipped)
     const stateNow = usePhotoStore.getState();
     setHistory((h) => [
       ...h,
@@ -119,19 +140,41 @@ const swipe = (dir) => {
         keptSnap:    stateNow.kept,
         deletedSnap: stateNow.deleted,
         printedSnap: stateNow.printed,
+        skippedSnap: stateNow.skipped,
       },
     ]);
 
-    const toX = dir === "left" ? -SW * 1.5 : dir === "right" ? SW * 1.5 : 0;
-    const toY = dir === "up" ? -SH : 0;
+    const toX = animDir === "left" ? -SW * 1.5 : animDir === "right" ? SW * 1.5 : 0;
+    const toY = animDir === "up" ? -SH : animDir === "down" ? SH : 0;
+
     Animated.timing(pan, { toValue: { x: toX, y: toY }, duration: 300, useNativeDriver: false }).start(() => {
-      if (dir === "right") addKept(photo);
-      if (dir === "left")  addDeleted(photo);
-      if (dir === "up")    addPrinted(photo);
+      if (actionKey === "delete")   addDeleted(photo);
+      if (actionKey === "album")    addPrinted(photo);
+      if (actionKey === "favorite") addKept(photo);
+      if (actionKey === "skip")     addSkipped(photo); // exclue de la file jusqu'au prochain Summary
+
       pan.setValue({ x: 0, y: 0 });
       if (idx >= queue.length - 1) navigation.navigate("Summary");
-      else setIdx(i => i + 1);
+      else setIdx((i) => i + 1);
     });
+  };
+
+  // Swipe gestuel : on lit la config utilisateur dans le store
+  const swipe = (dir) => {
+    const actionKey = swipeMappings?.[dir] || "none";
+    performAction(actionKey, dir);
+  };
+
+  // Boutons trash + album : font avancer la file comme avant
+  const handleTrashPress = () => performAction("delete", "down");
+  const handleAlbumPress = () => performAction("album", "right");
+
+  // Bouton ❤️ : DÉCOUPLÉ du swipe. N'avance pas, ne déclenche pas d'animation.
+  // Marque juste la photo comme favorite. L'utilisateur doit ensuite swiper.
+  const handleHeartPress = () => {
+    if (!photo) return;
+    addKept(photo); // idempotent (pas de doublon si re-tap)
+    setHeartedThisPhoto(true);
   };
 
 const undo = () => {
@@ -139,7 +182,7 @@ const undo = () => {
 
   const last = history[history.length - 1];
 
-  undoLast(last.keptSnap, last.deletedSnap, last.printedSnap);
+  undoLast(last.keptSnap, last.deletedSnap, last.printedSnap, last.skippedSnap);
 
   setHistory((h) => h.slice(0, -1));
   setIdx((i) => Math.max(0, i - 1));
@@ -348,7 +391,7 @@ const handleBack = () => {
         }}
       >
         <TouchableOpacity
-          onPress={() => swipe("left")}
+          onPress={handleTrashPress}
           style={{
             backgroundColor: "rgba(232,99,122,0.2)",
             borderWidth: 2,
@@ -380,7 +423,7 @@ const handleBack = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => swipe("up")}
+          onPress={handleAlbumPress}
           onLongPress={() => setShowAlbumPicker(true)}
           delayLongPress={350}
           style={{
@@ -397,17 +440,17 @@ const handleBack = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => swipe("right")}
+          onPress={handleHeartPress}
           style={{
-            backgroundColor: "rgba(92,184,122,0.2)",
+            backgroundColor: heartedThisPhoto ? "rgba(92,184,122,0.85)" : "rgba(92,184,122,0.2)",
             borderWidth: 2,
-            borderColor: "rgba(92,184,122,.5)",
+            borderColor: heartedThisPhoto ? "#5cb87a" : "rgba(92,184,122,.5)",
             borderRadius: S.radiusFull,
             padding: 18,
           }}
         >
           <Text style={{ fontSize: 22 }}>
-            ❤️
+            {heartedThisPhoto ? "❤️✓" : "❤️"}
           </Text>
         </TouchableOpacity>
       </View>

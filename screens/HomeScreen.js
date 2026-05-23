@@ -59,6 +59,7 @@ export function HomeScreen({ navigation }) {
   const kept              = usePhotoStore((state) => state.kept);
   const deleted           = usePhotoStore((state) => state.deleted);
   const printed           = usePhotoStore((state) => state.printed);
+  const skipped           = usePhotoStore((state) => state.skipped);
   const libraryPhotos     = usePhotoStore((state) => state.libraryPhotos);
   const libraryTotalCount = usePhotoStore((state) => state.libraryTotalCount);
   const libraryLoading    = usePhotoStore((state) => state.libraryLoading);
@@ -70,17 +71,18 @@ export function HomeScreen({ navigation }) {
   const deletedSize = deleted.reduce((a, p) => a + p.size, 0);
   const librarySize = libraryPhotos.reduce((a, p) => a + p.size, 0);
 
-  const triees = kept.length + deleted.length + printed.length;
-  const progressPct = libraryPhotos.length > 0
-    ? Math.min(100, (triees / libraryPhotos.length) * 100)
-    : 0;
-
-  // File des photos à trier = photothèque réelle, moins celles déjà triées, puis filtrée
+  // File des photos à trier = photothèque réelle, moins celles déjà traitées (kept/deleted/printed/skipped).
+  // On utilise un Set d'IDs pour dédupliquer (une photo peut être dans kept ET printed).
   const triedIds = new Set([
     ...kept.map((x) => x.id),
     ...deleted.map((x) => x.id),
     ...printed.map((x) => x.id),
+    ...skipped.map((x) => x.id),
   ]);
+  const triees = triedIds.size;
+  const progressPct = libraryPhotos.length > 0
+    ? Math.min(100, (triees / libraryPhotos.length) * 100)
+    : 0;
   const remaining = libraryPhotos.filter((p) => !triedIds.has(p.id));
   const queue = applyFilter(remaining, activeFilter);
 
@@ -454,7 +456,7 @@ export function HomeScreen({ navigation }) {
 {[
   { key: "deleted", emoji: "🗑",  label: "Corbeille",        desc: `${deleted.length} photos · ${deletedSize.toFixed(1)} Mo`, bg: "#ffe8e8" },
   { key: "album",   emoji: "📷", label: "Album souvenirs",   desc: `${printed.length} photos à imprimer`, bg: "#f0e8ff" },
-  { key: "kept",    emoji: "❤️", label: "Photos conservées", desc: `${kept.length} photos gardées`, bg: "#e8f8ee" },
+  { key: "kept",    emoji: "❤️", label: "Photos coup de cœur", desc: `${kept.length} photos favorites`, bg: "#e8f8ee" },
 ].map(s => (
   <TouchableOpacity key={s.key} onPress={() => navigation.navigate("Gallery", { section: s.key })} style={{ backgroundColor: C.bgCard, borderRadius: S.radius, padding: 16, borderWidth: 1, borderColor: C.border, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 }}>
     <View style={{ width: 44, height: 44, backgroundColor: s.bg, borderRadius: 14, alignItems: "center", justifyContent: "center" }}>
