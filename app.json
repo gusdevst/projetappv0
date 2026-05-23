@@ -48,7 +48,8 @@
           "savePhotosPermission": "Phototri a besoin d'enregistrer des photos dans ta photothèque.",
           "isAccessMediaLocationEnabled": true
         }
-      ]
+      ],
+      "expo-tracking-transparency"
     ],
     "extra": {
       "eas": {
