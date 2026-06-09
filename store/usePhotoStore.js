@@ -8,11 +8,11 @@ export const usePhotoStore = create(
   persist(
     subscribeWithSelector((set, get) => ({
       // ─── État du tri (persisté) ─────────────────────────────────────────
-      kept:    [], // "Photos coup de cœur" — favoris (additif, ne change pas la décision de tri)
-      deleted: [], // Corbeille (décision destructrice prioritaire — vide les autres piles)
-      printed: [], // À imprimer / album souvenirs
-      skipped: [], // Photos passées en revue mais sans décision — exclues de la file
-                   // jusqu'à la fin d'un tri complet (auto-reset au SummaryScreen)
+      kept:      [], // "Photos coup de cœur" — favoris
+      deleted:   [], // Corbeille (décision destructrice prioritaire — vide les autres piles)
+      printed:   [], // À imprimer / album souvenirs
+      skipped:   [], // Photos passées sans décision — exclues jusqu'à la fin du tri
+      hesitated: [], // "Je déciderai plus tard" — l'user hésite entre garder et supprimer
       // Albums créés par l'utilisateur dans "Album souvenirs".
       // Format : [{ id, name, photoIds: [] }]
       albums:  [],
@@ -22,9 +22,13 @@ export const usePhotoStore = create(
       swipeMappings: {
         up:    "skip",
         down:  "delete",
-        left:  "none",
+        left:  "hesitate",
         right: "album",
       },
+
+      // Fréquence des rappels push. Persistée.
+      // "off" | "daily" | "every2days" | "weekly"
+      notificationFrequency: "off",
 
       // ─── État de la photothèque (NON persisté — rechargé à chaque ouverture) ─
       permission:      "undetermined", // "undetermined" | "granted" | "denied"
@@ -70,6 +74,20 @@ export const usePhotoStore = create(
           : { skipped: [...state.skipped, photo] }
       ),
 
+      // addHesitated = "je déciderai plus tard". L'user n'est pas prêt à choisir.
+      // Retire la photo de deleted/kept si elle y était (décision suspendue).
+      addHesitated: (photo) => set((state) => {
+        if (state.hesitated.some((p) => p.id === photo.id)) return state;
+        return {
+          hesitated: [...state.hesitated, photo],
+          deleted:   state.deleted.filter((p) => p.id !== photo.id),
+          kept:      state.kept.filter((p) => p.id !== photo.id),
+        };
+      }),
+
+      // Réinitialise la pile hesitated (appelé quand l'user relance un tri sur ces photos)
+      resetHesitated: () => set({ hesitated: [] }),
+
       // Réinitialise la pile "skipped" — appelé automatiquement à la fin d'un tri complet
       // (SummaryScreen). Permet aux photos passées de revenir dans la file la prochaine fois.
       resetSkipped: () => set({ skipped: [] }),
@@ -79,25 +97,28 @@ export const usePhotoStore = create(
         swipeMappings: { ...state.swipeMappings, [direction]: action },
       })),
 
+      // Modifie la fréquence des rappels (utilisé par Settings).
+      setNotificationFrequency: (freq) => set({ notificationFrequency: freq }),
+
       // Remet les mappings de swipe par défaut.
       resetSwipeMappings: () => set({
         swipeMappings: {
           up:    "skip",
           down:  "delete",
-          left:  "none",
+          left:  "hesitate",
           right: "album",
         },
       }),
 
-      undoLast: (keptSnap, deletedSnap, printedSnap, skippedSnap) => set((state) => ({
-        kept:    keptSnap,
-        deleted: deletedSnap,
-        printed: printedSnap,
-        // skippedSnap est optionnel (rétrocompat avec snapshots pré-skip)
-        skipped: skippedSnap !== undefined ? skippedSnap : state.skipped,
+      undoLast: (keptSnap, deletedSnap, printedSnap, skippedSnap, hesitatedSnap) => set((state) => ({
+        kept:      keptSnap,
+        deleted:   deletedSnap,
+        printed:   printedSnap,
+        skipped:   skippedSnap   !== undefined ? skippedSnap   : state.skipped,
+        hesitated: hesitatedSnap !== undefined ? hesitatedSnap : state.hesitated,
       })),
 
-      reset: () => set({ kept: [], deleted: [], printed: [], skipped: [], albums: [] }),
+      reset: () => set({ kept: [], deleted: [], printed: [], skipped: [], hesitated: [], albums: [] }),
 
       // Retire une photo d'une section (kept/deleted/printed). Elle redevient
       // disponible pour le tri dans la file principale.
@@ -193,12 +214,14 @@ export const usePhotoStore = create(
       // On persiste UNIQUEMENT le tri + les albums + le mapping swipe.
       // La photothèque est rechargée à chaque ouverture.
       partialize: (state) => ({
-        kept:           state.kept,
-        deleted:        state.deleted,
-        printed:        state.printed,
-        skipped:        state.skipped,
-        albums:         state.albums,
-        swipeMappings:  state.swipeMappings,
+        kept:                    state.kept,
+        deleted:                 state.deleted,
+        printed:                 state.printed,
+        skipped:                 state.skipped,
+        hesitated:               state.hesitated,
+        albums:                  state.albums,
+        swipeMappings:           state.swipeMappings,
+        notificationFrequency:   state.notificationFrequency,
       }),
     }
   )

@@ -7,6 +7,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -199,66 +200,6 @@ export function HomeScreen({ navigation }) {
           </Text>
         )}
 
-        {/* Avancement global du tri */}
-        {libraryPhotos.length > 0 && (
-          <View
-            style={{
-              backgroundColor: C.bgCard,
-              borderRadius: 20,
-              padding: 16,
-              borderWidth: 1,
-              borderColor: C.border,
-              marginBottom: 14,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 10,
-              }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: "800", color: C.text }}>
-                {progressPct >= 100 ? "🎉 Bravo, tout est trié !" : "Avancement du tri"}
-              </Text>
-              <Text style={{ fontSize: 14, fontWeight: "900", color: C.accent }}>
-                {Math.round(progressPct)}%
-              </Text>
-            </View>
-
-            <View
-              style={{
-                height: 8,
-                backgroundColor: C.border,
-                borderRadius: 4,
-                overflow: "hidden",
-              }}
-            >
-              <View
-                style={{
-                  height: 8,
-                  width: `${progressPct}%`,
-                  backgroundColor: C.accent,
-                  borderRadius: 4,
-                }}
-              />
-            </View>
-
-            <Text
-              style={{
-                fontSize: 11,
-                color: C.textMuted,
-                marginTop: 8,
-              }}
-            >
-              {triees} sur {libraryPhotos.length} photos triées
-              {libraryTotalCount > libraryPhotos.length &&
-                ` · ${libraryTotalCount - libraryPhotos.length} non chargées`}
-            </Text>
-          </View>
-        )}
-
         {/* Filtres */}
         <ScrollView
           horizontal
@@ -308,149 +249,167 @@ export function HomeScreen({ navigation }) {
           </View>
         </ScrollView>
 
-        {/* Tri (par visage / par lieu / doublons) */}
+        {/* Tri par dimension (grille 2×2) */}
         <View
           style={{
             flexDirection: "row",
-            gap: 10,
+            flexWrap: "wrap",
+            marginHorizontal: -5,
             marginBottom: 14,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Moments")}
-            style={{
-              flex: 1,
-              backgroundColor: C.bgCard,
-              borderRadius: 20,
-              padding: 14,
-              borderWidth: 1,
-              borderColor: C.border,
-            }}
-          >
-            <Text style={{ fontSize: 22, marginBottom: 6 }}>📅</Text>
-            <Text style={{ fontWeight: "700", fontSize: 13, color: C.text }}>
-              Par moment
-            </Text>
-            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-              Soirée, voyage…
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Map")}
-            style={{
-              flex: 1,
-              backgroundColor: C.bgCard,
-              borderRadius: 20,
-              padding: 14,
-              borderWidth: 1,
-              borderColor: C.border,
-            }}
-          >
-            <Text style={{ fontSize: 22, marginBottom: 6 }}>🗺</Text>
-            <Text style={{ fontWeight: "700", fontSize: 13, color: C.text }}>
-              Par lieu
-            </Text>
-            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-              Carte interactive
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Duplicates")}
-            style={{
-              flex: 1,
-              backgroundColor: C.bgCard,
-              borderRadius: 20,
-              padding: 14,
-              borderWidth: 1,
-              borderColor: C.border,
-            }}
-          >
-            <Text style={{ fontSize: 22, marginBottom: 6 }}>🪞</Text>
-            <Text style={{ fontWeight: "700", fontSize: 13, color: C.text }}>
-              Doublons
-            </Text>
-            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-              Photos similaires
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Stats */}
-        <View
-          style={{
-            backgroundColor: C.bgCard,
-            borderRadius: 20,
-            padding: 16,
-            borderWidth: 1,
-            borderColor: C.border,
-            marginBottom: 14,
-            flexDirection: "row",
           }}
         >
           {[
             {
-              label: "Photos",
-              val: libraryPhotos.length,
-              subval: formatSize(librarySize),
-              color: C.accent,
+              emoji: "📅",
+              label: "Par moment",
+              desc: "Soirée, voyage…",
+              onPress: () => navigation.navigate("Moments"),
             },
             {
-              label: "Triées",
-              val: triees,
-              color: C.green,
+              emoji: "🗺",
+              label: "Par lieu",
+              desc: "Carte interactive",
+              onPress: () => navigation.navigate("Map"),
             },
             {
-              label: "À libérer",
-              val: formatSize(deletedSize),
-              color: C.red,
+              emoji: "👤",
+              label: "Par visage",
+              desc: "Reconnaissance auto",
+              onPress: () =>
+                Alert.alert(
+                  "Bientôt disponible",
+                  "La reconnaissance des visages arrive prochainement 🌸 — elle demande un modèle de détection qu'on est en train de mettre en place."
+                ),
             },
-          ].map((s, i) => (
-            <View
-              key={s.label}
-              style={{
-                flex: 1,
-                alignItems: "center",
-                borderLeftWidth: i > 0 ? 1 : 0,
-                borderLeftColor: C.border,
-              }}
-            >
-              <Text
+            {
+              emoji: "🪞",
+              label: "Doublons",
+              desc: "Photos similaires",
+              onPress: () => navigation.navigate("Duplicates"),
+            },
+          ].map((t) => (
+            <View key={t.label} style={{ width: "50%", padding: 5 }}>
+              <TouchableOpacity
+                onPress={t.onPress}
                 style={{
-                  fontSize: 22,
-                  fontWeight: "800",
-                  color: s.color,
+                  backgroundColor: C.bgCard,
+                  borderRadius: 18,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: C.border,
                 }}
               >
-                {s.val}
-              </Text>
-
-              {s.subval && (
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: "700",
-                    color: s.color,
-                    opacity: 0.75,
-                    marginTop: 1,
-                  }}
-                >
-                  {s.subval}
+                <Text style={{ fontSize: 22, marginBottom: 6 }}>{t.emoji}</Text>
+                <Text style={{ fontWeight: "700", fontSize: 13, color: C.text }}>
+                  {t.label}
                 </Text>
-              )}
-
-              <Text
-                style={{
-                  fontSize: 11,
-                  color: C.textMuted,
-                  marginTop: 2,
-                }}
-              >
-                {s.label}
-              </Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                  {t.desc}
+                </Text>
+              </TouchableOpacity>
             </View>
           ))}
+        </View>
+
+        {/* Stats compactes + Avancement (regroupés visuellement) */}
+        <View
+          style={{
+            backgroundColor: C.bgCard,
+            borderRadius: 16,
+            padding: 12,
+            borderWidth: 1,
+            borderColor: C.border,
+            marginBottom: 14,
+          }}
+        >
+          {/* Ligne de stats compacte */}
+          <View style={{ flexDirection: "row" }}>
+            {[
+              {
+                label: "Photos",
+                val: libraryPhotos.length,
+                subval: formatSize(librarySize),
+                color: C.accent,
+              },
+              {
+                label: "Triées",
+                val: triees,
+                color: C.green,
+              },
+              {
+                label: "À libérer",
+                val: formatSize(deletedSize),
+                color: C.red,
+              },
+            ].map((s, i) => (
+              <View
+                key={s.label}
+                style={{
+                  flex: 1,
+                  alignItems: "center",
+                  borderLeftWidth: i > 0 ? 1 : 0,
+                  borderLeftColor: C.border,
+                }}
+              >
+                <Text style={{ fontSize: 17, fontWeight: "800", color: s.color }}>
+                  {s.val}
+                </Text>
+                {s.subval && (
+                  <Text style={{ fontSize: 9, fontWeight: "700", color: s.color, opacity: 0.7, marginTop: 1 }}>
+                    {s.subval}
+                  </Text>
+                )}
+                <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
+                  {s.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Avancement — collé aux stats, séparé par une fine ligne */}
+          {libraryPhotos.length > 0 && (
+            <View
+              style={{
+                marginTop: 12,
+                paddingTop: 12,
+                borderTopWidth: 1,
+                borderTopColor: C.border,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 6,
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted }}>
+                  {progressPct >= 100 ? "🎉 Tout est trié !" : "Avancement du tri"}
+                </Text>
+                <Text style={{ fontSize: 13, fontWeight: "900", color: C.accent }}>
+                  {Math.round(progressPct)}%
+                </Text>
+              </View>
+
+              <View style={{ height: 6, backgroundColor: C.border, borderRadius: 3, overflow: "hidden" }}>
+                <View
+                  style={{
+                    height: 6,
+                    width: `${progressPct}%`,
+                    backgroundColor: C.accent,
+                    borderRadius: 3,
+                  }}
+                />
+              </View>
+
+              <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 5 }}>
+                {triees} sur {libraryPhotos.length} photos triées
+                {libraryTotalCount > libraryPhotos.length &&
+                  ` · ${libraryTotalCount - libraryPhotos.length} non chargées`}
+              </Text>
+            </View>
+          )}
         </View>
 {/* Sections */}
 {[

@@ -2,10 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   Animated,
-  PanResponder,
   ActivityIndicator,
   Dimensions,
   Platform,
@@ -15,14 +13,12 @@ import {
   ScrollView,
 } from "react-native";
 
-// Import défensif : si le module natif n'est pas dans le dev build (build pré-installation),
-// on continue sans planter. Une fois le dev build rebuild, la fonctionnalité s'active toute seule.
+// Import défensif : si le module natif n'est pas dans le dev build,
+// on continue sans planter. Une fois le dev build rebuild, ça s'active.
 let NavigationBar = null;
 try {
   NavigationBar = require("expo-navigation-bar");
-} catch (e) {
-  // Module absent du build natif — on tournera sans nav bar hiding
-}
+} catch (e) {}
 
 import { LinearGradient } from "expo-linear-gradient";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -40,43 +36,45 @@ function getEdgeContainerStyle(edge) {
   return null;
 }
 function getEdgeGradient(edge, color) {
-  // Couleur pleine côté edge, transparente vers l'intérieur
   if (edge === "up")    return { colors: [color, "transparent"], start: { x: 0, y: 0 }, end: { x: 0, y: 1 } };
   if (edge === "down")  return { colors: ["transparent", color], start: { x: 0, y: 0 }, end: { x: 0, y: 1 } };
   if (edge === "left")  return { colors: [color, "transparent"], start: { x: 0, y: 0 }, end: { x: 1, y: 0 } };
   if (edge === "right") return { colors: ["transparent", color], start: { x: 0, y: 0 }, end: { x: 1, y: 0 } };
   return { colors: ["transparent", "transparent"] };
 }
+
 const { width: SW, height: SH } = Dimensions.get("window");
 
 export function SwipeScreen({ navigation, route }) {
   const queue = route.params?.queue ?? [];
   const [idx, setIdx] = useState(0);
- const { addKept, addDeleted, addPrinted, addSkipped, undoLast, albums, createAlbum, addPhotoToAlbum, swipeMappings } = usePhotoStore();
+  const { addKept, addDeleted, addPrinted, addSkipped, addHesitated, undoLast, albums, createAlbum, addPhotoToAlbum, swipeMappings } = usePhotoStore();
 
   const [history, setHistory] = useState([]);
   const [showTip, setShowTip] = useState(true);
 
   const [aiPanel, setAiPanel] = useState(false);
   const [aiMode, setAiMode] = useState(null);
-
   const [aiLoading, setAiLoading] = useState(false);
   const [advice, setAdvice] = useState(null);
   const [enhanced, setEnhanced] = useState(null);
 
-  // Picker d'album déclenché par appui long sur l'icône 🖨 (album souvenirs)
+  // Picker d'album déclenché par appui long sur 🖨
   const [showAlbumPicker, setShowAlbumPicker] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
 
   // Indicateur visuel : la photo courante a-t-elle été marquée "coup de cœur" ?
   const [heartedThisPhoto, setHeartedThisPhoto] = useState(false);
 
-  // Modal zoom plein-écran (déclenché par le bouton 🔍)
-  const [showZoom, setShowZoom] = useState(false);
+  // Ref vers ZoomableImage pour déclencher les fly-off depuis les boutons
+  const zoomableRef = useRef(null);
 
-  // Sur Android : on cache la nav bar pendant le swipe pour une expérience immersive.
-  // "overlay-swipe" permet à l'utilisateur de la faire réapparaître en glissant depuis le bas.
-  // Skip si NavigationBar est null (module pas dans le dev build).
+  // Halo de feedback
+  const feedbackOpacity = useRef(new Animated.Value(0)).current;
+  const [feedbackColor, setFeedbackColor] = useState("rgba(232,99,122,0.7)");
+  const [feedbackEdge, setFeedbackEdge]   = useState(null);
+
+  // Cache la nav bar Android pendant le swipe (expérience immersive)
   useEffect(() => {
     if (Platform.OS === "android" && NavigationBar) {
       NavigationBar.setVisibilityAsync("hidden").catch(() => {});
@@ -89,23 +87,10 @@ export function SwipeScreen({ navigation, route }) {
     };
   }, []);
 
-  // Reset l'état "hearted" à chaque nouvelle photo
+  // Reset "hearted" à chaque nouvelle photo
   useEffect(() => {
     setHeartedThisPhoto(false);
   }, [idx]);
-
-  const pan = useRef(new Animated.ValueXY()).current;
-
-  const rotate = pan.x.interpolate({
-    inputRange: [-SW / 2, 0, SW / 2],
-    outputRange: ["-15deg", "0deg", "15deg"],
-  });
-
-  // Halo de feedback action — dégradé coloré sur l'edge correspondant à la direction du swipe.
-  // L'edge suit animDir (haut/bas/gauche/droite), la couleur suit l'action (rouge=delete, vert=skip).
-  const feedbackOpacity = useRef(new Animated.Value(0)).current;
-  const [feedbackColor, setFeedbackColor] = useState("rgba(232,99,122,0.7)");
-  const [feedbackEdge, setFeedbackEdge]   = useState(null);
 
   const flashFeedback = (color, edge) => {
     setFeedbackColor(color);
@@ -122,188 +107,126 @@ export function SwipeScreen({ navigation, route }) {
     ? queue.filter(
         (p) =>
           p.id !== photo.id &&
-          (
-            p.year === photo.year ||
-            p.faces?.some((f) => photo.faces?.includes(f))
-          )
+          (p.year === photo.year || p.faces?.some((f) => photo.faces?.includes(f)))
       )
     : [];
 
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-
-    onPanResponderMove: Animated.event(
-      [null, { dx: pan.x, dy: pan.y }],
-      { useNativeDriver: false }
-    ),
-
-    onPanResponderRelease: (_, g) => {
-      // On choisit la direction dominante selon la valeur absolue la plus grande
-      const absX = Math.abs(g.dx);
-      const absY = Math.abs(g.dy);
-      const threshold = 100;
-
-      if (absX < threshold && absY < threshold) {
-        Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
-        return;
-      }
-
-      if (absX > absY) {
-        swipe(g.dx > 0 ? "right" : "left");
-      } else {
-        swipe(g.dy > 0 ? "down" : "up");
-      }
-    },
-  });
-
-// Exécute une action de tri qui FAIT AVANCER la file (skip, delete, album).
-  // Heart est séparé (handleHeartPress) car il n'avance pas.
-  // - actionKey : "skip" | "delete" | "album" | "favorite" | "none"
-  // - animDir   : "up" | "down" | "left" | "right" (sens de sortie visuelle)
+  // ── Actions de tri ─────────────────────────────────────────────────────────
+  // Appelé APRÈS l'animation fly-off de ZoomableImage (ou depuis les boutons
+  // via flyOff()). Ne gère plus d'animation — ZoomableImage s'en charge.
   const performAction = (actionKey, animDir) => {
     if (!photo) return;
     setAiPanel(false); setAdvice(null); setEnhanced(null); setAiMode(null);
 
-    // "none" → rebond, aucune action
-    if (actionKey === "none") {
-      Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
-      return;
-    }
+    if (actionKey === "none") return;
 
-    // Snapshot pour undo (inclut skipped)
+    // Snapshot pour undo
     const stateNow = usePhotoStore.getState();
     setHistory((h) => [
       ...h,
       {
-        keptSnap:    stateNow.kept,
-        deletedSnap: stateNow.deleted,
-        printedSnap: stateNow.printed,
-        skippedSnap: stateNow.skipped,
+        keptSnap:      stateNow.kept,
+        deletedSnap:   stateNow.deleted,
+        printedSnap:   stateNow.printed,
+        skippedSnap:   stateNow.skipped,
+        hesitatedSnap: stateNow.hesitated,
       },
     ]);
 
-    // Halo de feedback : couleur = action, edge = direction du swipe (adaptatif si l'utilisateur
-    // remappe une direction dans Settings — ex. swipe droite = delete → halo rouge à droite).
-    if (actionKey === "delete") flashFeedback("rgba(232,99,122,0.7)", animDir); // rouge
-    if (actionKey === "skip")   flashFeedback("rgba(92,184,122,0.7)", animDir); // vert
+    // Halo de feedback coloré sur l'edge du swipe
+    if (actionKey === "delete")   flashFeedback("rgba(232,99,122,0.7)",  animDir); // rouge
+    if (actionKey === "skip")     flashFeedback("rgba(92,184,122,0.7)",  animDir); // vert
+    if (actionKey === "hesitate") flashFeedback("rgba(255,165,0,0.65)",  animDir); // orange
 
-    const toX = animDir === "left" ? -SW * 1.5 : animDir === "right" ? SW * 1.5 : 0;
-    const toY = animDir === "up" ? -SH : animDir === "down" ? SH : 0;
+    if (actionKey === "delete")   addDeleted(photo);
+    if (actionKey === "album")    addPrinted(photo);
+    if (actionKey === "favorite") addKept(photo);
+    if (actionKey === "skip")     addSkipped(photo);
+    if (actionKey === "hesitate") addHesitated(photo);
 
-    Animated.timing(pan, { toValue: { x: toX, y: toY }, duration: 300, useNativeDriver: false }).start(() => {
-      if (actionKey === "delete")   addDeleted(photo);
-      if (actionKey === "album")    addPrinted(photo);
-      if (actionKey === "favorite") addKept(photo);
-      if (actionKey === "skip")     addSkipped(photo); // exclue de la file jusqu'au prochain Summary
-
-      pan.setValue({ x: 0, y: 0 });
-      if (idx >= queue.length - 1) navigation.navigate("Summary");
-      else setIdx((i) => i + 1);
-    });
+    if (idx >= queue.length - 1) navigation.navigate("Summary");
+    else setIdx((i) => i + 1);
   };
 
-  // Swipe gestuel : on lit la config utilisateur dans le store
+  // Swipe gestuel : lit la config utilisateur dans le store
   const swipe = (dir) => {
     const actionKey = swipeMappings?.[dir] || "none";
     performAction(actionKey, dir);
   };
 
-  // Boutons trash + album : font avancer la file comme avant
-  const handleTrashPress = () => performAction("delete", "down");
-  const handleAlbumPress = () => performAction("album", "right");
+  // Boutons trash + album : déclenchent le fly-off via la ref, puis l'action
+  const handleTrashPress = () => {
+    zoomableRef.current?.flyOff("down", () => performAction("delete", "down"));
+  };
+  const handleAlbumPress = () => {
+    zoomableRef.current?.flyOff("right", () => performAction("album", "right"));
+  };
 
-  // Bouton ❤️ : DÉCOUPLÉ du swipe. N'avance pas, ne déclenche pas d'animation.
-  // Marque juste la photo comme favorite. L'utilisateur doit ensuite swiper.
+  // Bouton ❤️ : n'avance pas la file, marque juste la photo
   const handleHeartPress = () => {
     if (!photo) return;
-    addKept(photo); // idempotent (pas de doublon si re-tap)
+    addKept(photo);
     setHeartedThisPhoto(true);
   };
 
-const undo = () => {
-  if (!history.length) return;
-
-  const last = history[history.length - 1];
-
-  undoLast(last.keptSnap, last.deletedSnap, last.printedSnap, last.skippedSnap);
-
-  setHistory((h) => h.slice(0, -1));
-  setIdx((i) => Math.max(0, i - 1));
-};
+  const undo = () => {
+    if (!history.length) return;
+    const last = history[history.length - 1];
+    undoLast(last.keptSnap, last.deletedSnap, last.printedSnap, last.skippedSnap, last.hesitatedSnap);
+    setHistory((h) => h.slice(0, -1));
+    setIdx((i) => Math.max(0, i - 1));
+  };
 
   const doAdvice = async () => {
     setAiLoading(true);
-
     setAiMode("advice");
     setAdvice(null);
-
-    const result = await getPhotoAdvice(
-      photo,
-      similarPhotos.length
-    );
-
+    const result = await getPhotoAdvice(photo, similarPhotos.length);
     setAdvice(result);
-
     setAiLoading(false);
   };
 
   const doEnhance = async () => {
     setAiLoading(true);
-
     setAiMode("enhance");
     setEnhanced(null);
-
     const result = await enhancePhoto(photo);
-
     setEnhanced(result);
-
     setAiLoading(false);
   };
 
-  // Ajoute la photo courante à un album existant, puis déclenche le swipe vers le haut
-  // (= ajout à "printed" + passage à la photo suivante).
   const handlePickAlbum = (albumId) => {
     if (!photo) return;
     addPhotoToAlbum(albumId, photo.id);
     setShowAlbumPicker(false);
     setNewAlbumName("");
-    swipe("up");
+    zoomableRef.current?.flyOff("right", () => swipe("up"));
   };
 
-  // Crée un nouvel album avec la photo courante dedans, puis swipe up.
   const handleCreateAndAdd = () => {
     if (!photo) return;
     const trimmed = newAlbumName.trim();
     if (!trimmed) return;
     createAlbum(trimmed);
-    // createAlbum push en fin de tableau — on récupère l'id du dernier album créé.
     const fresh = usePhotoStore.getState().albums;
     const newAlbumId = fresh[fresh.length - 1]?.id;
     if (newAlbumId) addPhotoToAlbum(newAlbumId, photo.id);
     setShowAlbumPicker(false);
     setNewAlbumName("");
-    swipe("up");
+    zoomableRef.current?.flyOff("right", () => swipe("up"));
   };
 
-  if (!photo) {
-    return null;
-  }
+  if (!photo) return null;
 
-  const pct = Math.round(
-    (idx / queue.length) * 100
-  );
-const handleBack = () => {
-  navigation.goBack();
-};
+  const pct = Math.round((idx / queue.length) * 100);
+
+  const handleBack = () => navigation.goBack();
+
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle="light-content"
-      />
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      {/* Halo de feedback action — dégradé sur l'edge correspondant à la direction du swipe */}
+      {/* Halo de feedback action */}
       {feedbackEdge && (
         <Animated.View
           pointerEvents="none"
@@ -319,39 +242,25 @@ const handleBack = () => {
         </Animated.View>
       )}
 
-      {/* Barre progression */}
+      {/* Barre de progression */}
       <View
         style={{
           position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 3,
-          zIndex: 20,
+          top: 0, left: 0, right: 0,
+          height: 3, zIndex: 20,
           backgroundColor: "#333",
         }}
       >
-        <View
-          style={{
-            height: 3,
-            width: `${pct}%`,
-            backgroundColor: C.accent,
-          }}
-        />
+        <View style={{ height: 3, width: `${pct}%`, backgroundColor: C.accent }} />
       </View>
 
       {/* Header */}
       <View
         style={{
           position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
+          top: 0, left: 0, right: 0,
           zIndex: 15,
-          paddingTop:
-            Platform.OS === "android"
-              ? StatusBar.currentHeight + 8
-              : 52,
+          paddingTop: Platform.OS === "android" ? StatusBar.currentHeight + 8 : 52,
         }}
       >
         <View
@@ -372,88 +281,50 @@ const handleBack = () => {
               paddingVertical: 8,
             }}
           >
-            <Text
-              style={{
-                color: "#fff",
-                fontWeight: "700",
-                fontSize: 13,
-              }}
-            >
-              ← Retour
-            </Text>
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>← Retour</Text>
           </TouchableOpacity>
 
           <View style={{ alignItems: "center" }}>
-            <Text
-              style={{
-                color: "#fff",
-                fontWeight: "700",
-                fontSize: 13,
-              }}
-            >
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
               {photo.location}
             </Text>
-
-            <Text
-              style={{
-                color: "rgba(255,255,255,.6)",
-                fontSize: 11,
-              }}
-            >
+            <Text style={{ color: "rgba(255,255,255,.6)", fontSize: 11 }}>
               {photo.year}
             </Text>
           </View>
 
-          {/* Bouton zoom : ouvre la photo en plein-écran zoomable */}
-          <TouchableOpacity
-            onPress={() => setShowZoom(true)}
+          {/* Compteur photo à la place de la loupe */}
+          <View
             style={{
-              width: 56,
-              height: 36,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
               backgroundColor: "rgba(255,255,255,0.2)",
               borderRadius: S.radiusFull,
-              alignItems: "center",
-              justifyContent: "center",
             }}
           >
-            <Text style={{ fontSize: 16 }}>🔍</Text>
-          </TouchableOpacity>
+            <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>
+              {idx + 1} / {queue.length}
+            </Text>
+          </View>
         </View>
       </View>
 
-      {/* Image swipe */}
-      <Animated.View
-        {...panResponder.panHandlers}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          transform: [
-            { translateX: pan.x },
-            { translateY: pan.y },
-            { rotate },
-          ],
-        }}
-      >
-        <Image
-          source={{ uri: photo.url }}
-          style={{
-            width: "100%",
-            height: "100%",
-          }}
-          resizeMode="cover"
-        />
-      </Animated.View>
+      {/* ── Photo principale — pinch pour zoomer, swipe pour trier ── */}
+      <ZoomableImage
+        ref={zoomableRef}
+        uri={photo.url}
+        onSwipeLeft={() => swipe("left")}
+        onSwipeRight={() => swipe("right")}
+        onSwipeUp={() => swipe("up")}
+        onSwipeDown={() => swipe("down")}
+      />
 
-      {/* Boutons */}
+      {/* Boutons d'action */}
       <View
         style={{
           position: "absolute",
           bottom: 32,
-          left: 0,
-          right: 0,
+          left: 0, right: 0,
           flexDirection: "row",
           justifyContent: "center",
           alignItems: "center",
@@ -471,9 +342,7 @@ const handleBack = () => {
             padding: 18,
           }}
         >
-          <Text style={{ fontSize: 22 }}>
-            🗑
-          </Text>
+          <Text style={{ fontSize: 22 }}>🗑</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -492,9 +361,7 @@ const handleBack = () => {
             elevation: 6,
           }}
         >
-          <Text style={{ fontSize: 20, color: "#222", fontWeight: "800" }}>
-            ↩
-          </Text>
+          <Text style={{ fontSize: 20, color: "#222", fontWeight: "800" }}>↩</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -509,9 +376,7 @@ const handleBack = () => {
             padding: 18,
           }}
         >
-          <Text style={{ fontSize: 22 }}>
-            🖨
-          </Text>
+          <Text style={{ fontSize: 22 }}>🖨</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -524,46 +389,11 @@ const handleBack = () => {
             padding: 18,
           }}
         >
-          <Text style={{ fontSize: 22 }}>
-            {heartedThisPhoto ? "❤️✓" : "❤️"}
-          </Text>
+          <Text style={{ fontSize: 22 }}>{heartedThisPhoto ? "❤️✓" : "❤️"}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Modal zoom plein-écran (pinch + pan + double-tap)
-          IMPORTANT : le contenu d'un Modal RN est dans un arbre natif séparé, donc
-          le GestureHandlerRootView de App.js ne le couvre pas. On en rajoute un ici. */}
-      <Modal
-        visible={showZoom}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowZoom(false)}
-      >
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <View style={{ flex: 1, backgroundColor: "#000" }}>
-            <TouchableOpacity
-              onPress={() => setShowZoom(false)}
-              style={{
-                position: "absolute",
-                top: 52,
-                right: 20,
-                zIndex: 10,
-                backgroundColor: "rgba(255,255,255,0.2)",
-                borderRadius: S.radiusFull,
-                padding: 10,
-              }}
-            >
-              <Text style={{ color: "#fff", fontSize: 18 }}>✕</Text>
-            </TouchableOpacity>
-
-            {showZoom && photo && (
-              <ZoomableImage uri={photo.url} />
-            )}
-          </View>
-        </GestureHandlerRootView>
-      </Modal>
-
-      {/* Modal : picker d'album (déclenché par long-press sur 🖨) */}
+      {/* Modal : picker d'album (long-press sur 🖨) */}
       <Modal
         visible={showAlbumPicker}
         transparent
@@ -603,26 +433,16 @@ const handleBack = () => {
               </TouchableOpacity>
             </View>
 
-            <Text
-              style={{
-                fontSize: 12,
-                color: C.textMuted,
-                marginBottom: 16,
-              }}
-            >
+            <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 16 }}>
               La photo sera ajoutée à l'album souvenirs et à l'album choisi.
             </Text>
 
-            {/* Liste des albums existants */}
             <ScrollView style={{ maxHeight: SH * 0.35 }}>
               {albums.length === 0 ? (
                 <Text
                   style={{
-                    fontSize: 13,
-                    color: C.textMuted,
-                    fontStyle: "italic",
-                    textAlign: "center",
-                    paddingVertical: 16,
+                    fontSize: 13, color: C.textMuted,
+                    fontStyle: "italic", textAlign: "center", paddingVertical: 16,
                   }}
                 >
                   Aucun album pour l'instant. Crée le premier ci-dessous.
@@ -645,22 +465,10 @@ const handleBack = () => {
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          fontSize: 14,
-                          fontWeight: "700",
-                          color: C.text,
-                        }}
-                      >
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: C.text }}>
                         {a.name}
                       </Text>
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          color: C.textMuted,
-                          marginTop: 2,
-                        }}
-                      >
+                      <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
                         {a.photoIds.length} photo{a.photoIds.length > 1 ? "s" : ""}
                       </Text>
                     </View>
@@ -670,23 +478,16 @@ const handleBack = () => {
               )}
             </ScrollView>
 
-            {/* Création d'un nouvel album */}
             <View
               style={{
-                marginTop: 16,
-                paddingTop: 16,
-                borderTopWidth: 1,
-                borderTopColor: C.border,
+                marginTop: 16, paddingTop: 16,
+                borderTopWidth: 1, borderTopColor: C.border,
               }}
             >
               <Text
                 style={{
-                  fontSize: 12,
-                  fontWeight: "700",
-                  color: C.textMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: 1,
-                  marginBottom: 10,
+                  fontSize: 12, fontWeight: "700", color: C.textMuted,
+                  textTransform: "uppercase", letterSpacing: 1, marginBottom: 10,
                 }}
               >
                 Nouvel album
@@ -720,9 +521,7 @@ const handleBack = () => {
                     opacity: newAlbumName.trim() ? 1 : 0.4,
                   }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>
-                    Créer
-                  </Text>
+                  <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>Créer</Text>
                 </TouchableOpacity>
               </View>
             </View>
