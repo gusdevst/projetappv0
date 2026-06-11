@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { OnboardingScreen }       from "../screens/OnboardingScreen";
 import { PermissionDeniedScreen } from "../screens/PermissionDeniedScreen";
 import { HomeScreen }             from "../screens/HomeScreen";
+import { TriModeScreen }          from "../screens/TriModeScreen";
 import { SwipeScreen }            from "../screens/SwipeScreen";
 import { MomentScreen }           from "../screens/MomentScreen";
 import { DuplicatesScreen }       from "../screens/DuplicatesScreen";
@@ -43,6 +44,7 @@ export function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Home"        component={HomeScreen} />
+      <Stack.Screen name="TriMode"     component={TriModeScreen} options={{ presentation: "modal" }} />
       <Stack.Screen name="Swipe"       component={SwipeScreen} />
       <Stack.Screen name="Moments"     component={MomentScreen} />
       <Stack.Screen name="Duplicates"  component={DuplicatesScreen} />

@@ -155,8 +155,8 @@ export function HomeScreen({ navigation }) {
 
         {/* CTA principal */}
         <TouchableOpacity
-          onPress={() => queue.length > 0 && navigation.navigate("Swipe", { queue })}
-          disabled={libraryLoading || queue.length === 0}
+          onPress={() => remaining.length > 0 && navigation.navigate("TriMode")}
+          disabled={libraryLoading || remaining.length === 0}
           style={{
             backgroundColor: C.accent,
             borderRadius: 20,
@@ -179,9 +179,7 @@ export function HomeScreen({ navigation }) {
               ? "Chargement de tes photos…"
               : remaining.length === 0
               ? "🎉 Tout est trié !"
-              : queue.length === 0
-              ? `Aucune photo dans "${activeFilter}"`
-              : `🔀 Démarrer le tri · ${queue.length} photos`}
+              : `🔀 Démarrer le tri · ${remaining.length} photos`}
           </Text>
         </TouchableOpacity>
 

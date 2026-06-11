@@ -10,14 +10,20 @@ import { usePhotoStore } from "../store/usePhotoStore";
 
 const { width: SW } = Dimensions.get("window");
 
-export function SummaryScreen({ navigation }) {
+export function SummaryScreen({ navigation, route }) {
+  const { albumId, albumName } = route.params || {};
+
   const kept           = usePhotoStore((state) => state.kept);
   const deleted        = usePhotoStore((state) => state.deleted);
   const printed        = usePhotoStore((state) => state.printed);
   const hesitated      = usePhotoStore((state) => state.hesitated);
+  const albums         = usePhotoStore((state) => state.albums);
   const resetSkipped   = usePhotoStore((state) => state.resetSkipped);
   const resetHesitated = usePhotoStore((state) => state.resetHesitated);
   const deletedSize    = deleted.reduce((a, p) => a + (p.size || 0), 0);
+
+  // Album créé pendant cette session (mode album uniquement)
+  const createdAlbum = albumId ? albums.find((a) => a.id === albumId) : null;
 
   // Tri terminé → on libère les photos "skipped" pour le prochain tri
   useEffect(() => {
@@ -71,6 +77,30 @@ export function SummaryScreen({ navigation }) {
             </View>
           ))}
         </View>
+
+        {/* ── Section album créé (mode album uniquement) ──────────────── */}
+        {createdAlbum && (
+          <View style={{
+            backgroundColor: `${C.accent}12`,
+            borderRadius: S.radius,
+            padding: 18,
+            borderWidth: 2,
+            borderColor: `${C.accent}50`,
+            marginBottom: 16,
+          }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
+              <Text style={{ fontSize: 24 }}>📁</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: "900", fontSize: 16, color: C.text }}>
+                  {createdAlbum.name}
+                </Text>
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                  {createdAlbum.photoIds.length} photo{createdAlbum.photoIds.length > 1 ? "s" : ""} ajoutée{createdAlbum.photoIds.length > 1 ? "s" : ""} à l'album ✓
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* ── Section "J'hésite" (visible seulement si des photos hésitées) ── */}
         {hesitated.length > 0 && (

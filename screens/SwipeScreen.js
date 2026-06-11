@@ -46,7 +46,11 @@ function getEdgeGradient(edge, color) {
 const { width: SW, height: SH } = Dimensions.get("window");
 
 export function SwipeScreen({ navigation, route }) {
-  const queue = route.params?.queue ?? [];
+  const queue     = route.params?.queue     ?? [];
+  const albumMode = route.params?.albumMode ?? false;
+  const albumId   = route.params?.albumId   ?? null;
+  const albumName = route.params?.albumName ?? null;
+
   const [idx, setIdx] = useState(0);
   const { addKept, addDeleted, addPrinted, addSkipped, addHesitated, undoLast, albums, createAlbum, addPhotoToAlbum, swipeMappings } = usePhotoStore();
 
@@ -144,7 +148,12 @@ export function SwipeScreen({ navigation, route }) {
     if (actionKey === "skip")     addSkipped(photo);
     if (actionKey === "hesitate") addHesitated(photo);
 
-    if (idx >= queue.length - 1) navigation.navigate("Summary");
+    // Mode album : les actions positives (❤️ et 🖨) ajoutent aussi à l'album
+    if (albumMode && albumId && (actionKey === "favorite" || actionKey === "album")) {
+      addPhotoToAlbum(albumId, photo.id);
+    }
+
+    if (idx >= queue.length - 1) navigation.navigate("Summary", { albumId, albumName });
     else setIdx((i) => i + 1);
   };
 
@@ -163,9 +172,11 @@ export function SwipeScreen({ navigation, route }) {
   };
 
   // Bouton ❤️ : n'avance pas la file, marque juste la photo
+  // En mode album, l'ajoute aussi à l'album en cours
   const handleHeartPress = () => {
     if (!photo) return;
     addKept(photo);
+    if (albumMode && albumId) addPhotoToAlbum(albumId, photo.id);
     setHeartedThisPhoto(true);
   };
 
@@ -293,18 +304,22 @@ export function SwipeScreen({ navigation, route }) {
             </Text>
           </View>
 
-          {/* Compteur photo à la place de la loupe */}
-          <View
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 8,
-              backgroundColor: "rgba(255,255,255,0.2)",
-              borderRadius: S.radiusFull,
-            }}
-          >
-            <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>
-              {idx + 1} / {queue.length}
-            </Text>
+          {/* Badge : nom de l'album en mode album, compteur sinon */}
+          <View style={{
+            paddingHorizontal: 14, paddingVertical: 8,
+            backgroundColor: albumMode ? "rgba(244,132,95,0.35)" : "rgba(255,255,255,0.2)",
+            borderRadius: S.radiusFull,
+            maxWidth: 130,
+          }}>
+            {albumMode ? (
+              <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }} numberOfLines={1}>
+                📁 {albumName}
+              </Text>
+            ) : (
+              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>
+                {idx + 1} / {queue.length}
+              </Text>
+            )}
           </View>
         </View>
       </View>
