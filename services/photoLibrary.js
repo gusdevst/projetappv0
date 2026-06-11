@@ -87,6 +87,39 @@ export async function deletePhotos(assetIds) {
   return await MediaLibrary.deleteAssetsAsync(assetIds);
 }
 
+/**
+ * Retourne la liste des albums photo du téléphone triés par nombre de photos.
+ * Ex : "Camera Roll", "WhatsApp", "Screenshots", etc.
+ */
+export async function getAlbums() {
+  const albums = await MediaLibrary.getAlbumsAsync({ includeSmartAlbums: false });
+  return albums
+    .filter((a) => a.assetCount > 0)
+    .sort((a, b) => b.assetCount - a.assetCount);
+}
+
+/**
+ * Retourne un Set des IDs de toutes les photos d'un album donné.
+ * Utilisé dans HomeScreen pour filtrer la queue sur un dossier précis.
+ */
+export async function getAlbumAssetIds(albumId) {
+  const ids = [];
+  let after = undefined;
+  let hasMore = true;
+  while (hasMore) {
+    const result = await MediaLibrary.getAssetsAsync({
+      album: albumId,
+      first: 500,
+      after,
+      mediaType: MediaLibrary.MediaType.photo,
+    });
+    ids.push(...result.assets.map((a) => a.id));
+    hasMore = result.hasNextPage;
+    after = result.endCursor;
+  }
+  return new Set(ids);
+}
+
 // ─── Helpers internes ────────────────────────────────────────────────────
 
 function mapAssetToPhoto(asset) {
