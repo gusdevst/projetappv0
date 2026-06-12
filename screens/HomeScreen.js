@@ -26,8 +26,8 @@ function applyFilter(photos, filter) {
 
   const now = new Date();
 
-  if (filter === "4 derniers jours") {
-    const cutoff = now.getTime() - 4 * 24 * 60 * 60 * 1000;
+  if (filter === "7 derniers jours") {
+    const cutoff = now.getTime() - 7 * 24 * 60 * 60 * 1000;
     return photos.filter((p) => p.creationTime >= cutoff);
   }
   if (filter === "Mois dernier") {
@@ -154,27 +154,25 @@ export function HomeScreen({ navigation }) {
           </Text>
         )}
 
-        {/* ── Ligne 1 : filtres date ───────────────────────────────────── */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-          <View style={{ flexDirection: "row", gap: 8, paddingVertical: 2 }}>
-            {ROW1_FILTERS.map((f) => (
-              <TouchableOpacity
-                key={f}
-                onPress={() => setActiveFilter(f)}
-                style={{
-                  paddingHorizontal: 16, paddingVertical: 8, borderRadius: 99,
-                  borderWidth: 1.5,
-                  borderColor: activeFilter === f ? C.accent : C.border,
-                  backgroundColor: activeFilter === f ? C.accent : C.bgCard,
-                }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: "700", color: activeFilter === f ? "#fff" : C.textMuted }}>
-                  {f}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+        {/* ── Ligne 1 : filtres date — View flex simple, plus de scroll ── */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+          {ROW1_FILTERS.map((f) => (
+            <TouchableOpacity
+              key={f}
+              onPress={() => setActiveFilter(f)}
+              style={{
+                paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99,
+                borderWidth: 1.5,
+                borderColor: activeFilter === f ? C.accent : C.border,
+                backgroundColor: activeFilter === f ? C.accent : C.bgCard,
+              }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "700", color: activeFilter === f ? "#fff" : C.textMuted }}>
+                {f}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
         {/* ── Ligne 2 : dossier + screenshots ─────────────────────────── */}
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, alignItems: "center" }}>
@@ -237,11 +235,11 @@ export function HomeScreen({ navigation }) {
             <View key={t.label} style={{ width: "50%", padding: 5 }}>
               <TouchableOpacity
                 onPress={t.onPress}
-                style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.border }}
+                style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.border, alignItems: "center" }}
               >
                 <Text style={{ fontSize: 22, marginBottom: 6 }}>{t.emoji}</Text>
-                <Text style={{ fontWeight: "700", fontSize: 13, color: C.text }}>{t.label}</Text>
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{t.desc}</Text>
+                <Text style={{ fontWeight: "700", fontSize: 13, color: C.text, textAlign: "center" }}>{t.label}</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2, textAlign: "center" }}>{t.desc}</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -253,13 +251,18 @@ export function HomeScreen({ navigation }) {
             {[
               { label: "Photos",    val: libraryPhotos.length, subval: formatSize(librarySize), color: C.accent },
               { label: "Triées",    val: triees,               subval: null,                    color: C.green },
-              { label: "À libérer", val: formatSize(deletedSize), subval: null,                 color: C.red },
+              { label: "À libérer", val: formatSize(deletedSize), subval: null, color: C.red, onPress: () => navigation.navigate("Gallery", { section: "deleted" }) },
             ].map((s, i) => (
-              <View key={s.label} style={{ flex: 1, alignItems: "center", borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: C.border }}>
+              <TouchableOpacity
+                key={s.label}
+                onPress={s.onPress}
+                disabled={!s.onPress}
+                style={{ flex: 1, alignItems: "center", borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: C.border }}
+              >
                 <Text style={{ fontSize: 17, fontWeight: "800", color: s.color }}>{s.val}</Text>
                 {s.subval && <Text style={{ fontSize: 9, fontWeight: "700", color: s.color, opacity: 0.7, marginTop: 1 }}>{s.subval}</Text>}
                 <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{s.label}</Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
 

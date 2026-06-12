@@ -82,7 +82,7 @@ export function SwipeScreen({ navigation, route }) {
   useEffect(() => {
     if (Platform.OS === "android" && NavigationBar) {
       NavigationBar.setVisibilityAsync("hidden").catch(() => {});
-      NavigationBar.setBehaviorAsync("overlay-swipe").catch(() => {});
+
     }
     return () => {
       if (Platform.OS === "android" && NavigationBar) {
@@ -347,65 +347,88 @@ export function SwipeScreen({ navigation, route }) {
           zIndex: 10,
         }}
       >
-        <TouchableOpacity
-          onPress={handleTrashPress}
-          style={{
-            backgroundColor: "rgba(232,99,122,0.2)",
-            borderWidth: 2,
-            borderColor: "rgba(232,99,122,.5)",
-            borderRadius: S.radiusFull,
-            padding: 18,
-          }}
-        >
-          <Text style={{ fontSize: 22 }}>🗑</Text>
-        </TouchableOpacity>
+        {/* 🗑 Supprimer — swipe vers le bas */}
+        <View style={{ alignItems: "center", gap: 5 }}>
+          <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(232,99,122,0.9)", letterSpacing: 0.3 }}>
+            ↓ bas
+          </Text>
+          <TouchableOpacity
+            onPress={handleTrashPress}
+            style={{
+              backgroundColor: "rgba(232,99,122,0.2)",
+              borderWidth: 2,
+              borderColor: "rgba(232,99,122,.5)",
+              borderRadius: S.radiusFull,
+              padding: 18,
+            }}
+          >
+            <Text style={{ fontSize: 22 }}>🗑</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          onPress={undo}
-          disabled={!history.length}
-          style={{
-            backgroundColor: history.length ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.4)",
-            borderWidth: 2,
-            borderColor: "rgba(0,0,0,0.08)",
-            borderRadius: S.radiusFull,
-            padding: 14,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.35,
-            shadowRadius: 6,
-            elevation: 6,
-          }}
-        >
-          <Text style={{ fontSize: 20, color: "#222", fontWeight: "800" }}>↩</Text>
-        </TouchableOpacity>
+        {/* ↩ Annuler — pas de swipe associé */}
+        <View style={{ alignItems: "center", gap: 5 }}>
+          {/* Espace invisible pour aligner avec les autres boutons qui ont un label */}
+          <Text style={{ fontSize: 10, opacity: 0 }}>_</Text>
+          <TouchableOpacity
+            onPress={undo}
+            disabled={!history.length}
+            style={{
+              backgroundColor: history.length ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.4)",
+              borderWidth: 2,
+              borderColor: "rgba(0,0,0,0.08)",
+              borderRadius: S.radiusFull,
+              padding: 14,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.35,
+              shadowRadius: 6,
+              elevation: 6,
+            }}
+          >
+            <Text style={{ fontSize: 20, color: "#222", fontWeight: "800" }}>↩</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          onPress={handleAlbumPress}
-          onLongPress={() => setShowAlbumPicker(true)}
-          delayLongPress={350}
-          style={{
-            backgroundColor: "rgba(176,122,216,0.2)",
-            borderWidth: 2,
-            borderColor: "rgba(176,122,216,.5)",
-            borderRadius: S.radiusFull,
-            padding: 18,
-          }}
-        >
-          <Text style={{ fontSize: 22 }}>🖨</Text>
-        </TouchableOpacity>
+        {/* 🖨 Album — swipe vers la droite */}
+        <View style={{ alignItems: "center", gap: 5 }}>
+          <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(176,122,216,0.9)", letterSpacing: 0.3 }}>
+            → droite
+          </Text>
+          <TouchableOpacity
+            onPress={handleAlbumPress}
+            onLongPress={() => setShowAlbumPicker(true)}
+            delayLongPress={350}
+            style={{
+              backgroundColor: "rgba(176,122,216,0.2)",
+              borderWidth: 2,
+              borderColor: "rgba(176,122,216,.5)",
+              borderRadius: S.radiusFull,
+              padding: 18,
+            }}
+          >
+            <Text style={{ fontSize: 22 }}>🖨</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          onPress={handleHeartPress}
-          style={{
-            backgroundColor: heartedThisPhoto ? "rgba(92,184,122,0.85)" : "rgba(92,184,122,0.2)",
-            borderWidth: 2,
-            borderColor: heartedThisPhoto ? "#5cb87a" : "rgba(92,184,122,.5)",
-            borderRadius: S.radiusFull,
-            padding: 18,
-          }}
-        >
-          <Text style={{ fontSize: 22 }}>{heartedThisPhoto ? "❤️✓" : "❤️"}</Text>
-        </TouchableOpacity>
+        {/* ❤️ Coup de cœur — appui direct */}
+        <View style={{ alignItems: "center", gap: 5 }}>
+          <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>
+            appui
+          </Text>
+          <TouchableOpacity
+            onPress={handleHeartPress}
+            style={{
+              backgroundColor: heartedThisPhoto ? "rgba(92,184,122,0.85)" : "rgba(92,184,122,0.2)",
+              borderWidth: 2,
+              borderColor: heartedThisPhoto ? "#5cb87a" : "rgba(92,184,122,.5)",
+              borderRadius: S.radiusFull,
+              padding: 18,
+            }}
+          >
+            <Text style={{ fontSize: 22 }}>{heartedThisPhoto ? "❤️✓" : "❤️"}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Modal : picker d'album (long-press sur 🖨) */}

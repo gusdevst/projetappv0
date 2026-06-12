@@ -167,7 +167,12 @@ export const usePhotoStore = create(
         if (deleted.length === 0) return true;
         try {
           const ok = await PhotoLibrary.deletePhotos(deleted.map((p) => p.id));
-          if (ok) set({ deleted: [] });
+          if (ok) {
+            set({ deleted: [] });
+            // ⚠️ Recharger la photothèque : sans ça, les photos supprimées restent
+            // dans libraryPhotos et réapparaissent dans la file de tri (écran noir).
+            await get().loadLibrary();
+          }
           return ok;
         } catch (err) {
           console.warn("emptyTrash failed:", err);

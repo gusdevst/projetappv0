@@ -171,7 +171,14 @@ const styles = {
 // ─── MomentScreen ─────────────────────────────────────────────────────────────
 export function MomentScreen({ navigation }) {
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
+  const deleted       = usePhotoStore((s) => s.deleted);
   const [selectedId, setSelectedId] = useState(null);
+
+  // Exclure les photos mises en corbeille
+  const activePhotos = useMemo(() => {
+    const ids = new Set(deleted.map((p) => p.id));
+    return libraryPhotos.filter((p) => !ids.has(p.id));
+  }, [libraryPhotos, deleted]);
 
   // Créneau de dates
   const [dateFrom,     setDateFrom]     = useState(null); // Date | null
@@ -180,15 +187,15 @@ export function MomentScreen({ navigation }) {
 
   // Filtre les photos selon le créneau avant de grouper
   const filteredPhotos = useMemo(() => {
-    if (!dateFrom && !dateTo) return libraryPhotos;
+    if (!dateFrom && !dateTo) return activePhotos;
     const from = dateFrom
       ? new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate()).getTime()
       : 0;
     const to = dateTo
       ? new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59, 999).getTime()
       : Infinity;
-    return libraryPhotos.filter((p) => p.creationTime >= from && p.creationTime <= to);
-  }, [libraryPhotos, dateFrom, dateTo]);
+    return activePhotos.filter((p) => p.creationTime >= from && p.creationTime <= to);
+  }, [activePhotos, dateFrom, dateTo]);
 
   const moments = useMemo(() => groupByMoment(filteredPhotos), [filteredPhotos]);
   const selected = moments.find((m) => m.id === selectedId);
@@ -336,15 +343,20 @@ export function MomentScreen({ navigation }) {
         )}
       </ScrollView>
 
-      {/* CTA tri */}
-      {selected && (
+      {/* CTA tri — visible dès qu'un moment OU une période est sélectionné */}
+      {(selected || (hasFilter && filteredPhotos.length > 0)) && (
         <View style={{ padding: S.pad, paddingTop: 0 }}>
           <TouchableOpacity
-            onPress={() => navigation.navigate("Swipe", { queue: selected.photos })}
-            style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4 }}
+            onPress={() => navigation.navigate("Swipe", {
+              queue: selected ? selected.photos : filteredPhotos,
+            })}
+            style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4,
+              shadowColor: C.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }}
           >
             <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
-              🔀 Trier les {selected.photos.length} photo{selected.photos.length > 1 ? "s" : ""}
+              {selected
+                ? `🔀 Trier les ${selected.photos.length} photo${selected.photos.length > 1 ? "s" : ""} de ce moment`
+                : `🔀 Trier toute la période · ${filteredPhotos.length} photo${filteredPhotos.length > 1 ? "s" : ""}`}
             </Text>
           </TouchableOpacity>
         </View>

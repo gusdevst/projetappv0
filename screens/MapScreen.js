@@ -8,7 +8,7 @@
 // Limites MVP : pas de reverse geocoding (donc pas de nom de ville).
 // Les photos sont groupées par "cluster" simple (arrondi des coordonnées).
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
@@ -18,9 +18,16 @@ import { loadPhotoLocation } from "../services/photoLibrary";
 
 export function MapScreen({ navigation }) {
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
+  const deleted       = usePhotoStore((s) => s.deleted);
   const [photosWithGeo, setPhotosWithGeo] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCluster, setSelectedCluster] = useState(null);
+
+  // Exclure les photos mises en corbeille
+  const activePhotos = useMemo(() => {
+    const ids = new Set(deleted.map((p) => p.id));
+    return libraryPhotos.filter((p) => !ids.has(p.id));
+  }, [libraryPhotos, deleted]);
 
   // Charge les coordonnées GPS pour chaque photo (en parallèle).
   // Sur 500 photos, ~1-3 secondes selon le téléphone.
@@ -28,7 +35,7 @@ export function MapScreen({ navigation }) {
     let cancelled = false;
     (async () => {
       const enriched = await Promise.all(
-        libraryPhotos.map(async (p) => {
+        activePhotos.map(async (p) => {
           const loc = await loadPhotoLocation(p.id);
           return loc ? { ...p, lat: loc.lat, lng: loc.lng } : null;
         })
@@ -39,7 +46,7 @@ export function MapScreen({ navigation }) {
       }
     })();
     return () => { cancelled = true; };
-  }, [libraryPhotos]);
+  }, [activePhotos]);
 
   // Cluster naïf : on arrondit lat/lng à 0.1° (~10km) et on regroupe
   const clusters = {};

@@ -13,10 +13,17 @@ const { width: SW } = Dimensions.get("window");
 
 export function DuplicatesScreen({ navigation }) {
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
+  const deleted       = usePhotoStore((s) => s.deleted);
   const [selectedGroupIdx, setSelectedGroupIdx] = useState(null);
 
+  // Exclure les photos mises en corbeille — elles ne doivent pas apparaître ici
+  const activePhotos = useMemo(() => {
+    const ids = new Set(deleted.map((p) => p.id));
+    return libraryPhotos.filter((p) => !ids.has(p.id));
+  }, [libraryPhotos, deleted]);
+
   // findDuplicates est rapide (~ms) mais on memoize au cas où libraryPhotos change peu
-  const groups = useMemo(() => findDuplicates(libraryPhotos), [libraryPhotos]);
+  const groups = useMemo(() => findDuplicates(activePhotos), [activePhotos]);
   const totalDuplicates = groups.reduce((a, g) => a + g.photos.length, 0);
 
   // Toutes les photos doublons dans un seul array, pour le bouton "Tout trier"

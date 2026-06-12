@@ -28,10 +28,9 @@ export const C = {
 
 export const FILTERS = [
   "Toutes",
-  "4 derniers jours",
+  "7 derniers jours",
   "Mois dernier",
   "2026",
-  "2025",
   "Screenshots",
 ];
 
