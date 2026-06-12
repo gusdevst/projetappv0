@@ -24,24 +24,23 @@ function dateLabel(d) {
 }
 
 /**
- * CalendarPicker — calendrier mensuel custom, sans lib externe.
- * Semaine commence le lundi (convention française).
- * Les jours futurs sont désactivés.
+ * RangeCalendarPicker — sélection d'une plage de dates en un seul calendrier.
+ * 1er tap = date de début, 2e tap = date de fin.
+ * Les jours entre les deux sont surlignés.
  */
-function CalendarPicker({ visible, initialDate, title, onConfirm, onCancel }) {
+function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCancel }) {
   const today = new Date();
-  const init  = initialDate || today;
+  const init  = initialFrom || today;
 
   const [viewYear,  setViewYear]  = useState(init.getFullYear());
   const [viewMonth, setViewMonth] = useState(init.getMonth());
-  const [selected,  setSelected]  = useState(
-    new Date(init.getFullYear(), init.getMonth(), init.getDate())
-  );
+  const [rangeFrom, setRangeFrom] = useState(initialFrom || null);
+  const [rangeTo,   setRangeTo]   = useState(initialTo   || null);
+  // "picking" : "from" → on attend le 1er tap, "to" → on attend le 2e tap
+  const [picking, setPicking] = useState("from");
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  // Quel slot commence le 1er (Lundi = 0 … Dimanche = 6)
-  const firstSlot = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
-
+  const firstSlot   = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
   const cells = [
     ...Array(firstSlot).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
@@ -59,16 +58,37 @@ function CalendarPicker({ visible, initialDate, title, onConfirm, onCancel }) {
   }
   const nextBlocked = viewYear === today.getFullYear() && viewMonth === today.getMonth();
 
-  const isFuture  = (d) => new Date(viewYear, viewMonth, d) > today;
-  const isSelected = (d) =>
-    selected &&
-    selected.getDate() === d &&
-    selected.getMonth() === viewMonth &&
-    selected.getFullYear() === viewYear;
-  const isToday = (d) =>
-    d === today.getDate() &&
-    viewMonth === today.getMonth() &&
-    viewYear  === today.getFullYear();
+  function handleDayPress(day) {
+    const tapped = new Date(viewYear, viewMonth, day);
+    if (picking === "from") {
+      setRangeFrom(tapped);
+      setRangeTo(null);
+      setPicking("to");
+    } else {
+      // Si l'user tape avant la date de début, on inverse
+      if (rangeFrom && tapped < rangeFrom) {
+        setRangeTo(rangeFrom);
+        setRangeFrom(tapped);
+      } else {
+        setRangeTo(tapped);
+      }
+      setPicking("from");
+    }
+  }
+
+  function dayStatus(day) {
+    const d    = new Date(viewYear, viewMonth, day);
+    const from = rangeFrom ? new Date(rangeFrom.getFullYear(), rangeFrom.getMonth(), rangeFrom.getDate()) : null;
+    const to   = rangeTo   ? new Date(rangeTo.getFullYear(),   rangeTo.getMonth(),   rangeTo.getDate())   : null;
+    const isFrom = from && d.getTime() === from.getTime();
+    const isTo   = to   && d.getTime() === to.getTime();
+    const inRange = from && to && d > from && d < to;
+    const isToday = d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+    const isFuture = d > today;
+    return { isFrom, isTo, inRange, isToday, isFuture };
+  }
+
+  const canConfirm = !!rangeFrom;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
@@ -77,13 +97,33 @@ function CalendarPicker({ visible, initialDate, title, onConfirm, onCancel }) {
         activeOpacity={1}
         onPress={onCancel}
       >
-        {/* stopPropagation du tap sur la carte */}
         <TouchableOpacity activeOpacity={1}>
           <View style={{ backgroundColor: "#fff", borderRadius: 24, padding: 20 }}>
 
-            <Text style={{ fontWeight: "800", fontSize: 16, color: C.text, textAlign: "center", marginBottom: 14 }}>
-              {title}
+            <Text style={{ fontWeight: "800", fontSize: 16, color: C.text, textAlign: "center", marginBottom: 6 }}>
+              Choisir une période
             </Text>
+
+            {/* Indicateur de l'étape en cours */}
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, justifyContent: "center" }}>
+              <View style={{
+                paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99,
+                backgroundColor: picking === "from" ? C.accent : `${C.accent}15`,
+              }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: picking === "from" ? "#fff" : C.accent }}>
+                  {rangeFrom ? dateLabel(rangeFrom) : "Date de début"}
+                </Text>
+              </View>
+              <Text style={{ color: C.textMuted, alignSelf: "center" }}>→</Text>
+              <View style={{
+                paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99,
+                backgroundColor: picking === "to" ? C.accent : `${C.accent}15`,
+              }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: picking === "to" ? "#fff" : (rangeTo ? C.accent : C.textMuted) }}>
+                  {rangeTo ? dateLabel(rangeTo) : "Date de fin"}
+                </Text>
+              </View>
+            </View>
 
             {/* Navigation mois */}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -111,27 +151,33 @@ function CalendarPicker({ visible, initialDate, title, onConfirm, onCancel }) {
             <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
               {cells.map((day, i) => {
                 if (!day) return <View key={`_${i}`} style={{ width: "14.28%", height: 40 }} />;
-                const sel = isSelected(day);
-                const tod = isToday(day);
-                const fut = isFuture(day);
+                const { isFrom, isTo, inRange, isToday, isFuture } = dayStatus(day);
+                const isEndpoint = isFrom || isTo;
                 return (
                   <TouchableOpacity
                     key={day}
-                    disabled={fut}
-                    onPress={() => setSelected(new Date(viewYear, viewMonth, day))}
+                    disabled={isFuture}
+                    onPress={() => handleDayPress(day)}
                     style={{ width: "14.28%", height: 40, alignItems: "center", justifyContent: "center" }}
                   >
+                    {/* Fond de plage (entre les deux bornes) */}
+                    {inRange && (
+                      <View style={{
+                        position: "absolute", top: 3, bottom: 3, left: 0, right: 0,
+                        backgroundColor: `${C.accent}18`,
+                      }} />
+                    )}
                     <View style={{
                       width: 34, height: 34, borderRadius: 17,
-                      backgroundColor: sel ? C.accent : "transparent",
-                      borderWidth: tod && !sel ? 1.5 : 0,
+                      backgroundColor: isEndpoint ? C.accent : "transparent",
+                      borderWidth: isToday && !isEndpoint ? 1.5 : 0,
                       borderColor: C.accent,
                       alignItems: "center", justifyContent: "center",
                     }}>
                       <Text style={{
                         fontSize: 14,
-                        fontWeight: sel || tod ? "800" : "400",
-                        color: sel ? "#fff" : fut ? "#d0c0b0" : tod ? C.accent : C.text,
+                        fontWeight: isEndpoint || isToday ? "800" : "400",
+                        color: isEndpoint ? "#fff" : isFuture ? "#d0c0b0" : isToday ? C.accent : C.text,
                       }}>
                         {day}
                       </Text>
@@ -150,8 +196,9 @@ function CalendarPicker({ visible, initialDate, title, onConfirm, onCancel }) {
                 <Text style={{ color: C.textMuted, fontWeight: "700" }}>Annuler</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => onConfirm(selected)}
-                style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: C.accent, alignItems: "center" }}
+                onPress={() => canConfirm && onConfirm(rangeFrom, rangeTo)}
+                disabled={!canConfirm}
+                style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: canConfirm ? C.accent : `${C.accent}40`, alignItems: "center" }}
               >
                 <Text style={{ color: "#fff", fontWeight: "800" }}>Valider</Text>
               </TouchableOpacity>
@@ -181,9 +228,9 @@ export function MomentScreen({ navigation }) {
   }, [libraryPhotos, deleted]);
 
   // Créneau de dates
-  const [dateFrom,     setDateFrom]     = useState(null); // Date | null
-  const [dateTo,       setDateTo]       = useState(null); // Date | null
-  const [pickerTarget, setPickerTarget] = useState(null); // "from" | "to" | null
+  const [dateFrom,      setDateFrom]      = useState(null); // Date | null
+  const [dateTo,        setDateTo]        = useState(null); // Date | null
+  const [showRangePicker, setShowRangePicker] = useState(false);
 
   // Filtre les photos selon le créneau avant de grouper
   const filteredPhotos = useMemo(() => {
@@ -200,11 +247,11 @@ export function MomentScreen({ navigation }) {
   const moments = useMemo(() => groupByMoment(filteredPhotos), [filteredPhotos]);
   const selected = moments.find((m) => m.id === selectedId);
 
-  function handleConfirm(date) {
-    if (pickerTarget === "from") setDateFrom(date);
-    else                         setDateTo(date);
-    setPickerTarget(null);
-    setSelectedId(null); // reset sélection si le créneau change
+  function handleRangeConfirm(from, to) {
+    setDateFrom(from);
+    setDateTo(to || null);
+    setShowRangePicker(false);
+    setSelectedId(null);
   }
 
   function clearFilter() { setDateFrom(null); setDateTo(null); setSelectedId(null); }
@@ -233,61 +280,42 @@ export function MomentScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Sélecteur de créneau */}
+      {/* Sélecteur de créneau — un seul bouton */}
       <View style={{ paddingHorizontal: S.pad, marginBottom: 12 }}>
-        <View style={{
-          backgroundColor: C.bgCard, borderRadius: 16, padding: 12,
-          borderWidth: 1, borderColor: hasFilter ? C.accent : C.border,
-        }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <Text style={{ fontSize: 12, fontWeight: "700", color: hasFilter ? C.accent : C.textMuted }}>
-              📅 Filtrer par période
-            </Text>
-            {hasFilter && (
-              <TouchableOpacity onPress={clearFilter}>
-                <Text style={{ fontSize: 11, color: C.textMuted, textDecorationLine: "underline" }}>
-                  Réinitialiser
-                </Text>
-              </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setShowRangePicker(true)}
+          style={{
+            backgroundColor: C.bgCard, borderRadius: 16, padding: 12,
+            borderWidth: 1.5, borderColor: hasFilter ? C.accent : C.border,
+            flexDirection: "row", alignItems: "center", gap: 10,
+          }}
+        >
+          <Text style={{ fontSize: 18 }}>📅</Text>
+          <View style={{ flex: 1 }}>
+            {hasFilter ? (
+              <Text style={{ fontSize: 13, fontWeight: "700", color: C.accent }}>
+                {dateLabel(dateFrom)}{dateTo ? ` → ${dateLabel(dateTo)}` : " → aujourd'hui"}
+              </Text>
+            ) : (
+              <Text style={{ fontSize: 13, fontWeight: "700", color: C.textMuted }}>
+                Filtrer par période
+              </Text>
             )}
+            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+              {hasFilter ? `${filteredPhotos.length} photo${filteredPhotos.length > 1 ? "s" : ""} dans ce créneau` : "Touche pour choisir"}
+            </Text>
           </View>
-
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            {/* Bouton DU */}
+          {hasFilter ? (
             <TouchableOpacity
-              onPress={() => setPickerTarget("from")}
-              style={{
-                flex: 1, padding: 10, borderRadius: 12, alignItems: "center",
-                backgroundColor: dateFrom ? `${C.accent}15` : "#f5f0eb",
-                borderWidth: 1.5, borderColor: dateFrom ? C.accent : C.border,
-              }}
+              onPress={(e) => { e.stopPropagation(); clearFilter(); }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text style={{ fontSize: 10, color: C.textMuted, marginBottom: 2 }}>DU</Text>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: dateFrom ? C.accent : C.textMuted }}>
-                {dateLabel(dateFrom)}
-              </Text>
+              <Text style={{ fontSize: 13, color: C.textMuted }}>✕</Text>
             </TouchableOpacity>
-
-            <View style={{ justifyContent: "center" }}>
-              <Text style={{ color: C.textMuted, fontSize: 16 }}>→</Text>
-            </View>
-
-            {/* Bouton AU */}
-            <TouchableOpacity
-              onPress={() => setPickerTarget("to")}
-              style={{
-                flex: 1, padding: 10, borderRadius: 12, alignItems: "center",
-                backgroundColor: dateTo ? `${C.accent}15` : "#f5f0eb",
-                borderWidth: 1.5, borderColor: dateTo ? C.accent : C.border,
-              }}
-            >
-              <Text style={{ fontSize: 10, color: C.textMuted, marginBottom: 2 }}>AU</Text>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: dateTo ? C.accent : C.textMuted }}>
-                {dateLabel(dateTo)}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          ) : (
+            <Text style={{ color: C.textMuted, fontSize: 14 }}>›</Text>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Liste des moments */}
@@ -362,13 +390,13 @@ export function MomentScreen({ navigation }) {
         </View>
       )}
 
-      {/* Modal calendrier */}
-      <CalendarPicker
-        visible={pickerTarget !== null}
-        initialDate={pickerTarget === "from" ? (dateFrom || new Date()) : (dateTo || new Date())}
-        title={pickerTarget === "from" ? "Date de début" : "Date de fin"}
-        onConfirm={handleConfirm}
-        onCancel={() => setPickerTarget(null)}
+      {/* Modal calendrier plage */}
+      <RangeCalendarPicker
+        visible={showRangePicker}
+        initialFrom={dateFrom}
+        initialTo={dateTo}
+        onConfirm={handleRangeConfirm}
+        onCancel={() => setShowRangePicker(false)}
       />
     </SafeAreaView>
   );

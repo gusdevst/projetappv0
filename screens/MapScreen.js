@@ -146,7 +146,7 @@ export function MapScreen({ navigation }) {
               </View>
             </ScrollView>
             <TouchableOpacity
-              onPress={() => navigation.navigate("Swipe", { queue: displayedPhotos })}
+              onPress={() => navigation.navigate("TriMode", { preQueue: displayedPhotos })}
               style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4 }}
             >
               <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>🔀 Trier ces {displayedPhotos.length} photos</Text>

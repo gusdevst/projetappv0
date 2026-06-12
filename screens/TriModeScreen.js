@@ -119,6 +119,7 @@ export function TriModeScreen({ navigation, route }) {
   // STEP 0 — Choix du mode
   // ════════════════════════════════════════════════════════════════════════════
   if (step === 0) {
+    const photoCount = preQueue ? preQueue.length : remaining.length;
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
         <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
@@ -130,33 +131,35 @@ export function TriModeScreen({ navigation, route }) {
         </TouchableOpacity>
 
         <View style={{ flex: 1, padding: S.pad, justifyContent: "center" }}>
-          <Text style={{ fontSize: 26, fontWeight: "900", color: C.text, marginBottom: 6 }}>
+          <Text style={{ fontSize: 26, fontWeight: "900", color: C.text, marginBottom: 6, textAlign: "center" }}>
             Que veux-tu faire ?
           </Text>
-          <Text style={{ fontSize: 14, color: C.textMuted, marginBottom: 36 }}>
-            {preQueue
-              ? `${preQueue.length} photos sélectionnées 📷`
-              : `${remaining.length} photos t'attendent 📷`}
+          <Text style={{ fontSize: 14, color: C.textMuted, marginBottom: 36, textAlign: "center" }}>
+            {`${photoCount} photo${photoCount > 1 ? "s" : ""} sélectionnée${photoCount > 1 ? "s" : ""} 📷`}
           </Text>
 
           {/* ── Carte Ménage ───────────────────────────────────────────── */}
           <TouchableOpacity
             onPress={handleMenage}
             style={{
-              backgroundColor: C.bgCard,
               borderRadius: S.radiusLg,
               padding: 24,
-              borderWidth: 2,
-              borderColor: C.border,
               marginBottom: 16,
+              alignItems: "center",
+              backgroundColor: "#1a1a1a",
+              elevation: 4,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.18,
+              shadowRadius: 10,
             }}
           >
-            <Text style={{ fontSize: 38, marginBottom: 10 }}>🧹</Text>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 6 }}>
+            <Text style={{ fontSize: 42, marginBottom: 10 }}>🧹</Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", marginBottom: 6, textAlign: "center" }}>
               Faire le ménage
             </Text>
-            <Text style={{ fontSize: 13, color: C.textMuted, lineHeight: 19 }}>
-              Passe en revue tes photos, supprime les ratées et libère de l'espace sur ton téléphone.
+            <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 19, textAlign: "center" }}>
+              Supprime les ratées et libère de l'espace sur ton téléphone.
             </Text>
           </TouchableOpacity>
 
@@ -167,6 +170,7 @@ export function TriModeScreen({ navigation, route }) {
               backgroundColor: C.accent,
               borderRadius: S.radiusLg,
               padding: 24,
+              alignItems: "center",
               elevation: 6,
               shadowColor: C.accent,
               shadowOffset: { width: 0, height: 6 },
@@ -174,12 +178,12 @@ export function TriModeScreen({ navigation, route }) {
               shadowRadius: 14,
             }}
           >
-            <Text style={{ fontSize: 38, marginBottom: 10 }}>📁</Text>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", marginBottom: 6 }}>
+            <Text style={{ fontSize: 42, marginBottom: 10 }}>🖼️</Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", marginBottom: 6, textAlign: "center" }}>
               Créer / compléter un album
             </Text>
-            <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.82)", lineHeight: 19 }}>
-              Construis un album à partir de tes photos en swipant celles que tu veux garder.
+            <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.82)", lineHeight: 19, textAlign: "center" }}>
+              Construis un album en swipant les photos que tu veux garder.
             </Text>
           </TouchableOpacity>
         </View>
@@ -319,51 +323,72 @@ export function TriModeScreen({ navigation, route }) {
             </>
           )}
 
-          {/* ── Filtres mois ──────────────────────────────────────────── */}
-          <Text style={sectionLabel}>Quelle période ?</Text>
-          <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 14, lineHeight: 17 }}>
-            Sélectionne un ou plusieurs mois. Laisse vide pour inclure toutes tes photos.
-          </Text>
-
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
-            {monthGroups.map((g) => {
-              const on = selectedKeys.includes(g.key);
-              return (
-                <TouchableOpacity
-                  key={g.key}
-                  onPress={() => toggleKey(g.key)}
-                  style={[chip, on ? chipOn : chipOff]}
-                >
-                  <Text style={[chipText, { color: on ? C.accent : C.textMuted }]}>
-                    {g.label}{"  "}
-                    <Text style={{ fontWeight: "500", fontSize: 11 }}>{g.count}</Text>
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-            {selectedKeys.length > 0 && (
-              <TouchableOpacity onPress={() => setSelectedKeys([])} style={[chip, chipOff]}>
-                <Text style={[chipText, { color: C.textMuted }]}>✕ Effacer les filtres</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Compteur */}
-          <View style={{
-            flexDirection: "row", alignItems: "center", gap: 10,
-            backgroundColor: C.bgCard, borderRadius: S.radius,
-            padding: 14, borderWidth: 1, borderColor: C.border, marginBottom: 28,
-          }}>
-            <Text style={{ fontSize: 22 }}>📸</Text>
-            <Text style={{ fontSize: 15, fontWeight: "800", color: C.text }}>
-              {filteredPhotos.length} photo{filteredPhotos.length > 1 ? "s" : ""} sélectionnée{filteredPhotos.length > 1 ? "s" : ""}
-            </Text>
-            {selectedKeys.length > 0 && (
-              <Text style={{ fontSize: 12, color: C.textMuted, marginLeft: "auto" }}>
-                {selectedKeys.length} mois
+          {/* ── Filtres mois — masqués si les photos viennent d'un contexte pré-filtré ── */}
+          {preQueue ? (
+            // Résumé de la sélection pré-filtrée (par moment, par lieu…)
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 10,
+              backgroundColor: `${C.accent}12`, borderRadius: S.radius,
+              padding: 14, borderWidth: 1.5, borderColor: C.accent, marginBottom: 28,
+            }}>
+              <Text style={{ fontSize: 22 }}>✅</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: "800", color: C.accent }}>
+                  {preQueue.length} photo{preQueue.length > 1 ? "s" : ""} déjà sélectionnée{preQueue.length > 1 ? "s" : ""}
+                </Text>
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                  Filtres appliqués depuis la sélection précédente
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <>
+              <Text style={sectionLabel}>Quelle période ?</Text>
+              <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 14, lineHeight: 17 }}>
+                Sélectionne un ou plusieurs mois. Laisse vide pour inclure toutes tes photos.
               </Text>
-            )}
-          </View>
+
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+                {monthGroups.map((g) => {
+                  const on = selectedKeys.includes(g.key);
+                  return (
+                    <TouchableOpacity
+                      key={g.key}
+                      onPress={() => toggleKey(g.key)}
+                      style={[chip, on ? chipOn : chipOff]}
+                    >
+                      <Text style={[chipText, { color: on ? C.accent : C.textMuted }]}>
+                        {g.label}{"  "}
+                        <Text style={{ fontWeight: "500", fontSize: 11 }}>{g.count}</Text>
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                {selectedKeys.length > 0 && (
+                  <TouchableOpacity onPress={() => setSelectedKeys([])} style={[chip, chipOff]}>
+                    <Text style={[chipText, { color: C.textMuted }]}>✕ Effacer les filtres</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Compteur */}
+              <View style={{
+                flexDirection: "row", alignItems: "center", gap: 10,
+                backgroundColor: C.bgCard, borderRadius: S.radius,
+                padding: 14, borderWidth: 1, borderColor: C.border, marginBottom: 28,
+              }}>
+                <Text style={{ fontSize: 22 }}>📸</Text>
+                <Text style={{ fontSize: 15, fontWeight: "800", color: C.text }}>
+                  {filteredPhotos.length} photo{filteredPhotos.length > 1 ? "s" : ""} sélectionnée{filteredPhotos.length > 1 ? "s" : ""}
+                </Text>
+                {selectedKeys.length > 0 && (
+                  <Text style={{ fontSize: 12, color: C.textMuted, marginLeft: "auto" }}>
+                    {selectedKeys.length} mois
+                  </Text>
+                )}
+              </View>
+            </>
+          )}
 
           {/* ── Nom du nouvel album ───────────────────────────────────── */}
           {albumSubStep === "new" && (

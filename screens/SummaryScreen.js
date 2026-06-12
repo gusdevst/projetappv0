@@ -159,49 +159,78 @@ export function SummaryScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* ── Section "À imprimer" ─────────────────────────────────────── */}
-        {printed.length > 0 && (
-          <View
-            style={{
-              backgroundColor: C.bgCard,
-              borderRadius: S.radius,
-              padding: 16,
-              borderWidth: 1,
-              borderColor: C.border,
-              marginBottom: 16,
-            }}
-          >
-            <Text style={{ fontWeight: "800", fontSize: 14, color: C.accent, marginBottom: 10 }}>
-              📸 Photos à imprimer
+        {/* ── Section partenaires ──────────────────────────────────────── */}
+        <View style={{
+          backgroundColor: C.bgCard,
+          borderRadius: S.radius,
+          padding: 18,
+          borderWidth: 1.5,
+          borderColor: `${C.accent}40`,
+          marginBottom: 16,
+        }}>
+          {/* Badge promo */}
+          <View style={{
+            backgroundColor: C.accent, borderRadius: 99, alignSelf: "flex-start",
+            paddingHorizontal: 10, paddingVertical: 4, marginBottom: 10,
+          }}>
+            <Text style={{ fontSize: 11, fontWeight: "900", color: "#fff", letterSpacing: 0.5 }}>
+              OFFRE EXCLUSIVE
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {printed.map((p) => (
-                  <Image key={p.id} source={{ uri: p.url }} style={{ width: 70, height: 70, borderRadius: 12 }} />
-                ))}
-              </View>
-            </ScrollView>
+          </View>
+
+          <Text style={{ fontWeight: "900", fontSize: 15, color: C.text, marginBottom: 4 }}>
+            15% de réduction chez nos partenaires
+          </Text>
+          <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 14, lineHeight: 17 }}>
+            Imprime tes plus belles photos avec ton code Phototri.
+          </Text>
+
+          {/* Code promo */}
+          <View style={{
+            backgroundColor: `${C.accent}12`, borderRadius: 12,
+            borderWidth: 1.5, borderColor: `${C.accent}40`,
+            padding: 12, alignItems: "center", marginBottom: 16,
+          }}>
+            <Text style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>Ton code</Text>
+            <Text style={{ fontSize: 22, fontWeight: "900", color: C.accent, letterSpacing: 2 }}>
+              PHOTOTRI15
+            </Text>
+          </View>
+
+          {/* Logos partenaires */}
+          {[
+            { name: "Cheerz",   desc: "Tirages & livres photo",  emoji: "🖼️" },
+            { name: "CEWE",     desc: "Albums & photobooks",     emoji: "📚" },
+            { name: "Photobox", desc: "Impressions & cadeaux",   emoji: "🎁" },
+          ].map((p, i) => (
             <TouchableOpacity
-              onPress={() =>
-                Alert.alert(
-                  "Bientôt disponible",
-                  "L'impression chez nos partenaires arrive très vite 🌸 Merci de ton intérêt !"
-                )
-              }
+              key={p.name}
+              onPress={() => Alert.alert(
+                `Commander chez ${p.name}`,
+                `Rendez-vous sur ${p.name.toLowerCase()}.fr et saisis le code PHOTOTRI15 pour bénéficier de 15% de réduction sur ta commande !`
+              )}
               style={{
-                marginTop: 12,
-                backgroundColor: C.accent,
-                borderRadius: 12,
-                padding: 13,
-                alignItems: "center",
+                flexDirection: "row", alignItems: "center", gap: 12,
+                paddingVertical: 12,
+                borderTopWidth: i === 0 ? 0 : 1,
+                borderTopColor: C.border,
               }}
             >
-              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>
-                Commander chez CEWE →
-              </Text>
+              <View style={{
+                width: 42, height: 42, borderRadius: 12,
+                backgroundColor: "#f5f0eb",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Text style={{ fontSize: 20 }}>{p.emoji}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: "800", fontSize: 14, color: C.text }}>{p.name}</Text>
+                <Text style={{ fontSize: 12, color: C.textMuted }}>{p.desc}</Text>
+              </View>
+              <Text style={{ fontSize: 13, color: C.accent, fontWeight: "700" }}>Voir →</Text>
             </TouchableOpacity>
-          </View>
-        )}
+          ))}
+        </View>
 
         {/* ── Retour accueil ───────────────────────────────────────────── */}
         <TouchableOpacity

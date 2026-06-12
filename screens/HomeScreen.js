@@ -128,7 +128,7 @@ export function HomeScreen({ navigation }) {
 
         {/* ── CTA ─────────────────────────────────────────────────────── */}
         <TouchableOpacity
-          onPress={() => queue.length > 0 && navigation.navigate("TriMode")}
+          onPress={() => queue.length > 0 && navigation.navigate("TriMode", { preQueue: queue })}
           disabled={libraryLoading || albumFiltering || queue.length === 0}
           style={{
             backgroundColor: C.accent, borderRadius: 20, padding: 20,
@@ -291,7 +291,7 @@ export function HomeScreen({ navigation }) {
         <View style={{ flexDirection: "row", gap: 10 }}>
           {[
             { key: "deleted", emoji: "🗑",  label: "Corbeille",  count: deleted.length, sub: `${deletedSize.toFixed(0)} Mo`, bg: "#ffe8e8", color: "#e8637a" },
-            { key: "album",   emoji: "📷", label: "Souvenirs",   count: printed.length, sub: "à imprimer",                   bg: "#f0e8ff", color: "#b07ad8" },
+            { key: "album",   emoji: "🗂️", label: "Mes albums",  count: printed.length, sub: "photos gardées",               bg: "#f0e8ff", color: "#b07ad8" },
             { key: "kept",    emoji: "❤️", label: "Coup de ❤️",  count: kept.length,    sub: "favoris",                      bg: "#e8f8ee", color: "#5cb87a" },
           ].map((s) => (
             <TouchableOpacity

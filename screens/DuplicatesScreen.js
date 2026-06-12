@@ -113,7 +113,7 @@ export function DuplicatesScreen({ navigation }) {
                 const queue = selectedGroupIdx !== null
                   ? groups[selectedGroupIdx].photos
                   : allDuplicates;
-                navigation.navigate("TriMode", { preQueue: queue });
+                navigation.navigate("Swipe", { queue, mode: "menage" });
               }}
               style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4 }}
             >
