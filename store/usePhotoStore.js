@@ -17,13 +17,22 @@ export const usePhotoStore = create(
       // Format : [{ id, name, photoIds: [] }]
       albums:  [],
 
-      // Mapping des 4 directions de swipe vers une action. Customisable via Settings.
-      // Actions possibles : "skip" | "delete" | "album" | "favorite" | "none"
-      swipeMappings: {
-        up:    "skip",
+      // Mappings swipe pour le mode MÉNAGE (nettoyer la photothèque).
+      // Actions possibles : "skip" | "delete" | "favorite" | "hesitate" | "none"
+      swipeMappingsMenage: {
+        up:    "favorite",
         down:  "delete",
         left:  "hesitate",
-        right: "album",
+        right: "skip",
+      },
+
+      // Mappings swipe pour le mode ALBUM (construire un album).
+      // up=mettre dans l'album, right=garder sans album, down=supprimer, left=hésiter
+      swipeMappingsAlbum: {
+        up:    "album",
+        down:  "delete",
+        left:  "hesitate",
+        right: "skip",
       },
 
       // Fréquence des rappels push. Persistée.
@@ -92,23 +101,29 @@ export const usePhotoStore = create(
       // (SummaryScreen). Permet aux photos passées de revenir dans la file la prochaine fois.
       resetSkipped: () => set({ skipped: [] }),
 
-      // Modifie le mapping d'une direction de swipe (utilisé par Settings).
-      setSwipeMapping: (direction, action) => set((state) => ({
-        swipeMappings: { ...state.swipeMappings, [direction]: action },
-      })),
+      // Modifie le mapping d'une direction pour un mode donné ("menage" ou "album").
+      setSwipeMapping: (mode, direction, action) => set((state) => {
+        const key = mode === "album" ? "swipeMappingsAlbum" : "swipeMappingsMenage";
+        return { [key]: { ...state[key], [direction]: action } };
+      }),
 
       // Modifie la fréquence des rappels (utilisé par Settings).
       setNotificationFrequency: (freq) => set({ notificationFrequency: freq }),
 
-      // Remet les mappings de swipe par défaut.
-      resetSwipeMappings: () => set({
-        swipeMappings: {
-          up:    "skip",
-          down:  "delete",
-          left:  "hesitate",
-          right: "album",
-        },
-      }),
+      // Remet les mappings de swipe par défaut pour un mode donné (ou les deux).
+      resetSwipeMappings: (mode) => {
+        if (mode === "album") {
+          set({ swipeMappingsAlbum: { up: "album", down: "delete", left: "hesitate", right: "skip" } });
+        } else if (mode === "menage") {
+          set({ swipeMappingsMenage: { up: "favorite", down: "delete", left: "hesitate", right: "skip" } });
+        } else {
+          // reset les deux
+          set({
+            swipeMappingsMenage: { up: "favorite", down: "delete", left: "hesitate", right: "skip" },
+            swipeMappingsAlbum:  { up: "album",    down: "delete", left: "hesitate", right: "skip" },
+          });
+        }
+      },
 
       undoLast: (keptSnap, deletedSnap, printedSnap, skippedSnap, hesitatedSnap) => set((state) => ({
         kept:      keptSnap,
@@ -225,7 +240,8 @@ export const usePhotoStore = create(
         skipped:                 state.skipped,
         hesitated:               state.hesitated,
         albums:                  state.albums,
-        swipeMappings:           state.swipeMappings,
+        swipeMappingsMenage:     state.swipeMappingsMenage,
+        swipeMappingsAlbum:      state.swipeMappingsAlbum,
         notificationFrequency:   state.notificationFrequency,
       }),
     }

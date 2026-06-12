@@ -39,12 +39,15 @@ const getActionMeta = (key) => SWIPE_ACTIONS.find((a) => a.key === key) || SWIPE
 // ── Composant ─────────────────────────────────────────────────────────────────
 
 export function SettingsScreen({ navigation }) {
-  const [showPremium, setShowPremium]       = useState(false);
-  const [swipeExpanded, setSwipeExpanded]   = useState(false);
-  const [editingDirection, setEditingDirection] = useState(null);
-  const [notifLoading, setNotifLoading]     = useState(false);
+  const [showPremium, setShowPremium]           = useState(false);
+  const [menageExpanded, setMenageExpanded]     = useState(false);
+  const [albumExpanded, setAlbumExpanded]       = useState(false);
+  // editingSwipe = { mode: "menage"|"album", direction: string } | null
+  const [editingSwipe, setEditingSwipe]         = useState(null);
+  const [notifLoading, setNotifLoading]         = useState(false);
 
-  const swipeMappings           = usePhotoStore((s) => s.swipeMappings);
+  const swipeMappingsMenage     = usePhotoStore((s) => s.swipeMappingsMenage);
+  const swipeMappingsAlbum      = usePhotoStore((s) => s.swipeMappingsAlbum);
   const setSwipeMapping         = usePhotoStore((s) => s.setSwipeMapping);
   const resetSwipeMappings      = usePhotoStore((s) => s.resetSwipeMappings);
   const notificationFrequency   = usePhotoStore((s) => s.notificationFrequency);
@@ -55,18 +58,18 @@ export function SettingsScreen({ navigation }) {
 
   // ── Swipe settings ─────────────────────────────────────────────────────────
   const handlePickAction = (actionKey) => {
-    if (!editingDirection) return;
-    setSwipeMapping(editingDirection, actionKey);
-    setEditingDirection(null);
+    if (!editingSwipe) return;
+    setSwipeMapping(editingSwipe.mode, editingSwipe.direction, actionKey);
+    setEditingSwipe(null);
   };
 
-  const confirmReset = () => {
+  const confirmReset = (swipeMode) => {
     Alert.alert(
       "Réinitialiser",
-      "Remettre les directions de swipe par défaut ?",
+      `Remettre les directions de swipe "${swipeMode === "menage" ? "Ménage" : "Album"}" par défaut ?`,
       [
         { text: "Annuler", style: "cancel" },
-        { text: "Réinitialiser", style: "destructive", onPress: () => resetSwipeMappings() },
+        { text: "Réinitialiser", style: "destructive", onPress: () => resetSwipeMappings(swipeMode) },
       ]
     );
   };
@@ -111,8 +114,8 @@ export function SettingsScreen({ navigation }) {
   );
 
   // Résumé des directions pour l'en-tête du menu réduit
-  const swipeSummary = DIRECTIONS.map((dir) => {
-    const action = getActionMeta(swipeMappings?.[dir.key] ?? "none");
+  const makeSummary = (mappings) => DIRECTIONS.map((dir) => {
+    const action = getActionMeta(mappings?.[dir.key] ?? "none");
     return `${dir.emoji} ${action.emoji}`;
   }).join("  ");
 
@@ -211,68 +214,94 @@ export function SettingsScreen({ navigation }) {
           );
         })}
 
-        {/* ── Section Tri par swipe (menu dépliable) ──────────────────────── */}
-        <Section title="Tri par swipe" />
-
-        {/* En-tête du menu dépliable */}
+        {/* ── Section Tri par swipe — Mode Ménage ──────────────────────────── */}
+        <Section title="🧹 Swipe — Mode Ménage" />
         <TouchableOpacity
-          onPress={() => setSwipeExpanded(!swipeExpanded)}
+          onPress={() => setMenageExpanded(!menageExpanded)}
           style={{
-            backgroundColor: C.bgCard,
-            borderRadius: S.radius,
-            borderWidth: 1,
-            borderColor: swipeExpanded ? C.accent : C.border,
-            padding: 14,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: swipeExpanded ? 8 : 0,
+            backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1,
+            borderColor: menageExpanded ? C.accent : C.border,
+            padding: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+            marginBottom: menageExpanded ? 8 : 0,
           }}
         >
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>
-              Personnaliser les directions
-            </Text>
-            {/* Résumé des associations actuelles */}
-            {!swipeExpanded && (
-              <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>
-                {swipeSummary}
-              </Text>
+            <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>Personnaliser les directions</Text>
+            {!menageExpanded && (
+              <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>{makeSummary(swipeMappingsMenage)}</Text>
             )}
           </View>
-          <Text style={{ color: C.textMuted, fontSize: 18, marginLeft: 8 }}>
-            {swipeExpanded ? "▲" : "▼"}
-          </Text>
+          <Text style={{ color: C.textMuted, fontSize: 18, marginLeft: 8 }}>{menageExpanded ? "▲" : "▼"}</Text>
         </TouchableOpacity>
-
-        {/* Contenu dépliable */}
-        {swipeExpanded && (
+        {menageExpanded && (
           <>
             <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 10, lineHeight: 17 }}>
-              Choisis ce que fait chaque direction. Les boutons (cœur, corbeille, album) gardent leur action quoi qu'il arrive.
+              Suppression, coup de cœur, hésitation. Le bouton 🗑 reste toujours "Supprimer".
             </Text>
-
             {DIRECTIONS.map((dir) => {
-              const action = getActionMeta(swipeMappings?.[dir.key] ?? "none");
+              const action = getActionMeta(swipeMappingsMenage?.[dir.key] ?? "none");
               return (
                 <RowSetting
                   key={dir.key}
                   emoji={dir.emoji}
                   label={dir.label}
                   desc={`${action.emoji}  ${action.label}`}
-                  onPress={() => setEditingDirection(dir.key)}
+                  onPress={() => setEditingSwipe({ mode: "menage", direction: dir.key })}
                   right={<Text style={{ color: C.textMuted, fontSize: 18 }}>›</Text>}
                 />
               );
             })}
-
             <TouchableOpacity
-              onPress={confirmReset}
+              onPress={() => confirmReset("menage")}
               style={{ alignSelf: "flex-end", paddingHorizontal: 12, paddingVertical: 6, marginTop: 4 }}
             >
-              <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: "700" }}>
-                ↺ Réinitialiser
-              </Text>
+              <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: "700" }}>↺ Réinitialiser</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {/* ── Section Tri par swipe — Mode Album ───────────────────────────── */}
+        <Section title="📁 Swipe — Mode Album" />
+        <TouchableOpacity
+          onPress={() => setAlbumExpanded(!albumExpanded)}
+          style={{
+            backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1,
+            borderColor: albumExpanded ? C.accent : C.border,
+            padding: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+            marginBottom: albumExpanded ? 8 : 0,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>Personnaliser les directions</Text>
+            {!albumExpanded && (
+              <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>{makeSummary(swipeMappingsAlbum)}</Text>
+            )}
+          </View>
+          <Text style={{ color: C.textMuted, fontSize: 18, marginLeft: 8 }}>{albumExpanded ? "▲" : "▼"}</Text>
+        </TouchableOpacity>
+        {albumExpanded && (
+          <>
+            <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 10, lineHeight: 17 }}>
+              Par défaut : haut = ajouter à l'album, droite = garder sans album, bas = supprimer.
+            </Text>
+            {DIRECTIONS.map((dir) => {
+              const action = getActionMeta(swipeMappingsAlbum?.[dir.key] ?? "none");
+              return (
+                <RowSetting
+                  key={dir.key}
+                  emoji={dir.emoji}
+                  label={dir.label}
+                  desc={`${action.emoji}  ${action.label}`}
+                  onPress={() => setEditingSwipe({ mode: "album", direction: dir.key })}
+                  right={<Text style={{ color: C.textMuted, fontSize: 18 }}>›</Text>}
+                />
+              );
+            })}
+            <TouchableOpacity
+              onPress={() => confirmReset("album")}
+              style={{ alignSelf: "flex-end", paddingHorizontal: 12, paddingVertical: 6, marginTop: 4 }}
+            >
+              <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: "700" }}>↺ Réinitialiser</Text>
             </TouchableOpacity>
           </>
         )}
@@ -337,7 +366,7 @@ export function SettingsScreen({ navigation }) {
       </Modal>
 
       {/* ── Modal picker de direction de swipe ──────────────────────────── */}
-      <Modal visible={!!editingDirection} transparent animationType="slide" onRequestClose={() => setEditingDirection(null)}>
+      <Modal visible={!!editingSwipe} transparent animationType="slide" onRequestClose={() => setEditingSwipe(null)}>
         <View style={{ flex: 1, backgroundColor: "rgba(60,20,0,0.5)", justifyContent: "flex-end" }}>
           <View style={{
             backgroundColor: C.bgCard,
@@ -345,14 +374,15 @@ export function SettingsScreen({ navigation }) {
             padding: S.padLg, paddingBottom: 40,
           }}>
             <Text style={{ fontSize: 20, fontWeight: "900", color: C.text, marginBottom: 4 }}>
-              {editingDirection ? DIRECTIONS.find((d) => d.key === editingDirection)?.label : ""}
+              {editingSwipe ? DIRECTIONS.find((d) => d.key === editingSwipe.direction)?.label : ""}
             </Text>
             <Text style={{ fontSize: 13, color: C.textMuted, marginBottom: 16 }}>
               Quelle action ce swipe déclenche-t-il ?
             </Text>
 
             {SWIPE_ACTIONS.map((a) => {
-              const isSelected = swipeMappings?.[editingDirection] === a.key;
+              const currentMappings = editingSwipe?.mode === "album" ? swipeMappingsAlbum : swipeMappingsMenage;
+              const isSelected = currentMappings?.[editingSwipe?.direction] === a.key;
               return (
                 <TouchableOpacity
                   key={a.key}
@@ -382,7 +412,7 @@ export function SettingsScreen({ navigation }) {
             })}
 
             <TouchableOpacity
-              onPress={() => setEditingDirection(null)}
+              onPress={() => setEditingSwipe(null)}
               style={{ marginTop: 8, alignItems: "center", paddingVertical: 10 }}
             >
               <Text style={{ color: C.textMuted, fontSize: 14 }}>Annuler</Text>

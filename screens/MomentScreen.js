@@ -347,8 +347,8 @@ export function MomentScreen({ navigation }) {
       {(selected || (hasFilter && filteredPhotos.length > 0)) && (
         <View style={{ padding: S.pad, paddingTop: 0 }}>
           <TouchableOpacity
-            onPress={() => navigation.navigate("Swipe", {
-              queue: selected ? selected.photos : filteredPhotos,
+            onPress={() => navigation.navigate("TriMode", {
+              preQueue: selected ? selected.photos : filteredPhotos,
             })}
             style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4,
               shadowColor: C.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }}

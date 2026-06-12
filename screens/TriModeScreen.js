@@ -2,11 +2,12 @@
 // Écran de lancement du tri — présenté comme une modale qui slide depuis le bas.
 //
 // Deux modes :
-//   "Ménage"  → lance le swipe sur toutes les photos restantes
-//   "Album"   → step 1 : choix des filtres (par mois)
-//               step 2 : nom de l'album → crée l'album → lance le swipe en mode album
+//   "Ménage"  → lance le swipe sur toutes les photos restantes (ou preQueue si fourni)
+//   "Album"   → step 1 : choix créer un nouvel album ou continuer un existant
+//               step 2 (nouvel album) : filtres mois + nom → crée l'album → lance le swipe
+//               step 2 (album existant) : sélectionner l'album → lance le swipe
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
   StatusBar, KeyboardAvoidingView, Platform,
@@ -20,7 +21,6 @@ const MOIS_FR = [
   "Juillet","Août","Septembre","Octobre","Novembre","Décembre",
 ];
 
-// Groupe les photos par mois, retourne un tableau trié du plus récent au plus ancien
 function buildMonthGroups(photos) {
   const map = {};
   photos.forEach((p) => {
@@ -36,19 +36,27 @@ function buildMonthGroups(photos) {
     .map((g) => ({ key: g.key, label: g.label, count: g.ids.size, ids: g.ids }));
 }
 
-export function TriModeScreen({ navigation }) {
-  const [step, setStep] = useState(0); // 0 = choix mode, 1 = config album
-  const [selectedKeys, setSelectedKeys] = useState([]); // mois cochés (vide = toutes)
-  const [albumName, setAlbumName] = useState("");
+export function TriModeScreen({ navigation, route }) {
+  // preQueue : file de photos pré-construite (depuis MomentScreen / DuplicatesScreen)
+  const preQueue = route.params?.preQueue ?? null;
 
-  const libraryPhotos  = usePhotoStore((s) => s.libraryPhotos);
-  const kept           = usePhotoStore((s) => s.kept);
-  const deleted        = usePhotoStore((s) => s.deleted);
-  const printed        = usePhotoStore((s) => s.printed);
-  const skipped        = usePhotoStore((s) => s.skipped);
-  const createAlbum    = usePhotoStore((s) => s.createAlbum);
+  // step 0 = choix ménage/album
+  // step 1 = album : nouveau ou existant ?
+  // step 2 = config (filtres + nom si nouvel album ; liste si existant)
+  const [step, setStep]                       = useState(0);
+  const [albumSubStep, setAlbumSubStep]       = useState(null); // "new" | "existing"
+  const [selectedKeys, setSelectedKeys]       = useState([]);
+  const [albumName, setAlbumName]             = useState("");
+  const [selectedExistingAlbum, setSelectedExistingAlbum] = useState(null);
 
-  // Photos déjà traitées → exclues de la file
+  const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
+  const kept          = usePhotoStore((s) => s.kept);
+  const deleted       = usePhotoStore((s) => s.deleted);
+  const printed       = usePhotoStore((s) => s.printed);
+  const skipped       = usePhotoStore((s) => s.skipped);
+  const createAlbum   = usePhotoStore((s) => s.createAlbum);
+  const albums        = usePhotoStore((s) => s.albums);
+
   const triedIds = useMemo(() => new Set([
     ...kept.map((x) => x.id),
     ...deleted.map((x) => x.id),
@@ -56,10 +64,10 @@ export function TriModeScreen({ navigation }) {
     ...skipped.map((x) => x.id),
   ]), [kept, deleted, printed, skipped]);
 
-  const remaining   = useMemo(() => libraryPhotos.filter((p) => !triedIds.has(p.id)), [libraryPhotos, triedIds]);
+  // Si preQueue fourni (depuis MomentScreen etc.), on l'utilise tel quel
+  const remaining   = preQueue ?? libraryPhotos.filter((p) => !triedIds.has(p.id));
   const monthGroups = useMemo(() => buildMonthGroups(remaining), [remaining]);
 
-  // Photos correspondant aux filtres cochés (vide = toutes)
   const filteredPhotos = useMemo(() => {
     if (selectedKeys.length === 0) return remaining;
     const union = new Set(
@@ -68,7 +76,6 @@ export function TriModeScreen({ navigation }) {
     return remaining.filter((p) => union.has(p.id));
   }, [remaining, selectedKeys, monthGroups]);
 
-  // Ajouter / retirer un mois des filtres
   const toggleKey = (key) => {
     setSelectedKeys((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
@@ -77,24 +84,36 @@ export function TriModeScreen({ navigation }) {
 
   // ── Mode Ménage ───────────────────────────────────────────────────────────
   const handleMenage = () => {
-    navigation.replace("Swipe", { queue: remaining });
+    navigation.replace("Swipe", { queue: remaining, mode: "menage" });
   };
 
-  // ── Mode Album ────────────────────────────────────────────────────────────
-  const handleLancerAlbum = () => {
+  // ── Mode Album — Nouvel album ─────────────────────────────────────────────
+  const handleLancerNouvelAlbum = () => {
     const name = albumName.trim();
     if (!name || filteredPhotos.length === 0) return;
     createAlbum(name);
     const newAlbum = usePhotoStore.getState().albums.slice(-1)[0];
     navigation.replace("Swipe", {
       queue:     filteredPhotos,
-      albumMode: true,
+      mode:      "album",
       albumId:   newAlbum.id,
       albumName: name,
     });
   };
 
-  const canLaunch = albumName.trim().length > 0 && filteredPhotos.length > 0;
+  // ── Mode Album — Album existant ───────────────────────────────────────────
+  const handleLancerAlbumExistant = () => {
+    if (!selectedExistingAlbum || filteredPhotos.length === 0) return;
+    navigation.replace("Swipe", {
+      queue:     filteredPhotos,
+      mode:      "album",
+      albumId:   selectedExistingAlbum.id,
+      albumName: selectedExistingAlbum.name,
+    });
+  };
+
+  const canLaunchNew      = albumName.trim().length > 0 && filteredPhotos.length > 0;
+  const canLaunchExisting = !!selectedExistingAlbum && filteredPhotos.length > 0;
 
   // ════════════════════════════════════════════════════════════════════════════
   // STEP 0 — Choix du mode
@@ -103,7 +122,6 @@ export function TriModeScreen({ navigation }) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
         <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
-
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={{ padding: S.pad, paddingBottom: 0, alignSelf: "flex-start" }}
@@ -116,7 +134,9 @@ export function TriModeScreen({ navigation }) {
             Que veux-tu faire ?
           </Text>
           <Text style={{ fontSize: 14, color: C.textMuted, marginBottom: 36 }}>
-            {remaining.length} photos t'attendent 📷
+            {preQueue
+              ? `${preQueue.length} photos sélectionnées 📷`
+              : `${remaining.length} photos t'attendent 📷`}
           </Text>
 
           {/* ── Carte Ménage ───────────────────────────────────────────── */}
@@ -156,10 +176,10 @@ export function TriModeScreen({ navigation }) {
           >
             <Text style={{ fontSize: 38, marginBottom: 10 }}>📁</Text>
             <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", marginBottom: 6 }}>
-              Créer un album
+              Créer / compléter un album
             </Text>
             <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.82)", lineHeight: 19 }}>
-              Choisis une période, donne un nom, et swipe pour sélectionner tes meilleures photos.
+              Construis un album à partir de tes photos en swipant celles que tu veux garder.
             </Text>
           </TouchableOpacity>
         </View>
@@ -168,14 +188,12 @@ export function TriModeScreen({ navigation }) {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // STEP 1 — Config album (filtres + nom)
+  // STEP 1 — Nouvel album ou album existant ?
   // ════════════════════════════════════════════════════════════════════════════
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-
-        {/* Header */}
+  if (step === 1) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+        <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 8 }}>
           <TouchableOpacity
             onPress={() => setStep(0)}
@@ -183,7 +201,80 @@ export function TriModeScreen({ navigation }) {
           >
             <Text style={{ color: C.textMuted, fontSize: 16, paddingHorizontal: 4 }}>←</Text>
           </TouchableOpacity>
-          <Text style={{ fontWeight: "900", fontSize: 20, color: C.text }}>Créer un album</Text>
+          <Text style={{ fontWeight: "900", fontSize: 20, color: C.text }}>Album</Text>
+        </View>
+
+        <View style={{ flex: 1, padding: S.pad, justifyContent: "center" }}>
+          {/* ── Nouvel album ───────────────────────────────────────────── */}
+          <TouchableOpacity
+            onPress={() => { setAlbumSubStep("new"); setStep(2); }}
+            style={{
+              backgroundColor: C.accent,
+              borderRadius: S.radiusLg,
+              padding: 24,
+              marginBottom: 16,
+              elevation: 6,
+              shadowColor: C.accent,
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.3,
+              shadowRadius: 14,
+            }}
+          >
+            <Text style={{ fontSize: 38, marginBottom: 10 }}>✨</Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", marginBottom: 6 }}>
+              Créer un nouvel album
+            </Text>
+            <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.82)", lineHeight: 19 }}>
+              Choisis une période, donne un nom, et commence à trier.
+            </Text>
+          </TouchableOpacity>
+
+          {/* ── Album existant ─────────────────────────────────────────── */}
+          <TouchableOpacity
+            onPress={() => { setAlbumSubStep("existing"); setStep(2); }}
+            disabled={albums.length === 0}
+            style={{
+              backgroundColor: C.bgCard,
+              borderRadius: S.radiusLg,
+              padding: 24,
+              borderWidth: 2,
+              borderColor: C.border,
+              opacity: albums.length === 0 ? 0.5 : 1,
+            }}
+          >
+            <Text style={{ fontSize: 38, marginBottom: 10 }}>📂</Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 6 }}>
+              Continuer un album existant
+            </Text>
+            <Text style={{ fontSize: 13, color: C.textMuted, lineHeight: 19 }}>
+              {albums.length === 0
+                ? "Aucun album créé pour l'instant."
+                : `${albums.length} album${albums.length > 1 ? "s" : ""} disponible${albums.length > 1 ? "s" : ""}`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // STEP 2 — Config filtres + nom/album
+  // ════════════════════════════════════════════════════════════════════════════
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 8 }}>
+          <TouchableOpacity
+            onPress={() => setStep(1)}
+            style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, padding: 8, borderWidth: 1, borderColor: C.border }}
+          >
+            <Text style={{ color: C.textMuted, fontSize: 16, paddingHorizontal: 4 }}>←</Text>
+          </TouchableOpacity>
+          <Text style={{ fontWeight: "900", fontSize: 20, color: C.text }}>
+            {albumSubStep === "new" ? "Nouvel album" : "Continuer un album"}
+          </Text>
         </View>
 
         <ScrollView
@@ -191,14 +282,50 @@ export function TriModeScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
         >
 
-          {/* ── Section filtres ────────────────────────────────────────── */}
+          {/* ── Liste des albums existants ──────────────────────────── */}
+          {albumSubStep === "existing" && (
+            <>
+              <Text style={sectionLabel}>Choisir un album</Text>
+              {albums.map((a) => {
+                const isActive = selectedExistingAlbum?.id === a.id;
+                return (
+                  <TouchableOpacity
+                    key={a.id}
+                    onPress={() => setSelectedExistingAlbum(a)}
+                    style={{
+                      backgroundColor: isActive ? `${C.accent}15` : C.bgCard,
+                      borderRadius: S.radius,
+                      borderWidth: 1.5,
+                      borderColor: isActive ? C.accent : C.border,
+                      padding: 14,
+                      marginBottom: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                    }}
+                  >
+                    <Text style={{ fontSize: 22 }}>📁</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>{a.name}</Text>
+                      <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                        {a.photoIds.length} photo{a.photoIds.length > 1 ? "s" : ""}
+                      </Text>
+                    </View>
+                    {isActive && <Text style={{ color: C.accent, fontSize: 18 }}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+              <View style={{ height: 20 }} />
+            </>
+          )}
+
+          {/* ── Filtres mois ──────────────────────────────────────────── */}
           <Text style={sectionLabel}>Quelle période ?</Text>
           <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 14, lineHeight: 17 }}>
             Sélectionne un ou plusieurs mois. Laisse vide pour inclure toutes tes photos.
           </Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
-            {/* Chips de mois */}
             {monthGroups.map((g) => {
               const on = selectedKeys.includes(g.key);
               return (
@@ -208,15 +335,12 @@ export function TriModeScreen({ navigation }) {
                   style={[chip, on ? chipOn : chipOff]}
                 >
                   <Text style={[chipText, { color: on ? C.accent : C.textMuted }]}>
-                    {g.label}
-                    {"  "}
+                    {g.label}{"  "}
                     <Text style={{ fontWeight: "500", fontSize: 11 }}>{g.count}</Text>
                   </Text>
                 </TouchableOpacity>
               );
             })}
-
-            {/* Chip "Toutes les photos" */}
             {selectedKeys.length > 0 && (
               <TouchableOpacity onPress={() => setSelectedKeys([])} style={[chip, chipOff]}>
                 <Text style={[chipText, { color: C.textMuted }]}>✕ Effacer les filtres</Text>
@@ -224,7 +348,7 @@ export function TriModeScreen({ navigation }) {
             )}
           </View>
 
-          {/* Compteur de photos sélectionnées */}
+          {/* Compteur */}
           <View style={{
             flexDirection: "row", alignItems: "center", gap: 10,
             backgroundColor: C.bgCard, borderRadius: S.radius,
@@ -241,58 +365,80 @@ export function TriModeScreen({ navigation }) {
             )}
           </View>
 
-          {/* ── Nom de l'album ─────────────────────────────────────────── */}
-          <Text style={sectionLabel}>Nom de l'album</Text>
-          <TextInput
-            value={albumName}
-            onChangeText={setAlbumName}
-            placeholder="Ex. Vacances été 2025, Noël en famille…"
-            placeholderTextColor={C.textMuted}
-            returnKeyType="done"
-            style={{
-              backgroundColor: C.bgCard,
-              borderRadius: S.radius,
-              borderWidth: 1.5,
-              borderColor: albumName.trim() ? C.accent : C.border,
-              paddingHorizontal: 16,
-              paddingVertical: 14,
-              fontSize: 15,
-              color: C.text,
-            }}
-          />
+          {/* ── Nom du nouvel album ───────────────────────────────────── */}
+          {albumSubStep === "new" && (
+            <>
+              <Text style={sectionLabel}>Nom de l'album</Text>
+              <TextInput
+                value={albumName}
+                onChangeText={setAlbumName}
+                placeholder="Ex. Vacances été 2025, Noël en famille…"
+                placeholderTextColor={C.textMuted}
+                returnKeyType="done"
+                style={{
+                  backgroundColor: C.bgCard,
+                  borderRadius: S.radius,
+                  borderWidth: 1.5,
+                  borderColor: albumName.trim() ? C.accent : C.border,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                  fontSize: 15,
+                  color: C.text,
+                }}
+              />
+            </>
+          )}
 
         </ScrollView>
 
-        {/* ── Bouton flottant "Lancer le tri" ───────────────────────────── */}
+        {/* ── Bouton flottant ───────────────────────────────────────────── */}
         <View style={{
           position: "absolute", bottom: 0, left: 0, right: 0,
           backgroundColor: C.bg, borderTopWidth: 1, borderTopColor: C.border,
           padding: S.pad,
           paddingBottom: Platform.OS === "ios" ? 32 : S.pad,
         }}>
-          <TouchableOpacity
-            onPress={handleLancerAlbum}
-            disabled={!canLaunch}
-            style={{
-              backgroundColor: canLaunch ? C.accent : `${C.accent}40`,
-              borderRadius: S.radius,
-              padding: 16,
-              alignItems: "center",
-              elevation: canLaunch ? 4 : 0,
-              shadowColor: C.accent,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: canLaunch ? 0.3 : 0,
-              shadowRadius: 8,
-            }}
-          >
-            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 15 }}>
-              {filteredPhotos.length === 0
-                ? "Aucune photo dans cette période"
-                : albumName.trim() === ""
-                ? "Entre un nom pour continuer"
-                : `Lancer le tri · ${filteredPhotos.length} photos →`}
-            </Text>
-          </TouchableOpacity>
+          {albumSubStep === "new" ? (
+            <TouchableOpacity
+              onPress={handleLancerNouvelAlbum}
+              disabled={!canLaunchNew}
+              style={{
+                backgroundColor: canLaunchNew ? C.accent : `${C.accent}40`,
+                borderRadius: S.radius, padding: 16, alignItems: "center",
+                elevation: canLaunchNew ? 4 : 0,
+                shadowColor: C.accent, shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: canLaunchNew ? 0.3 : 0, shadowRadius: 8,
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "900", fontSize: 15 }}>
+                {filteredPhotos.length === 0
+                  ? "Aucune photo dans cette période"
+                  : albumName.trim() === ""
+                  ? "Entre un nom pour continuer"
+                  : `Lancer le tri · ${filteredPhotos.length} photos →`}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={handleLancerAlbumExistant}
+              disabled={!canLaunchExisting}
+              style={{
+                backgroundColor: canLaunchExisting ? C.accent : `${C.accent}40`,
+                borderRadius: S.radius, padding: 16, alignItems: "center",
+                elevation: canLaunchExisting ? 4 : 0,
+                shadowColor: C.accent, shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: canLaunchExisting ? 0.3 : 0, shadowRadius: 8,
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "900", fontSize: 15 }}>
+                {!selectedExistingAlbum
+                  ? "Choisis un album pour continuer"
+                  : filteredPhotos.length === 0
+                  ? "Aucune photo dans cette période"
+                  : `Continuer "${selectedExistingAlbum.name}" · ${filteredPhotos.length} photos →`}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
       </KeyboardAvoidingView>
