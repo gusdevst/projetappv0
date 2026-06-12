@@ -55,6 +55,10 @@ export function HomeScreen({ navigation }) {
 
   const [activeFilter, setActiveFilter] = useState("Toutes");
 
+  // ── Aléatoire 50 ─────────────────────────────────────────────────────────
+  const [randomFiftyActive, setRandomFiftyActive] = useState(false);
+  const [randomQueue,       setRandomQueue]       = useState([]);
+
   // ── Sélecteur de dossier (ligne 2) ──────────────────────────────────────
   const [selectedAlbum,   setSelectedAlbum]   = useState(null);  // { id, title } | null
   const [albumPhotoIds,   setAlbumPhotoIds]   = useState(null);  // Set<string> | null
@@ -85,6 +89,16 @@ export function HomeScreen({ navigation }) {
 
   function clearAlbum() { setSelectedAlbum(null); setAlbumPhotoIds(null); }
 
+  function toggleRandomFifty(currentRemaining) {
+    if (randomFiftyActive) {
+      setRandomFiftyActive(false);
+    } else {
+      const shuffled = [...currentRemaining].sort(() => Math.random() - 0.5).slice(0, 50);
+      setRandomQueue(shuffled);
+      setRandomFiftyActive(true);
+    }
+  }
+
   // ── Queue de tri ─────────────────────────────────────────────────────────
   const deletedSize = deleted.reduce((a, p) => a + p.size, 0);
   const librarySize = libraryPhotos.reduce((a, p) => a + p.size, 0);
@@ -104,7 +118,9 @@ export function HomeScreen({ navigation }) {
   // Photos non triées, filtrées par album si sélectionné, puis par filtre date
   let remaining = libraryPhotos.filter((p) => !triedIds.has(p.id));
   if (albumPhotoIds) remaining = remaining.filter((p) => albumPhotoIds.has(p.id));
-  const queue = applyFilter(remaining, activeFilter);
+  const queue = randomFiftyActive
+    ? randomQueue.filter((p) => !triedIds.has(p.id))
+    : applyFilter(remaining, activeFilter);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
@@ -174,26 +190,26 @@ export function HomeScreen({ navigation }) {
           ))}
         </View>
 
-        {/* ── Ligne 2 : dossier + screenshots ─────────────────────────── */}
-        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, alignItems: "center" }}>
+        {/* ── Ligne 2 : dossier + aléatoire 50 + screenshots ─────────── */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14, alignItems: "center" }}>
 
-          {/* Pill dossier — flex:1 pour prendre la place disponible */}
+          {/* Pill dossier */}
           <TouchableOpacity
             onPress={openAlbumPicker}
             style={{
-              flex: 1, flexDirection: "row", alignItems: "center", gap: 6,
-              paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99,
+              flexDirection: "row", alignItems: "center", gap: 6,
+              paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99,
               borderWidth: 1.5,
               borderColor: selectedAlbum ? C.accent : C.border,
               backgroundColor: selectedAlbum ? `${C.accent}15` : C.bgCard,
             }}
           >
-            <Text style={{ fontSize: 14 }}>📁</Text>
+            <Text style={{ fontSize: 13 }}>📁</Text>
             <Text
-              style={{ flex: 1, fontSize: 12, fontWeight: "700", color: selectedAlbum ? C.accent : C.textMuted }}
+              style={{ fontSize: 12, fontWeight: "700", color: selectedAlbum ? C.accent : C.textMuted, maxWidth: 90 }}
               numberOfLines={1}
             >
-              {selectedAlbum ? selectedAlbum.title : "Tous les dossiers"}
+              {selectedAlbum ? selectedAlbum.title : "Dossiers"}
             </Text>
             {selectedAlbum ? (
               <TouchableOpacity onPress={clearAlbum} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -204,18 +220,35 @@ export function HomeScreen({ navigation }) {
             )}
           </TouchableOpacity>
 
+          {/* Pill Aléatoire 50 */}
+          <TouchableOpacity
+            onPress={() => toggleRandomFifty(remaining)}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 6,
+              paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99,
+              borderWidth: 1.5,
+              borderColor: randomFiftyActive ? C.accent : C.border,
+              backgroundColor: randomFiftyActive ? C.accent : C.bgCard,
+            }}
+          >
+            <Text style={{ fontSize: 13 }}>🎲</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: randomFiftyActive ? "#fff" : C.textMuted }}>
+              Aléatoire 50
+            </Text>
+          </TouchableOpacity>
+
           {/* Pill Screenshots */}
           <TouchableOpacity
             onPress={() => setActiveFilter(activeFilter === "Screenshots" ? "Toutes" : "Screenshots")}
             style={{
               flexDirection: "row", alignItems: "center", gap: 6,
-              paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99,
+              paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99,
               borderWidth: 1.5,
               borderColor: activeFilter === "Screenshots" ? C.accent : C.border,
               backgroundColor: activeFilter === "Screenshots" ? C.accent : C.bgCard,
             }}
           >
-            <Text style={{ fontSize: 14 }}>📸</Text>
+            <Text style={{ fontSize: 13 }}>📸</Text>
             <Text style={{ fontSize: 12, fontWeight: "700", color: activeFilter === "Screenshots" ? "#fff" : C.textMuted }}>
               Screenshots
             </Text>
