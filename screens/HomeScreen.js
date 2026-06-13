@@ -52,6 +52,7 @@ export function HomeScreen({ navigation }) {
   const libraryPhotos     = usePhotoStore((state) => state.libraryPhotos);
   const libraryTotalCount = usePhotoStore((state) => state.libraryTotalCount);
   const libraryLoading    = usePhotoStore((state) => state.libraryLoading);
+  const randomCount       = usePhotoStore((state) => state.randomCount);
 
   const [activeFilter, setActiveFilter] = useState("Toutes");
 
@@ -89,11 +90,12 @@ export function HomeScreen({ navigation }) {
 
   function clearAlbum() { setSelectedAlbum(null); setAlbumPhotoIds(null); }
 
-  function toggleRandomFifty(currentRemaining) {
+  function toggleRandomFifty(filteredPool) {
     if (randomFiftyActive) {
       setRandomFiftyActive(false);
     } else {
-      const shuffled = [...currentRemaining].sort(() => Math.random() - 0.5).slice(0, 50);
+      // On pioche dans le pool déjà filtré (album + date de ligne 1)
+      const shuffled = [...filteredPool].sort(() => Math.random() - 0.5).slice(0, randomCount);
       setRandomQueue(shuffled);
       setRandomFiftyActive(true);
     }
@@ -115,12 +117,14 @@ export function HomeScreen({ navigation }) {
   const progressPct = libraryPhotos.length > 0
     ? Math.min(100, (triees / libraryPhotos.length) * 100) : 0;
 
-  // Photos non triées, filtrées par album si sélectionné, puis par filtre date
+  // Photos non triées, filtrées par album si sélectionné
   let remaining = libraryPhotos.filter((p) => !triedIds.has(p.id));
   if (albumPhotoIds) remaining = remaining.filter((p) => albumPhotoIds.has(p.id));
+  // Pool filtré par la date (ligne 1) — sert de base pour l'aléatoire ET pour le tri normal
+  const filteredPool = applyFilter(remaining, activeFilter);
   const queue = randomFiftyActive
     ? randomQueue.filter((p) => !triedIds.has(p.id))
-    : applyFilter(remaining, activeFilter);
+    : filteredPool;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
@@ -144,7 +148,7 @@ export function HomeScreen({ navigation }) {
 
         {/* ── CTA ─────────────────────────────────────────────────────── */}
         <TouchableOpacity
-          onPress={() => queue.length > 0 && navigation.navigate("TriMode", { preQueue: queue })}
+          onPress={() => queue.length > 0 && navigation.navigate("TriMode", { preQueue: queue, skipToMenage: randomFiftyActive })}
           disabled={libraryLoading || albumFiltering || queue.length === 0}
           style={{
             backgroundColor: C.accent, borderRadius: 20, padding: 20,
@@ -222,7 +226,7 @@ export function HomeScreen({ navigation }) {
 
           {/* Pill Aléatoire 50 */}
           <TouchableOpacity
-            onPress={() => toggleRandomFifty(remaining)}
+            onPress={() => toggleRandomFifty(filteredPool)}
             style={{
               flexDirection: "row", alignItems: "center", gap: 6,
               paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99,
@@ -231,9 +235,8 @@ export function HomeScreen({ navigation }) {
               backgroundColor: randomFiftyActive ? C.accent : C.bgCard,
             }}
           >
-            <Text style={{ fontSize: 13 }}>🎲</Text>
             <Text style={{ fontSize: 12, fontWeight: "700", color: randomFiftyActive ? "#fff" : C.textMuted }}>
-              Aléatoire 50
+              🎲 Aléatoire {randomCount}
             </Text>
           </TouchableOpacity>
 
@@ -325,7 +328,7 @@ export function HomeScreen({ navigation }) {
           {[
             { key: "deleted", emoji: "🗑",  label: "Corbeille",  count: deleted.length, sub: `${deletedSize.toFixed(0)} Mo`, bg: "#ffe8e8", color: "#e8637a" },
             { key: "album",   emoji: "🗂️", label: "Mes albums",  count: printed.length, sub: "photos gardées",               bg: "#f0e8ff", color: "#b07ad8" },
-            { key: "kept",    emoji: "❤️", label: "Coup de ❤️",  count: kept.length,    sub: "favoris",                      bg: "#e8f8ee", color: "#5cb87a" },
+            { key: "kept",    emoji: "❤️", label: "Coup de ❤️",  count: kept.length,    sub: `${kept.length > 0 ? kept.length + " photo" + (kept.length > 1 ? "s" : "") : "Tes favorites"}`,   bg: "#e8f8ee", color: "#5cb87a" },
           ].map((s) => (
             <TouchableOpacity
               key={s.key}

@@ -80,14 +80,11 @@ export function SwipeScreen({ navigation, route }) {
   const [feedbackEdge, setFeedbackEdge]   = useState(null);
 
   useEffect(() => {
-    if (Platform.OS === "android" && NavigationBar) {
-      NavigationBar.setVisibilityAsync("hidden").catch(() => {});
+    if (Platform.OS === "android") {
+      StatusBar.setHidden(true, "fade");
+      if (NavigationBar) NavigationBar.setVisibilityAsync("hidden").catch(() => {});
     }
-    return () => {
-      if (Platform.OS === "android" && NavigationBar) {
-        NavigationBar.setVisibilityAsync("visible").catch(() => {});
-      }
-    };
+    // Pas de cleanup : on veut la barre cachée sur toute l'app (géré globalement dans App.js)
   }, []);
 
   useEffect(() => { setHeartedThisPhoto(false); }, [idx]);
@@ -194,7 +191,7 @@ export function SwipeScreen({ navigation, route }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <StatusBar hidden={true} />
 
       {/* Halo de feedback */}
       {feedbackEdge && (
@@ -214,7 +211,7 @@ export function SwipeScreen({ navigation, route }) {
       {/* Header */}
       <View style={{
         position: "absolute", top: 0, left: 0, right: 0, zIndex: 15,
-        paddingTop: Platform.OS === "android" ? StatusBar.currentHeight + 8 : 52,
+        paddingTop: Platform.OS === "android" ? 24 : 52,
       }}>
         <View style={{
           flexDirection: "row", justifyContent: "space-between", alignItems: "center",
@@ -307,10 +304,10 @@ export function SwipeScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
-        {/* Mode MÉNAGE : ❤️ coup de cœur (haut) */}
+        {/* Mode MÉNAGE : ❤️ coup de cœur (appui direct — ne fait pas avancer) */}
         {isMenage && (
           <View style={{ alignItems: "center", gap: 5 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>↑ haut</Text>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>appui</Text>
             <TouchableOpacity
               onPress={handleHeartPress}
               style={{

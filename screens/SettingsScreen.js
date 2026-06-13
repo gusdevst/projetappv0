@@ -2,7 +2,7 @@
 // screens/SettingsScreen.js
 // ─────────────────────────────────────────────
 import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Modal, StatusBar, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Modal, StatusBar, Alert, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { RowSetting } from "../components/RowSetting";
@@ -10,6 +10,39 @@ import { usePhotoStore } from "../store/usePhotoStore";
 import { scheduleReminder, requestPermission } from "../services/notificationService";
 
 // ── Données de configuration ──────────────────────────────────────────────────
+
+const TUTORIAL_SLIDES = [
+  {
+    emoji: "🌸",
+    title: "Bienvenue sur Phototri",
+    desc: "Tes souvenirs méritent mieux. On va t'aider à trier ta photothèque sans douleur — photo par photo.",
+  },
+  {
+    emoji: "↔️",
+    title: "Swipe pour décider",
+    desc: "Glisse à droite ou à gauche pour passer, vers le bas pour supprimer. Chaque direction est personnalisable dans les paramètres.",
+  },
+  {
+    emoji: "❤️",
+    title: "Coup de cœur",
+    desc: "Appuie sur le bouton ❤️ pendant le tri pour ajouter une photo à tes coups de cœur. Retrouve-les dans le menu principal.",
+  },
+  {
+    emoji: "🗂️",
+    title: "Créer un album",
+    desc: "Choisis le mode Album pour sélectionner des photos et les regrouper dans un album souvenir.",
+  },
+  {
+    emoji: "🗑",
+    title: "Vider la corbeille",
+    desc: "Les photos supprimées vont dans la Corbeille. Tu confirmes la suppression définitive depuis le menu principal.",
+  },
+  {
+    emoji: "🔒",
+    title: "Tes photos restent privées",
+    desc: "Tout se passe sur ton téléphone. Phototri n'envoie aucune photo sur un serveur.",
+  },
+];
 
 const SWIPE_ACTIONS = [
   { key: "skip",     label: "Passer",              desc: "Aucune action, la photo reviendra plus tard", emoji: "⏭" },
@@ -40,6 +73,8 @@ const getActionMeta = (key) => SWIPE_ACTIONS.find((a) => a.key === key) || SWIPE
 
 export function SettingsScreen({ navigation }) {
   const [showPremium, setShowPremium]           = useState(false);
+  const [showTutorial, setShowTutorial]         = useState(false);
+  const [tutorialIdx, setTutorialIdx]           = useState(0);
   const [menageExpanded, setMenageExpanded]     = useState(false);
   const [albumExpanded, setAlbumExpanded]       = useState(false);
   // editingSwipe = { mode: "menage"|"album", direction: string } | null
@@ -52,6 +87,8 @@ export function SettingsScreen({ navigation }) {
   const resetSwipeMappings      = usePhotoStore((s) => s.resetSwipeMappings);
   const notificationFrequency   = usePhotoStore((s) => s.notificationFrequency);
   const setNotificationFrequency = usePhotoStore((s) => s.setNotificationFrequency);
+  const randomCount             = usePhotoStore((s) => s.randomCount);
+  const setRandomCount          = usePhotoStore((s) => s.setRandomCount);
 
   const comingSoon = (feature) =>
     Alert.alert("Bientôt disponible", `${feature} arrive très vite 🌸`);
@@ -166,6 +203,54 @@ export function SettingsScreen({ navigation }) {
             <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>2,99 €/mois</Text>
           </View>
         </TouchableOpacity>
+
+        {/* ── Section Session aléatoire ────────────────────────────────────── */}
+        <Section title="🎲 Session aléatoire" />
+        <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 12, marginTop: -4, lineHeight: 17 }}>
+          Nombre de photos tirées au sort à chaque session. Ajuste par dizaine selon ton rythme.
+        </Text>
+        <View style={{
+          backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1,
+          borderColor: C.border, padding: 16, marginBottom: 8,
+          flexDirection: "row", alignItems: "center", gap: 16,
+        }}>
+          {/* Moins */}
+          <TouchableOpacity
+            onPress={() => setRandomCount(Math.max(10, randomCount - 10))}
+            disabled={randomCount <= 10}
+            style={{
+              width: 40, height: 40, borderRadius: 20,
+              backgroundColor: randomCount <= 10 ? C.bgMuted : C.bgCard,
+              borderWidth: 1.5, borderColor: randomCount <= 10 ? C.border : C.accent,
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 22, fontWeight: "800", color: randomCount <= 10 ? C.textMuted : C.accent }}>−</Text>
+          </TouchableOpacity>
+
+          {/* Valeur */}
+          <View style={{ flex: 1, alignItems: "center" }}>
+            <Text style={{ fontSize: 36, fontWeight: "900", color: C.text }}>{randomCount}</Text>
+            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>photos</Text>
+          </View>
+
+          {/* Plus */}
+          <TouchableOpacity
+            onPress={() => setRandomCount(Math.min(200, randomCount + 10))}
+            disabled={randomCount >= 200}
+            style={{
+              width: 40, height: 40, borderRadius: 20,
+              backgroundColor: randomCount >= 200 ? C.bgMuted : C.bgCard,
+              borderWidth: 1.5, borderColor: randomCount >= 200 ? C.border : C.accent,
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 22, fontWeight: "800", color: randomCount >= 200 ? C.textMuted : C.accent }}>+</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginBottom: 16 }}>
+          Min 10 · Max 200 · Affiché sur le toggle de l'accueil
+        </Text>
 
         {/* ── Section Rappels ─────────────────────────────────────────────── */}
         <Section title="Rappels" />
@@ -306,6 +391,12 @@ export function SettingsScreen({ navigation }) {
           </>
         )}
 
+        {/* ── Section Aide ─────────────────────────────────────────────────── */}
+        <Section title="Aide" />
+        <RowSetting emoji="🎓" label="Tutoriel" desc="Revoir comment fonctionne Phototri"
+          onPress={() => { setTutorialIdx(0); setShowTutorial(true); }}
+          right={<Text style={{ color: C.textMuted }}>›</Text>} />
+
         {/* ── Section Compte ───────────────────────────────────────────────── */}
         <Section title="Compte" />
         <RowSetting emoji="💬" label="Nous contacter" desc="Support & feedback"
@@ -417,6 +508,63 @@ export function SettingsScreen({ navigation }) {
             >
               <Text style={{ color: C.textMuted, fontSize: 14 }}>Annuler</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Modal Tutoriel ───────────────────────────────────────────────── */}
+      <Modal visible={showTutorial} transparent animationType="fade" onRequestClose={() => setShowTutorial(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }}>
+          <View style={{ backgroundColor: C.bgCard, borderRadius: S.radiusLg, padding: 28, width: "100%" }}>
+
+            {/* Slide actuel */}
+            <View style={{ alignItems: "center", marginBottom: 24 }}>
+              <Text style={{ fontSize: 52, marginBottom: 16 }}>{TUTORIAL_SLIDES[tutorialIdx].emoji}</Text>
+              <Text style={{ fontSize: 20, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 10 }}>
+                {TUTORIAL_SLIDES[tutorialIdx].title}
+              </Text>
+              <Text style={{ fontSize: 14, color: C.textMuted, textAlign: "center", lineHeight: 21 }}>
+                {TUTORIAL_SLIDES[tutorialIdx].desc}
+              </Text>
+            </View>
+
+            {/* Indicateur de progression */}
+            <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginBottom: 24 }}>
+              {TUTORIAL_SLIDES.map((_, i) => (
+                <View key={i} style={{
+                  width: i === tutorialIdx ? 20 : 6, height: 6,
+                  borderRadius: 3,
+                  backgroundColor: i === tutorialIdx ? C.accent : C.border,
+                }} />
+              ))}
+            </View>
+
+            {/* Boutons navigation */}
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              {tutorialIdx > 0 && (
+                <TouchableOpacity
+                  onPress={() => setTutorialIdx(tutorialIdx - 1)}
+                  style={{ flex: 1, backgroundColor: C.bgMuted, borderRadius: S.radius, padding: 14, alignItems: "center" }}
+                >
+                  <Text style={{ color: C.textMuted, fontWeight: "700" }}>← Précédent</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={() => {
+                  if (tutorialIdx < TUTORIAL_SLIDES.length - 1) {
+                    setTutorialIdx(tutorialIdx + 1);
+                  } else {
+                    setShowTutorial(false);
+                  }
+                }}
+                style={{ flex: 1, backgroundColor: C.accent, borderRadius: S.radius, padding: 14, alignItems: "center", elevation: 3 }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "900" }}>
+                  {tutorialIdx < TUTORIAL_SLIDES.length - 1 ? "Suivant →" : "Terminer ✓"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
           </View>
         </View>
       </Modal>

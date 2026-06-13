@@ -7,7 +7,7 @@
 //               step 2 (nouvel album) : filtres mois + nom → crée l'album → lance le swipe
 //               step 2 (album existant) : sélectionner l'album → lance le swipe
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
   StatusBar, KeyboardAvoidingView, Platform,
@@ -38,7 +38,8 @@ function buildMonthGroups(photos) {
 
 export function TriModeScreen({ navigation, route }) {
   // preQueue : file de photos pré-construite (depuis MomentScreen / DuplicatesScreen)
-  const preQueue = route.params?.preQueue ?? null;
+  const preQueue      = route.params?.preQueue      ?? null;
+  const skipToMenage  = route.params?.skipToMenage  ?? false;
 
   // step 0 = choix ménage/album
   // step 1 = album : nouveau ou existant ?
@@ -86,6 +87,13 @@ export function TriModeScreen({ navigation, route }) {
   const handleMenage = () => {
     navigation.replace("Swipe", { queue: remaining, mode: "menage" });
   };
+
+  // Aléatoire : sauter directement en ménage APRÈS le rendu (jamais pendant)
+  useEffect(() => {
+    if (skipToMenage && preQueue) {
+      navigation.replace("Swipe", { queue: preQueue, mode: "menage" });
+    }
+  }, []);
 
   // ── Mode Album — Nouvel album ─────────────────────────────────────────────
   const handleLancerNouvelAlbum = () => {

@@ -19,8 +19,9 @@ export const usePhotoStore = create(
 
       // Mappings swipe pour le mode MÉNAGE (nettoyer la photothèque).
       // Actions possibles : "skip" | "delete" | "favorite" | "hesitate" | "none"
+      // up = "skip" : conserver la photo. Le bouton ❤️ est l'unique moyen d'ajouter aux coups de cœur.
       swipeMappingsMenage: {
-        up:    "favorite",
+        up:    "skip",
         down:  "delete",
         left:  "hesitate",
         right: "skip",
@@ -109,6 +110,10 @@ export const usePhotoStore = create(
 
       // Modifie la fréquence des rappels (utilisé par Settings).
       setNotificationFrequency: (freq) => set({ notificationFrequency: freq }),
+
+      // Taille de la session aléatoire (par défaut 50, ajustable par 10).
+      randomCount: 50,
+      setRandomCount: (n) => set({ randomCount: n }),
 
       // Remet les mappings de swipe par défaut pour un mode donné (ou les deux).
       resetSwipeMappings: (mode) => {
@@ -243,6 +248,7 @@ export const usePhotoStore = create(
         swipeMappingsMenage:     state.swipeMappingsMenage,
         swipeMappingsAlbum:      state.swipeMappingsAlbum,
         notificationFrequency:   state.notificationFrequency,
+        randomCount:             state.randomCount,
       }),
     }
   )

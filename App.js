@@ -2,7 +2,7 @@
 // Rôle : initialiser la navigation et vérifier la permission photo au démarrage.
 
 import { useEffect } from "react";
-import { View } from "react-native";
+import { View, Platform } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider }    from "react-native-safe-area-context";
 import { AppNavigator }        from "./navigation/AppNavigator";
@@ -18,11 +18,32 @@ try {
   // Module non disponible dans le dev build courant — fallback sur View
 }
 
+// Import défensif de expo-navigation-bar (Android uniquement)
+let NavigationBar = null;
+try {
+  if (Platform.OS === "android") {
+    NavigationBar = require("expo-navigation-bar");
+  }
+} catch (e) {}
+
+// Fonction utilitaire : cacher la barre Android (appelée à chaque navigation)
+async function hideAndroidNavBar() {
+  if (!NavigationBar || Platform.OS !== "android") return;
+  try {
+    // overlay-swipe = la barre réapparaît brièvement si swipe depuis le bord, puis se recache seule
+    await NavigationBar.setBehaviorAsync("overlay-swipe");
+    await NavigationBar.setVisibilityAsync("hidden");
+  } catch (e) {}
+}
+
 export default function App() {
   const checkPermission = usePhotoStore((s) => s.checkPermission);
   const loadLibrary     = usePhotoStore((s) => s.loadLibrary);
 
   useEffect(() => {
+    // Masquer la barre Android au démarrage
+    hideAndroidNavBar();
+
     // Au lancement : on vérifie la permission. Si déjà accordée, on charge la photothèque.
     (async () => {
       const status = await checkPermission();
@@ -35,7 +56,8 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <NavigationContainer>
+        {/* onStateChange : recache la barre Android à chaque changement d'écran */}
+        <NavigationContainer onStateChange={hideAndroidNavBar}>
           <AppNavigator />
         </NavigationContainer>
       </SafeAreaProvider>

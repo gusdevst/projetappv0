@@ -1,32 +1,78 @@
 // screens/DuplicatesScreen.js
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Image, StatusBar, Dimensions, Modal, FlatList, Platform,
+  Image, StatusBar, Dimensions, Modal, FlatList, Platform, Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { LinearGradient } from "expo-linear-gradient";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { findDuplicates } from "../services/photoAnalysis";
+import { ZoomableImage } from "../components/ZoomableImage";
+
+let NavigationBar = null;
+try { NavigationBar = require("expo-navigation-bar"); } catch (e) {}
 
 const { width: SW, height: SH } = Dimensions.get("window");
 const PHOTO_SIZE = (SW - S.pad * 2 - 28 - 28 - 8) / 2;
 const THUMB_SIZE = 56;
 
+// Helpers halo (identiques à SwipeScreen)
+function getEdgeContainerStyle(edge) {
+  if (edge === "up")    return { position: "absolute", top: 0,    left: 0, right: 0, height: 220 };
+  if (edge === "down")  return { position: "absolute", bottom: 0, left: 0, right: 0, height: 220 };
+  if (edge === "left")  return { position: "absolute", top: 0, bottom: 0, left: 0,  width: 200 };
+  if (edge === "right") return { position: "absolute", top: 0, bottom: 0, right: 0, width: 200 };
+  return null;
+}
+function getEdgeGradient(edge, color) {
+  if (edge === "up")    return { colors: [color, "transparent"], start: { x: 0, y: 0 }, end: { x: 0, y: 1 } };
+  if (edge === "down")  return { colors: ["transparent", color], start: { x: 0, y: 0 }, end: { x: 0, y: 1 } };
+  if (edge === "left")  return { colors: [color, "transparent"], start: { x: 0, y: 0 }, end: { x: 1, y: 0 } };
+  if (edge === "right") return { colors: ["transparent", color], start: { x: 0, y: 0 }, end: { x: 1, y: 0 } };
+  return { colors: ["transparent", "transparent"] };
+}
+
 export function DuplicatesScreen({ navigation }) {
-  const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
-  const deleted       = usePhotoStore((s) => s.deleted);
-  const addDeleted    = usePhotoStore((s) => s.addDeleted);
-  const addSkipped    = usePhotoStore((s) => s.addSkipped);
+  const libraryPhotos       = usePhotoStore((s) => s.libraryPhotos);
+  const deleted             = usePhotoStore((s) => s.deleted);
+  const addDeleted          = usePhotoStore((s) => s.addDeleted);
+  const addSkipped          = usePhotoStore((s) => s.addSkipped);
+  const addKept             = usePhotoStore((s) => s.addKept);
+  const undoLast            = usePhotoStore((s) => s.undoLast);
+  const swipeMappingsMenage = usePhotoStore((s) => s.swipeMappingsMenage);
 
   const [selectedGroupIdx, setSelectedGroupIdx] = useState(null);
-  // fullscreen = { photos: [...], idx: number } | null
-  // `photos` = liste locale des photos restantes à traiter dans le groupe
-  const [fullscreen, setFullscreen] = useState(null);
+  const [fullscreen, setFullscreen]             = useState(null);
+  // Historique pour le undo (snapshots du store avant chaque action)
+  const [history, setHistory]                   = useState([]);
 
-  const mainListRef  = useRef(null); // FlatList de la photo principale (swipe)
-  const flatListRef  = useRef(null); // FlatList des miniatures
+  const flatListRef     = useRef(null);
+  const feedbackOpacity = useRef(new Animated.Value(0)).current;
+  const [feedbackColor, setFeedbackColor] = useState("rgba(232,99,122,0.7)");
+  const [feedbackEdge,  setFeedbackEdge]  = useState(null);
 
+  // ── Masquer StatusBar + NavigationBar Android quand le modal est ouvert ───
+  const hideAndroidBars = () => {
+    if (Platform.OS !== "android") return;
+    StatusBar.setHidden(true, "fade");
+    if (NavigationBar) {
+      NavigationBar.setBehaviorAsync("immersive-sticky").catch(() => {});
+      NavigationBar.setVisibilityAsync("hidden").catch(() => {});
+    }
+  };
+  const showAndroidBars = () => {
+    if (Platform.OS !== "android") return;
+    StatusBar.setHidden(false, "fade");
+    if (NavigationBar) NavigationBar.setVisibilityAsync("visible").catch(() => {});
+  };
+
+  useEffect(() => {
+    if (fullscreen !== null) hideAndroidBars();
+    else showAndroidBars();
+  }, [fullscreen]);
 
   const activePhotos = useMemo(() => {
     const ids = new Set(deleted.map((p) => p.id));
@@ -36,7 +82,18 @@ export function DuplicatesScreen({ navigation }) {
   const groups = useMemo(() => findDuplicates(activePhotos), [activePhotos]);
   const totalDuplicates = groups.reduce((a, g) => a + g.photos.length, 0);
 
+  // ── Halo de feedback (identique à SwipeScreen) ─────────────────────────────
+  function flashFeedback(color, edge) {
+    setFeedbackColor(color);
+    setFeedbackEdge(edge);
+    Animated.sequence([
+      Animated.timing(feedbackOpacity, { toValue: 1, duration: 120, useNativeDriver: false }),
+      Animated.timing(feedbackOpacity, { toValue: 0, duration: 450, useNativeDriver: false }),
+    ]).start();
+  }
+
   function openFullscreen(group, photoIdx) {
+    setHistory([]); // reset undo à chaque groupe
     setFullscreen({ photos: [...group.photos], idx: photoIdx });
   }
 
@@ -44,11 +101,25 @@ export function DuplicatesScreen({ navigation }) {
     if (!fullscreen) return;
     const clamped = Math.max(0, Math.min(idx, fullscreen.photos.length - 1));
     setFullscreen({ ...fullscreen, idx: clamped });
-    mainListRef.current?.scrollToIndex({ index: clamped, animated: true });
     flatListRef.current?.scrollToIndex({ index: clamped, animated: true, viewPosition: 0.5 });
   }
 
-  function advanceAfterAction(processedPhoto, storeAction) {
+  function advanceAfterAction(processedPhoto, storeAction, swipeDir) {
+    // Snapshot avant action pour pouvoir annuler
+    const stateNow = usePhotoStore.getState();
+    setHistory((h) => [...h, {
+      keptSnap:      stateNow.kept,
+      deletedSnap:   stateNow.deleted,
+      printedSnap:   stateNow.printed,
+      skippedSnap:   stateNow.skipped,
+      hesitatedSnap: stateNow.hesitated,
+      fullscreenSnap: fullscreen,
+    }]);
+
+    // Flash halo selon direction
+    if (storeAction === addDeleted)                      flashFeedback("rgba(232,99,122,0.7)", swipeDir || "down");
+    if (storeAction === addSkipped || storeAction === addKept) flashFeedback("rgba(92,184,122,0.7)", swipeDir || "up");
+
     storeAction(processedPhoto);
     const remaining = fullscreen.photos.filter((p) => p.id !== processedPhoto.id);
     if (remaining.length === 0) {
@@ -58,23 +129,49 @@ export function DuplicatesScreen({ navigation }) {
       const newIdx = Math.min(fullscreen.idx, remaining.length - 1);
       setFullscreen({ photos: remaining, idx: newIdx });
       setTimeout(() => {
-        mainListRef.current?.scrollToIndex({ index: newIdx, animated: false });
         flatListRef.current?.scrollToIndex({ index: newIdx, animated: true, viewPosition: 0.5 });
       }, 50);
     }
   }
 
-  function keepCurrentPhoto(photo)   { advanceAfterAction(photo, addSkipped); }
-  function deleteCurrentPhoto(photo) { advanceAfterAction(photo, addDeleted); }
+  // Undo : restaure le snapshot du store et de l'état fullscreen
+  function undo() {
+    if (!history.length) return;
+    const last = history[history.length - 1];
+    undoLast(last.keptSnap, last.deletedSnap, last.printedSnap, last.skippedSnap, last.hesitatedSnap);
+    setFullscreen(last.fullscreenSnap);
+    setHistory((h) => h.slice(0, -1));
+  }
+
+  // Mappe la direction swipe config ménage → action dans les doublons
+  function getSwipeHandler(direction) {
+    if (!currentPhoto) return undefined;
+    const action = swipeMappingsMenage[direction];
+    if (action === "delete")
+      return () => advanceAfterAction(currentPhoto, addDeleted, direction);
+    if (["favorite", "skip", "hesitate"].includes(action))
+      return () => advanceAfterAction(currentPhoto, addSkipped, direction);
+    return undefined;
+  }
 
   const currentPhoto = fullscreen ? fullscreen.photos[fullscreen.idx] : null;
   const groupSize    = fullscreen ? fullscreen.photos.length : 0;
+
+  function handleDeletePress() {
+    if (!currentPhoto) return;
+    advanceAfterAction(currentPhoto, addDeleted, "down");
+  }
+  // ❤️ = coup de cœur (addKept), identique au bouton ❤️ du mode ménage
+  function handleKeepPress() {
+    if (!currentPhoto) return;
+    advanceAfterAction(currentPhoto, addKept, "up");
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
+      {/* ── Header ── */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -92,7 +189,7 @@ export function DuplicatesScreen({ navigation }) {
         </View>
       </View>
 
-      {/* ── État vide ────────────────────────────────────────────────────── */}
+      {/* ── État vide ── */}
       {groups.length === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 40 }}>
           <Text style={{ fontSize: 56, marginBottom: 12 }}>🪞</Text>
@@ -111,7 +208,6 @@ export function DuplicatesScreen({ navigation }) {
             const dateStr    = new Date(first.creationTime).toLocaleDateString("fr-FR", {
               day: "numeric", month: "long", year: "numeric",
             });
-
             return (
               <TouchableOpacity
                 key={idx}
@@ -119,9 +215,7 @@ export function DuplicatesScreen({ navigation }) {
                 activeOpacity={isSelected ? 1 : 0.75}
                 style={{
                   backgroundColor: isSelected ? `${C.accent}10` : C.bgCard,
-                  borderRadius: S.radius,
-                  padding: 14,
-                  marginBottom: 10,
+                  borderRadius: S.radius, padding: 14, marginBottom: 10,
                   borderWidth: isSelected ? 2 : 1,
                   borderColor: isSelected ? C.accent : C.border,
                 }}
@@ -150,19 +244,9 @@ export function DuplicatesScreen({ navigation }) {
                         activeOpacity={0.85}
                         style={{ borderRadius: 12, overflow: "hidden", borderWidth: 2, borderColor: C.border }}
                       >
-                        <Image
-                          source={{ uri: p.url }}
-                          style={{ width: PHOTO_SIZE, height: PHOTO_SIZE }}
-                          resizeMode="cover"
-                        />
-                        <View style={{
-                          position: "absolute", bottom: 0, left: 0, right: 0,
-                          backgroundColor: "rgba(0,0,0,0.4)", paddingVertical: 5,
-                          alignItems: "center",
-                        }}>
-                          <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>
-                            Voir en plein écran
-                          </Text>
+                        <Image source={{ uri: p.url }} style={{ width: PHOTO_SIZE, height: PHOTO_SIZE }} resizeMode="cover" />
+                        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.4)", paddingVertical: 5, alignItems: "center" }}>
+                          <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>Voir en plein écran</Text>
                         </View>
                       </TouchableOpacity>
                     ))}
@@ -174,72 +258,56 @@ export function DuplicatesScreen({ navigation }) {
         </ScrollView>
       )}
 
-      {/* ── Modal plein écran ────────────────────────────────────────────── */}
+      {/* ── Modal plein écran ── */}
       <Modal
         visible={fullscreen !== null}
         transparent={false}
         animationType="fade"
-        onRequestClose={() => setFullscreen(null)}
+        onShow={hideAndroidBars}
+        onRequestClose={() => { showAndroidBars(); setFullscreen(null); }}
       >
-        <View style={{ flex: 1, backgroundColor: "#000" }}>
-          {/* Masquer la barre Android dans le modal */}
-          <StatusBar hidden={true} />
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#000" }}>
 
-          {/* Photos swipeables plein écran */}
-          {fullscreen && (
-            <FlatList
-              ref={mainListRef}
-              data={fullscreen.photos}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(p) => p.id}
-              initialScrollIndex={fullscreen.idx}
-              getItemLayout={(_, index) => ({ length: SW, offset: SW * index, index })}
-              onMomentumScrollEnd={(e) => {
-                const newIdx = Math.round(e.nativeEvent.contentOffset.x / SW);
-                if (newIdx !== fullscreen.idx) {
-                  setFullscreen((f) => f ? { ...f, idx: newIdx } : f);
-                  flatListRef.current?.scrollToIndex({ index: newIdx, animated: true, viewPosition: 0.5 });
-                }
-              }}
-              renderItem={({ item: p }) => (
-                <Image
-                  source={{ uri: p.url }}
-                  style={{ width: SW, height: SH }}
-                  resizeMode="contain"
-                />
-              )}
-              style={{ flex: 1 }}
+          {/* Halo de feedback (même que SwipeScreen) */}
+          {feedbackEdge && (
+            <Animated.View
+              pointerEvents="none"
+              style={[getEdgeContainerStyle(feedbackEdge), { opacity: feedbackOpacity, zIndex: 25 }]}
+            >
+              <LinearGradient {...getEdgeGradient(feedbackEdge, feedbackColor)} style={{ flex: 1 }} />
+            </Animated.View>
+          )}
+
+          {/* Photo principale avec swipe gestures */}
+          {currentPhoto && (
+            <ZoomableImage
+              key={currentPhoto.id}
+              uri={currentPhoto.url}
+              onSwipeLeft={fullscreen && fullscreen.idx < groupSize - 1
+                ? () => goToPhoto(fullscreen.idx + 1) : undefined}
+              onSwipeRight={fullscreen && fullscreen.idx > 0
+                ? () => goToPhoto(fullscreen.idx - 1) : undefined}
+              onSwipeUp={getSwipeHandler("up")}
+              onSwipeDown={getSwipeHandler("down")}
             />
           )}
 
           {/* ── Top bar ── */}
           <View style={{
-            position: "absolute",
-            top: Platform.OS === "android" ? 16 : 52,
-            left: 0, right: 0,
+            position: "absolute", top: Platform.OS === "android" ? 16 : 52,
+            left: 0, right: 0, zIndex: 10,
             flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-            paddingHorizontal: 16, zIndex: 10,
+            paddingHorizontal: 16,
           }}>
             <TouchableOpacity
               onPress={() => setFullscreen(null)}
-              style={{
-                backgroundColor: "rgba(0,0,0,0.55)",
-                borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10,
-                borderWidth: 1, borderColor: "rgba(255,255,255,0.25)",
-              }}
+              style={{ backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" }}
             >
               <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>← Retour</Text>
             </TouchableOpacity>
 
-            {/* Compteur photo X / N */}
             {fullscreen && (
-              <View style={{
-                backgroundColor: "rgba(0,0,0,0.55)",
-                borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
-                borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
-              }}>
+              <View style={{ backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
                 <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
                   {fullscreen.idx + 1} / {groupSize}
                 </Text>
@@ -247,110 +315,92 @@ export function DuplicatesScreen({ navigation }) {
             )}
           </View>
 
-          {/* ── Zone basse : miniatures + CTA ── */}
+          {/* Indication navigation swipe */}
+          <View style={{ position: "absolute", left: 0, right: 0, bottom: 155, alignItems: "center", zIndex: 10, pointerEvents: "none" }}>
+            <View style={{ backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 99, paddingHorizontal: 14, paddingVertical: 6 }}>
+              <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>← → Naviguer entre les copies</Text>
+            </View>
+          </View>
+
+          {/* ── Barre basse : miniatures + undo ── */}
           {fullscreen && (
             <View style={{
-              position: "absolute", bottom: 0, left: 0, right: 0,
-              paddingBottom: 36, zIndex: 10,
+              position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10,
+              backgroundColor: "rgba(0,0,0,0.72)",
+              paddingTop: 12, paddingBottom: 36,
+              borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)",
             }}>
-              {/* Fond flouté simulé */}
-              <View style={{
-                backgroundColor: "rgba(0,0,0,0.72)",
-                paddingTop: 16, paddingBottom: 0,
-                borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)",
-              }}>
+              {/* Miniatures */}
+              <FlatList
+                ref={flatListRef}
+                data={fullscreen.photos}
+                horizontal
+                keyExtractor={(p) => p.id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+                style={{ marginBottom: 12 }}
+                getItemLayout={(_, index) => ({ length: THUMB_SIZE + 8, offset: (THUMB_SIZE + 8) * index, index })}
+                renderItem={({ item: p, index }) => {
+                  const isActive = index === fullscreen.idx;
+                  return (
+                    <TouchableOpacity
+                      onPress={() => goToPhoto(index)}
+                      activeOpacity={0.8}
+                      style={{ width: THUMB_SIZE, height: THUMB_SIZE, borderRadius: 10, overflow: "hidden", borderWidth: isActive ? 2.5 : 1.5, borderColor: isActive ? "#fff" : "rgba(255,255,255,0.25)", opacity: isActive ? 1 : 0.55 }}
+                    >
+                      <Image source={{ uri: p.url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                    </TouchableOpacity>
+                  );
+                }}
+              />
 
-                {/* Bande de miniatures */}
-                <FlatList
-                  ref={flatListRef}
-                  data={fullscreen.photos}
-                  horizontal
-                  keyExtractor={(p) => p.id}
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
-                  style={{ marginBottom: 16 }}
-                  getItemLayout={(_, index) => ({
-                    length: THUMB_SIZE + 8,
-                    offset: (THUMB_SIZE + 8) * index,
-                    index,
-                  })}
-                  renderItem={({ item: p, index }) => {
-                    const isActive = index === fullscreen.idx;
-                    return (
-                      <TouchableOpacity
-                        onPress={() => goToPhoto(index)}
-                        activeOpacity={0.8}
-                        style={{
-                          width: THUMB_SIZE,
-                          height: THUMB_SIZE,
-                          borderRadius: 10,
-                          overflow: "hidden",
-                          borderWidth: isActive ? 2.5 : 1.5,
-                          borderColor: isActive ? "#fff" : "rgba(255,255,255,0.25)",
-                          opacity: isActive ? 1 : 0.55,
-                        }}
-                      >
-                        <Image
-                          source={{ uri: p.url }}
-                          style={{ width: "100%", height: "100%" }}
-                          resizeMode="cover"
-                        />
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
+              {/* ── Boutons action (identiques à SwipeScreen ménage) ── */}
+              <View style={{ paddingHorizontal: 16, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 14 }}>
 
-                {/* CTAs côte à côte */}
-                <View style={{ paddingHorizontal: 16, flexDirection: "row", gap: 10 }}>
-                  {/* Supprimer */}
+                {/* 🗑 Supprimer */}
+                <View style={{ alignItems: "center", gap: 5 }}>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(232,99,122,0.9)", letterSpacing: 0.3 }}>↓ bas</Text>
                   <TouchableOpacity
-                    onPress={() => deleteCurrentPhoto(currentPhoto)}
-                    style={{
-                      flex: 1,
-                      backgroundColor: "rgba(255,255,255,0.1)",
-                      borderRadius: S.radius,
-                      paddingVertical: 16,
-                      alignItems: "center",
-                      borderWidth: 1.5,
-                      borderColor: "rgba(255,80,80,0.5)",
-                    }}
+                    onPress={handleDeletePress}
+                    style={{ backgroundColor: "rgba(232,99,122,0.2)", borderWidth: 2, borderColor: "rgba(232,99,122,.5)", borderRadius: S.radiusFull, padding: 18 }}
                   >
-                    <Text style={{ color: "#ff6b6b", fontWeight: "800", fontSize: 15 }}>
-                      🗑 Supprimer
-                    </Text>
-                    <Text style={{ color: "rgba(255,107,107,0.7)", fontSize: 11, marginTop: 3 }}>
-                      cette photo
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Garder */}
-                  <TouchableOpacity
-                    onPress={() => keepCurrentPhoto(currentPhoto)}
-                    style={{
-                      flex: 1,
-                      backgroundColor: C.accent,
-                      borderRadius: S.radius,
-                      paddingVertical: 16,
-                      alignItems: "center",
-                      elevation: 8,
-                      shadowColor: C.accent,
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.5,
-                      shadowRadius: 12,
-                    }}
-                  >
-                    <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
-                      ✓ Garder
-                    </Text>
-                    <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, marginTop: 3 }}>
-                      cette photo
-                    </Text>
+                    <Text style={{ fontSize: 22 }}>🗑</Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* ↩ Annuler */}
+                <View style={{ alignItems: "center", gap: 5 }}>
+                  <Text style={{ fontSize: 10, opacity: 0 }}>_</Text>
+                  <TouchableOpacity
+                    onPress={undo}
+                    disabled={!history.length}
+                    style={{
+                      backgroundColor: history.length ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.25)",
+                      borderWidth: 2, borderColor: "rgba(0,0,0,0.08)",
+                      borderRadius: S.radiusFull, padding: 14,
+                      shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: history.length ? 0.35 : 0, shadowRadius: 6, elevation: history.length ? 6 : 0,
+                    }}
+                  >
+                    <Text style={{ fontSize: 20, fontWeight: "800", color: history.length ? "#222" : "rgba(255,255,255,0.4)" }}>↩</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* ❤️ Garder */}
+                <View style={{ alignItems: "center", gap: 5 }}>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>coup de cœur</Text>
+                  <TouchableOpacity
+                    onPress={handleKeepPress}
+                    style={{ backgroundColor: "rgba(92,184,122,0.2)", borderWidth: 2, borderColor: "rgba(92,184,122,.5)", borderRadius: S.radiusFull, padding: 18 }}
+                  >
+                    <Text style={{ fontSize: 22 }}>❤️</Text>
+                  </TouchableOpacity>
+                </View>
+
               </View>
             </View>
           )}
-        </View>
+        </GestureHandlerRootView>
       </Modal>
     </SafeAreaView>
   );

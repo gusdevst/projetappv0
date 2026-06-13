@@ -3,11 +3,14 @@
 // - Corbeille : restauration individuelle ou vidage
 // - Album souvenirs : liste des albums → tap → grille de l'album → tap → plein écran swipeable
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, Image, Modal,
   Dimensions, StatusBar, Alert, TextInput, Platform,
 } from "react-native";
+
+let NavigationBar = null;
+try { NavigationBar = require("expo-navigation-bar"); } catch (e) {}
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { C, S } from "../constants/theme";
@@ -52,6 +55,26 @@ export function GalleryScreen({ navigation, route }) {
   const [deleting, setDeleting]     = useState(false);
   const [newAlbumModal, setNewAlbumModal] = useState(false);
   const [newAlbumName, setNewAlbumName]   = useState("");
+
+  // ── Masquer StatusBar + NavigationBar Android en plein écran ────────────
+  const hideAndroidBars = () => {
+    if (Platform.OS !== "android") return;
+    StatusBar.setHidden(true, "fade");
+    if (NavigationBar) {
+      NavigationBar.setBehaviorAsync("immersive-sticky").catch(() => {});
+      NavigationBar.setVisibilityAsync("hidden").catch(() => {});
+    }
+  };
+  const showAndroidBars = () => {
+    if (Platform.OS !== "android") return;
+    StatusBar.setHidden(false, "fade");
+    if (NavigationBar) NavigationBar.setVisibilityAsync("visible").catch(() => {});
+  };
+
+  useEffect(() => {
+    if (selected) hideAndroidBars();
+    else showAndroidBars();
+  }, [selected]);
 
   // ─── Plein écran ────────────────────────────────────────────────────────
   const openPhoto = (group, photo) => {
@@ -265,10 +288,14 @@ export function GalleryScreen({ navigation, route }) {
       </ScrollView>
 
       {/* ── Modal plein écran ── */}
-      <Modal visible={!!selected} transparent animationType="fade" onRequestClose={closePhoto}>
+      <Modal
+        visible={!!selected}
+        transparent
+        animationType="fade"
+        onShow={hideAndroidBars}
+        onRequestClose={closePhoto}
+      >
         <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#000" }}>
-          {/* Masquer la barre Android dans le modal */}
-          <StatusBar hidden={true} />
 
           {/* Compteur position */}
           {selectedGroup && selectedGroup.length > 1 && (
