@@ -1,5 +1,5 @@
 // screens/DuplicatesScreen.js
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
   Image, StatusBar, Dimensions, Modal, FlatList, Platform,
@@ -27,16 +27,6 @@ export function DuplicatesScreen({ navigation }) {
   const mainListRef  = useRef(null); // FlatList de la photo principale (swipe)
   const flatListRef  = useRef(null); // FlatList des miniatures
 
-  // Masquer/afficher la barre de statut Android quand le modal plein écran s'ouvre
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-    if (fullscreen !== null) {
-      StatusBar.setHidden(true, "fade");
-    } else {
-      StatusBar.setHidden(false, "fade");
-    }
-    return () => StatusBar.setHidden(false, "fade");
-  }, [fullscreen]);
 
   const activePhotos = useMemo(() => {
     const ids = new Set(deleted.map((p) => p.id));
@@ -192,6 +182,9 @@ export function DuplicatesScreen({ navigation }) {
         onRequestClose={() => setFullscreen(null)}
       >
         <View style={{ flex: 1, backgroundColor: "#000" }}>
+          {/* Masquer la barre Android dans le modal */}
+          <StatusBar hidden={true} />
+
           {/* Photos swipeables plein écran */}
           {fullscreen && (
             <FlatList

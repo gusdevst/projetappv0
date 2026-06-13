@@ -3,10 +3,10 @@
 // - Corbeille : restauration individuelle ou vidage
 // - Album souvenirs : liste des albums → tap → grille de l'album → tap → plein écran swipeable
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, Image, Modal,
-  Dimensions, StatusBar, Alert, TextInput, FlatList, Platform,
+  Dimensions, StatusBar, Alert, TextInput, Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -48,16 +48,6 @@ export function GalleryScreen({ navigation, route }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const selected = selectedGroup ? selectedGroup[selectedIndex] : null;
 
-  // Masquer la barre Android quand le plein écran s'ouvre
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-    if (selected) {
-      StatusBar.setHidden(true, "fade");
-    } else {
-      StatusBar.setHidden(false, "fade");
-    }
-    return () => StatusBar.setHidden(false, "fade");
-  }, [selected]);
 
   const [deleting, setDeleting]     = useState(false);
   const [newAlbumModal, setNewAlbumModal] = useState(false);
@@ -277,24 +267,12 @@ export function GalleryScreen({ navigation, route }) {
       {/* ── Modal plein écran ── */}
       <Modal visible={!!selected} transparent animationType="fade" onRequestClose={closePhoto}>
         <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#000" }}>
-          {/* Fermer */}
-          <TouchableOpacity
-            onPress={closePhoto}
-            style={{
-              position: "absolute",
-              top: Platform.OS === "android" ? 16 : 52,
-              left: 20,
-              backgroundColor: "rgba(255,255,255,.2)",
-              borderRadius: S.radiusFull,
-              padding: 10, zIndex: 10,
-            }}
-          >
-            <Text style={{ color: "#fff", fontSize: 18 }}>✕</Text>
-          </TouchableOpacity>
+          {/* Masquer la barre Android dans le modal */}
+          <StatusBar hidden={true} />
 
-          {/* Compteur */}
+          {/* Compteur position */}
           {selectedGroup && selectedGroup.length > 1 && (
-            <View style={{ position: "absolute", top: Platform.OS === "android" ? 20 : 56, left: 0, right: 0, alignItems: "center", zIndex: 9 }}>
+            <View style={{ position: "absolute", top: 16, left: 0, right: 0, alignItems: "center", zIndex: 9 }}>
               <View style={{ backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 12, paddingVertical: 4, borderRadius: S.radiusFull }}>
                 <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
                   {selectedIndex + 1} / {selectedGroup.length}
@@ -308,20 +286,34 @@ export function GalleryScreen({ navigation, route }) {
             <View style={{ flex: 1 }}>
               <ZoomableImage
                 uri={selected.url}
-                onSwipeNext={selectedIndex < (selectedGroup?.length ?? 0) - 1 ? showNext : undefined}
-                onSwipePrev={selectedIndex > 0 ? showPrev : undefined}
+                onSwipeLeft={selectedIndex < (selectedGroup?.length ?? 0) - 1 ? showNext : undefined}
+                onSwipeRight={selectedIndex > 0 ? showPrev : undefined}
               />
             </View>
           )}
 
-          {/* Actions en bas */}
+          {/* Actions en bas + bouton sortie */}
           {selected && (
             <View style={{ paddingHorizontal: 20, paddingBottom: 36, paddingTop: 8, backgroundColor: "rgba(0,0,0,0.6)" }}>
               <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14, textAlign: "center", marginBottom: 14 }}>
                 {selected.location ? `${selected.location} · ${selected.year}` : selected.year}
               </Text>
 
-              <View style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+                {/* Bouton sortie 🚪 — discret, à gauche */}
+                <TouchableOpacity
+                  onPress={closePhoto}
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                    borderRadius: S.radiusFull,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.15)",
+                  }}
+                >
+                  <Text style={{ fontSize: 20 }}>🚪</Text>
+                </TouchableOpacity>
+
                 {section === "deleted" && (
                   <TouchableOpacity
                     onPress={() => handleRestore(selected.id)}
@@ -345,6 +337,9 @@ export function GalleryScreen({ navigation, route }) {
                   >
                     <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>↩ Retirer de l'album</Text>
                   </TouchableOpacity>
+                )}
+                {!["deleted", "kept"].includes(section) && !activeAlbum && (
+                  <View style={{ flex: 1 }} />
                 )}
               </View>
             </View>

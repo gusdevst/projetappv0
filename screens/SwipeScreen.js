@@ -220,17 +220,9 @@ export function SwipeScreen({ navigation, route }) {
           flexDirection: "row", justifyContent: "space-between", alignItems: "center",
           paddingHorizontal: 16, paddingBottom: 8,
         }}>
-          {/* Bouton gauche : "Fin de tri" en mode ménage, "← Retour" en mode album */}
+          {/* Bouton gauche : placeholder vide en mode ménage, "← Retour" en mode album */}
           {isMenage ? (
-            <TouchableOpacity
-              onPress={handleFinDeTri}
-              style={{
-                backgroundColor: "rgba(255,255,255,0.2)", borderRadius: S.radiusFull,
-                paddingHorizontal: 14, paddingVertical: 8,
-              }}
-            >
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>⏹ Fin de tri</Text>
-            </TouchableOpacity>
+            <View style={{ width: 40 }} />
           ) : (
             <TouchableOpacity
               onPress={() => navigation.goBack()}
@@ -370,6 +362,23 @@ export function SwipeScreen({ navigation, route }) {
         )}
 
       </View>
+
+      {/* 🚪 Fin de tri — discret, bas gauche, mode ménage uniquement */}
+      {isMenage && (
+        <TouchableOpacity
+          onPress={handleFinDeTri}
+          style={{
+            position: "absolute", bottom: 16, left: 20, zIndex: 15,
+            backgroundColor: "rgba(255,255,255,0.12)",
+            borderRadius: S.radiusFull,
+            padding: 10,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.15)",
+          }}
+        >
+          <Text style={{ fontSize: 22 }}>🚪</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Modal picker d'album (long-press sur 📁) */}
       <Modal
