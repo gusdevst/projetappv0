@@ -1,12 +1,14 @@
 // App.js — Point d'entrée unique
-// Rôle : initialiser la navigation et vérifier la permission photo au démarrage.
+// Rôle : initialiser la navigation, vérifier la permission photo au démarrage,
+// et gérer le tap sur une notification de rappel (→ session ménage aléatoire).
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { View, Platform } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
-import { SafeAreaProvider }    from "react-native-safe-area-context";
-import { AppNavigator }        from "./navigation/AppNavigator";
-import { usePhotoStore }       from "./store/usePhotoStore";
+import { NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import * as Notifications from "expo-notifications";
+import { AppNavigator } from "./navigation/AppNavigator";
+import { usePhotoStore } from "./store/usePhotoStore";
 
 // Import défensif : avant le rebuild incluant react-native-gesture-handler dans
 // le binaire natif, on tombe sur un View standard sans gestures. Une fois le rebuild
@@ -36,28 +38,104 @@ async function hideAndroidNavBar() {
   } catch (e) {}
 }
 
+// ── Ref de navigation ──────────────────────────────────────────────────────────
+// Permet de naviguer depuis l'extérieur du contexte React Navigation
+// (ex : depuis le handler de notification).
+export const navigationRef = createNavigationContainerRef();
+
+// ── Session ménage aléatoire depuis une notification ──────────────────────────
+// Choisit randomCount photos au hasard parmi les photos non encore triées
+// et lance directement l'écran de swipe en mode ménage.
+// Retourne true si la navigation a été déclenchée, false si la bibliothèque
+// n'est pas encore chargée (on réessaiera après loadLibrary).
+function launchRandomMenage() {
+  const { libraryPhotos, kept, deleted, printed, skipped, randomCount } =
+    usePhotoStore.getState();
+
+  if (libraryPhotos.length === 0) return false;
+
+  const triedIds = new Set([
+    ...kept.map((p) => p.id),
+    ...deleted.map((p) => p.id),
+    ...printed.map((p) => p.id),
+    ...skipped.map((p) => p.id),
+  ]);
+
+  const remaining = libraryPhotos.filter((p) => !triedIds.has(p.id));
+  if (remaining.length === 0) return true; // Tout trié, rien à faire
+
+  // Mélange aléatoire (Fisher-Yates)
+  const shuffled = [...remaining];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  const count = Math.min(randomCount || 50, shuffled.length);
+  const queue = shuffled.slice(0, count);
+
+  if (navigationRef.isReady()) {
+    navigationRef.navigate("Swipe", { queue, mode: "menage" });
+  }
+  return true;
+}
+
 export default function App() {
-  const checkPermission = usePhotoStore((s) => s.checkPermission);
-  const loadLibrary     = usePhotoStore((s) => s.loadLibrary);
+  const checkPermission  = usePhotoStore((s) => s.checkPermission);
+  const loadLibrary      = usePhotoStore((s) => s.loadLibrary);
+  const pendingNotifTap  = useRef(false);
 
   useEffect(() => {
-    // Masquer la barre Android au démarrage
     hideAndroidNavBar();
 
-    // Au lancement : on vérifie la permission. Si déjà accordée, on charge la photothèque.
+    // iOS — app tuée puis ouverte via un tap sur la notification :
+    // le listener ci-dessous ne se déclenche pas, on récupère la réponse ici.
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (
+        response?.notification?.request?.content?.data?.action ===
+        "start_menage_random"
+      ) {
+        pendingNotifTap.current = true;
+      }
+    });
+
+    // Toutes plateformes — app en foreground ou background (Android couvre aussi
+    // le killed state via ce listener).
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        if (
+          response?.notification?.request?.content?.data?.action ===
+          "start_menage_random"
+        ) {
+          // Si la bibliothèque n'est pas encore chargée, on marque comme en attente.
+          if (!launchRandomMenage()) {
+            pendingNotifTap.current = true;
+          }
+        }
+      }
+    );
+
+    // Vérification permission + chargement de la bibliothèque
     (async () => {
       const status = await checkPermission();
       if (status === "granted") {
         await loadLibrary();
+        // Bibliothèque chargée : traiter le tap de notification différé si nécessaire
+        if (pendingNotifTap.current) {
+          pendingNotifTap.current = false;
+          launchRandomMenage();
+        }
       }
     })();
+
+    return () => sub.remove();
   }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         {/* onStateChange : recache la barre Android à chaque changement d'écran */}
-        <NavigationContainer onStateChange={hideAndroidNavBar}>
+        <NavigationContainer ref={navigationRef} onStateChange={hideAndroidNavBar}>
           <AppNavigator />
         </NavigationContainer>
       </SafeAreaProvider>

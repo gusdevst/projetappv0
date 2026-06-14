@@ -1,7 +1,7 @@
 //─────────────────────────────────────────────
 // screens/SettingsScreen.js
 // ─────────────────────────────────────────────
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Modal, StatusBar, Alert, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
@@ -81,14 +81,35 @@ export function SettingsScreen({ navigation }) {
   const [editingSwipe, setEditingSwipe]         = useState(null);
   const [notifLoading, setNotifLoading]         = useState(false);
 
-  const swipeMappingsMenage     = usePhotoStore((s) => s.swipeMappingsMenage);
-  const swipeMappingsAlbum      = usePhotoStore((s) => s.swipeMappingsAlbum);
-  const setSwipeMapping         = usePhotoStore((s) => s.setSwipeMapping);
-  const resetSwipeMappings      = usePhotoStore((s) => s.resetSwipeMappings);
-  const notificationFrequency   = usePhotoStore((s) => s.notificationFrequency);
+  const swipeMappingsMenage      = usePhotoStore((s) => s.swipeMappingsMenage);
+  const swipeMappingsAlbum       = usePhotoStore((s) => s.swipeMappingsAlbum);
+  const setSwipeMapping          = usePhotoStore((s) => s.setSwipeMapping);
+  const resetSwipeMappings       = usePhotoStore((s) => s.resetSwipeMappings);
+  const notificationFrequency    = usePhotoStore((s) => s.notificationFrequency);
   const setNotificationFrequency = usePhotoStore((s) => s.setNotificationFrequency);
-  const randomCount             = usePhotoStore((s) => s.randomCount);
-  const setRandomCount          = usePhotoStore((s) => s.setRandomCount);
+  const notificationHour         = usePhotoStore((s) => s.notificationHour);
+  const setNotificationHour      = usePhotoStore((s) => s.setNotificationHour);
+  const randomCount              = usePhotoStore((s) => s.randomCount);
+  const setRandomCount           = usePhotoStore((s) => s.setRandomCount);
+  const libraryPhotos            = usePhotoStore((s) => s.libraryPhotos);
+  const kept                     = usePhotoStore((s) => s.kept);
+  const deleted                  = usePhotoStore((s) => s.deleted);
+  const printed                  = usePhotoStore((s) => s.printed);
+  const skipped                  = usePhotoStore((s) => s.skipped);
+
+  // Nombre de photos pas encore triées (même logique que TriModeScreen)
+  const remainingCount = useMemo(() => {
+    const triedIds = new Set([
+      ...kept.map((p) => p.id),
+      ...deleted.map((p) => p.id),
+      ...printed.map((p) => p.id),
+      ...skipped.map((p) => p.id),
+    ]);
+    return libraryPhotos.filter((p) => !triedIds.has(p.id)).length;
+  }, [libraryPhotos, kept, deleted, printed, skipped]);
+
+  // Nb de sessions restantes affiché dans l'aperçu de la notification
+  const sessionsLeft = remainingCount > 0 ? Math.ceil(remainingCount / randomCount) : 0;
 
   const comingSoon = (feature) =>
     Alert.alert("Bientôt disponible", `${feature} arrive très vite 🌸`);
@@ -112,6 +133,14 @@ export function SettingsScreen({ navigation }) {
   };
 
   // ── Notifications ──────────────────────────────────────────────────────────
+  // Quand l'heure change, on reprogramme immédiatement si un rappel est actif
+  const handleChangeHour = async (newHour) => {
+    setNotificationHour(newHour);
+    if (notificationFrequency !== "off") {
+      await scheduleReminder(notificationFrequency, { remainingCount, randomCount, notificationHour: newHour });
+    }
+  };
+
   const handleSetFrequency = async (freq) => {
     // Si l'utilisateur veut activer les notifs, on vérifie la permission d'abord
     if (freq !== "off") {
@@ -129,9 +158,9 @@ export function SettingsScreen({ navigation }) {
       }
     }
 
-    // Enregistre dans le store (persisté) et programme le rappel
+    // Enregistre dans le store (persisté) et programme le rappel avec les stats actuelles
     setNotificationFrequency(freq);
-    const result = await scheduleReminder(freq);
+    const result = await scheduleReminder(freq, { remainingCount, randomCount, notificationHour });
 
     if (freq !== "off" && !result.success) {
       Alert.alert("Erreur", "Impossible de programmer le rappel. Réessaie dans un moment.");
@@ -258,6 +287,50 @@ export function SettingsScreen({ navigation }) {
           Reçois une notification pour te rappeler de trier tes photos.
         </Text>
 
+        {/* ── Sélecteur d'heure ──────────────────────────────────────────── */}
+        <Text style={{ fontSize: 11, fontWeight: "800", color: C.textMuted, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+          Heure du rappel
+        </Text>
+        <View style={{
+          backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1,
+          borderColor: C.border, padding: 14, marginBottom: 16,
+          flexDirection: "row", alignItems: "center", gap: 16,
+        }}>
+          {/* Moins */}
+          <TouchableOpacity
+            onPress={() => handleChangeHour((notificationHour + 23) % 24)}
+            style={{
+              width: 40, height: 40, borderRadius: 20,
+              backgroundColor: C.bgCard, borderWidth: 1.5, borderColor: C.accent,
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 22, fontWeight: "800", color: C.accent }}>−</Text>
+          </TouchableOpacity>
+
+          {/* Heure affichée */}
+          <View style={{ flex: 1, alignItems: "center" }}>
+            <Text style={{ fontSize: 34, fontWeight: "900", color: C.text }}>
+              {String(notificationHour).padStart(2, "0")}h00
+            </Text>
+            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+              {notificationHour < 12 ? "matin" : notificationHour < 18 ? "après-midi" : "soirée"}
+            </Text>
+          </View>
+
+          {/* Plus */}
+          <TouchableOpacity
+            onPress={() => handleChangeHour((notificationHour + 1) % 24)}
+            style={{
+              width: 40, height: 40, borderRadius: 20,
+              backgroundColor: C.bgCard, borderWidth: 1.5, borderColor: C.accent,
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 22, fontWeight: "800", color: C.accent }}>+</Text>
+          </TouchableOpacity>
+        </View>
+
         {NOTIF_OPTIONS.map((opt) => {
           const isSelected = notificationFrequency === opt.key;
           return (
@@ -298,6 +371,47 @@ export function SettingsScreen({ navigation }) {
             </TouchableOpacity>
           );
         })}
+
+        {/* Aperçu de la notification quand un rappel est actif */}
+        {notificationFrequency !== "off" && (
+          <View style={{
+            backgroundColor: `${C.accent}10`,
+            borderRadius: S.radius,
+            borderWidth: 1,
+            borderColor: `${C.accent}30`,
+            padding: 14,
+            marginTop: 4,
+            marginBottom: 8,
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 10,
+          }}>
+            <Text style={{ fontSize: 18, marginTop: 1 }}>💬</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: C.accent, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.8 }}>
+                Aperçu de la notification
+              </Text>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: C.text, marginBottom: 1 }}>
+                Phototri 📷
+              </Text>
+              <Text style={{ fontSize: 12, color: C.textMuted, lineHeight: 17 }}>
+                {sessionsLeft > 0
+                  ? `Il te reste ${sessionsLeft} session${sessionsLeft > 1 ? "s" : ""} de ${randomCount} photos à trier 📸`
+                  : "Ta galerie est au top 🌸 Bravo !"}
+              </Text>
+              {/* Heure et note selon la fréquence */}
+              {notificationFrequency === "every2days" ? (
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 6 }}>
+                  ⚠️ Rappel toutes les 48h depuis l'activation — heure non garantie.
+                </Text>
+              ) : (
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 6 }}>
+                  🕐 Se déclenche à {String(notificationHour).padStart(2, "0")}h00 — appuie pour lancer une session.
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* ── Section Tri par swipe — Mode Ménage ──────────────────────────── */}
         <Section title="🧹 Swipe — Mode Ménage" />

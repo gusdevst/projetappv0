@@ -40,6 +40,10 @@ export const usePhotoStore = create(
       // "off" | "daily" | "every2days" | "weekly"
       notificationFrequency: "off",
 
+      // Heure du rappel (0-23). Persistée. Utilisée pour les triggers DAILY et WEEKLY.
+      notificationHour: 9,
+      setNotificationHour: (h) => set({ notificationHour: h }),
+
       // ─── État de la photothèque (NON persisté — rechargé à chaque ouverture) ─
       permission:      "undetermined", // "undetermined" | "granted" | "denied"
       libraryPhotos:     [],
@@ -248,6 +252,7 @@ export const usePhotoStore = create(
         swipeMappingsMenage:     state.swipeMappingsMenage,
         swipeMappingsAlbum:      state.swipeMappingsAlbum,
         notificationFrequency:   state.notificationFrequency,
+        notificationHour:        state.notificationHour,
         randomCount:             state.randomCount,
       }),
     }

@@ -2,20 +2,24 @@
 // Gère les rappels locaux "Pense à trier tes photos".
 //
 // Fonctions exportées :
-//   requestPermission()          → demande la permission (retourne true/false)
-//   scheduleReminder(frequency)  → programme le rappel selon la fréquence choisie
-//   cancelReminders()            → annule tous les rappels en cours
+//   requestPermission()                      → demande la permission (retourne true/false)
+//   scheduleReminder(frequency, stats?)      → programme le rappel selon la fréquence choisie
+//   cancelReminders()                        → annule tous les rappels en cours
+//
+// stats (optionnel) : { remainingCount, randomCount, notificationHour }
+//   remainingCount + randomCount → message personnalisé avec nb de sessions restantes
+//   notificationHour (0-23)      → heure précise pour DAILY et WEEKLY
+//   data.action = "start_menage_random" → l'app lance une session au tap
 //
 // Fréquences supportées :
 //   "off"        → aucun rappel
-//   "daily"      → chaque jour à 9h
-//   "every2days" → toutes les 48h
-//   "weekly"     → chaque semaine
+//   "daily"      → trigger DAILY  — heure exacte = notificationHour
+//   "every2days" → trigger TIME_INTERVAL 48h — heure approximative (48h depuis activation)
+//   "weekly"     → trigger WEEKLY — heure exacte, jour = jour courant de la semaine
 
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-// Comment les notifications s'affichent quand l'app est ouverte
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -24,7 +28,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Quelques messages variés pour que le rappel ne soit pas toujours identique
 const REMINDER_MESSAGES = [
   "Tu as des photos qui attendent d'être triées 📸",
   "Quelques swipes et ta galerie sera au top !",
@@ -36,64 +39,75 @@ function randomMessage() {
   return REMINDER_MESSAGES[Math.floor(Math.random() * REMINDER_MESSAGES.length)];
 }
 
-// ── Demande la permission (à appeler avant de programmer un rappel) ──────────
+// Construit un message personnalisé si on connaît le nb de photos restantes
+function buildNotifBody(remainingCount, randomCount) {
+  if (!remainingCount || !randomCount) return randomMessage();
+  if (remainingCount <= 0) return "Ta galerie est au top 🌸 Bravo !";
+  const sessions = Math.ceil(remainingCount / randomCount);
+  return `Il te reste ${sessions} session${sessions > 1 ? "s" : ""} de ${randomCount} photos à trier 📸`;
+}
+
+// ── Demande la permission ────────────────────────────────────────────────────
 export async function requestPermission() {
   const { status: existing } = await Notifications.getPermissionsAsync();
   if (existing === "granted") return true;
-
   const { status } = await Notifications.requestPermissionsAsync();
   return status === "granted";
 }
 
-// ── Programme le rappel selon la fréquence ───────────────────────────────────
-// Annule d'abord les rappels existants pour éviter les doublons.
-export async function scheduleReminder(frequency) {
-  // On commence toujours par tout annuler
+// ── Programme le rappel ──────────────────────────────────────────────────────
+// stats = { remainingCount, randomCount, notificationHour }
+export async function scheduleReminder(frequency, stats = {}) {
   await Notifications.cancelAllScheduledNotificationsAsync();
-
   if (frequency === "off") return { success: true };
 
-  // Demande la permission si pas encore accordée
   const granted = await requestPermission();
   if (!granted) return { success: false, reason: "permission_denied" };
 
-  // Calcul du déclencheur selon la fréquence
-  // On utilise un intervalle en secondes — simple et cross-platform.
-  // Le premier rappel part à la même heure que l'activation.
-  const secondsMap = {
-    daily:      24 * 60 * 60,        // 24h
-    every2days: 2 * 24 * 60 * 60,    // 48h
-    weekly:     7 * 24 * 60 * 60,    // 7 jours
+  const { remainingCount = null, randomCount = 50, notificationHour = 9 } = stats;
+  const body = buildNotifBody(remainingCount, randomCount);
+
+  const content = {
+    title: "Phototri 📷",
+    body,
+    // L'app lit ce champ au tap pour lancer une session ménage aléatoire
+    data: { action: "start_menage_random" },
+    sound: Platform.OS === "android" ? true : false,
   };
 
-  const seconds = secondsMap[frequency];
-  if (!seconds) return { success: false, reason: "unknown_frequency" };
+  // JS getDay() : 0=Dim … 6=Sam  →  Expo weekday : 1=Dim … 7=Sam
+  const expoWeekday = new Date().getDay() + 1;
 
   try {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "Phototri 📷",
-        body: randomMessage(),
-        // Sur Android, le son par défaut de l'OS est utilisé
-        sound: Platform.OS === "android" ? true : false,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds,
-        repeats: true,
-      },
-    });
+    const TT = Notifications.SchedulableTriggerInputTypes;
+
+    let trigger;
+    if (frequency === "daily") {
+      // Heure exacte chaque jour
+      trigger = { type: TT.DAILY, hour: notificationHour, minute: 0 };
+    } else if (frequency === "weekly") {
+      // Heure exacte, même jour de la semaine que l'activation
+      trigger = { type: TT.WEEKLY, weekday: expoWeekday, hour: notificationHour, minute: 0 };
+    } else {
+      // every2days : TIME_INTERVAL 48h (pas de trigger "toutes les N heures à HH:MM" natif)
+      trigger = { type: TT.TIME_INTERVAL, seconds: 2 * 24 * 60 * 60, repeats: true };
+    }
+
+    await Notifications.scheduleNotificationAsync({ content, trigger });
     return { success: true };
+
   } catch (err) {
     // Fallback pour les versions d'expo-notifications sans SchedulableTriggerInputTypes
     try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Phototri 📷",
-          body: randomMessage(),
-        },
-        trigger: { seconds, repeats: true },
-      });
+      let trigger;
+      if (frequency === "daily") {
+        trigger = { hour: notificationHour, minute: 0, repeats: true };
+      } else if (frequency === "weekly") {
+        trigger = { weekday: expoWeekday, hour: notificationHour, minute: 0, repeats: true };
+      } else {
+        trigger = { seconds: 2 * 24 * 60 * 60, repeats: true };
+      }
+      await Notifications.scheduleNotificationAsync({ content, trigger });
       return { success: true };
     } catch (err2) {
       console.warn("scheduleReminder failed:", err2);
