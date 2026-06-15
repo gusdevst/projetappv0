@@ -98,7 +98,7 @@ function applyFilter(photos, filter) {
 // Filtres date affichés selon le mode :
 // - Ménage : toutes les périodes
 // - Album  : seulement "Toutes" et l'année en cours (ligne unique avec "Dossiers")
-const MENAGE_DATE_FILTERS = FILTERS.filter((f) => f !== "Screenshots");
+const MENAGE_DATE_FILTERS = [...FILTERS.filter((f) => f !== "Screenshots"), "2025"];
 const ALBUM_DATE_FILTERS  = ["Toutes", "2026"];
 
 export function HomeScreen({ navigation }) {

@@ -51,6 +51,9 @@ export function TriModeScreen({ navigation, route }) {
   const [selectedKeys, setSelectedKeys]       = useState([]);
   const [albumName, setAlbumName]             = useState("");
   const [selectedExistingAlbum, setSelectedExistingAlbum] = useState(null);
+  // Id de l'album créé pendant cette config — évite d'en recréer un si l'user
+  // revient depuis le swipe puis relance le tri.
+  const [createdAlbumId, setCreatedAlbumId]   = useState(null);
 
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
   const kept          = usePhotoStore((s) => s.kept);
@@ -101,12 +104,19 @@ export function TriModeScreen({ navigation, route }) {
   const handleLancerNouvelAlbum = () => {
     const name = albumName.trim();
     if (!name || filteredPhotos.length === 0) return;
-    createAlbum(name);
-    const newAlbum = usePhotoStore.getState().albums.slice(-1)[0];
-    navigation.replace("Swipe", {
+    // Crée l'album une seule fois, même si on relance après un retour arrière.
+    let albumId = createdAlbumId;
+    if (!albumId) {
+      createAlbum(name);
+      albumId = usePhotoStore.getState().albums.slice(-1)[0].id;
+      setCreatedAlbumId(albumId);
+    }
+    // navigate (et non replace) : on garde l'écran de config dans la pile
+    // pour pouvoir revenir en arrière depuis le swipe.
+    navigation.navigate("Swipe", {
       queue:     filteredPhotos,
       mode:      "album",
-      albumId:   newAlbum.id,
+      albumId,
       albumName: name,
     });
   };
@@ -114,7 +124,7 @@ export function TriModeScreen({ navigation, route }) {
   // ── Mode Album — Album existant ───────────────────────────────────────────
   const handleLancerAlbumExistant = () => {
     if (!selectedExistingAlbum || filteredPhotos.length === 0) return;
-    navigation.replace("Swipe", {
+    navigation.navigate("Swipe", {
       queue:     filteredPhotos,
       mode:      "album",
       albumId:   selectedExistingAlbum.id,
@@ -210,12 +220,12 @@ export function TriModeScreen({ navigation, route }) {
         <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 8 }}>
           <TouchableOpacity
-            onPress={() => setStep(0)}
+            onPress={() => skipToAlbum ? navigation.goBack() : setStep(0)}
             style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, padding: 8, borderWidth: 1, borderColor: C.border }}
           >
             <Text style={{ color: C.textMuted, fontSize: 16, paddingHorizontal: 4 }}>←</Text>
           </TouchableOpacity>
-          <Text style={{ fontWeight: "900", fontSize: 20, color: C.text }}>Album</Text>
+          <Text style={{ fontWeight: "900", fontSize: 20, color: C.album }}>Album</Text>
         </View>
 
         <View style={{ flex: 1, padding: S.pad, justifyContent: "center" }}>

@@ -321,6 +321,26 @@ export function MomentScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
 
+      {/* CTA démarrer le tri — juste sous le calendrier, dès qu'une période/un moment est choisi */}
+      {(selected || (hasFilter && filteredPhotos.length > 0)) && (
+        <View style={{ paddingHorizontal: S.pad, marginBottom: 14 }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("TriMode", {
+              preQueue: selected ? selected.photos : filteredPhotos,
+              ...(mode === "album" ? { skipToAlbum: true } : { skipToMenage: true }),
+            })}
+            style={{ backgroundColor: accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4,
+              shadowColor: accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
+              {selected
+                ? `🔀 Trier les ${selected.photos.length} photo${selected.photos.length > 1 ? "s" : ""} de ce moment`
+                : `🔀 Trier toute la période · ${filteredPhotos.length} photo${filteredPhotos.length > 1 ? "s" : ""}`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Liste des moments — affichée seulement après le choix d'une période */}
       <ScrollView style={{ flex: 1, paddingHorizontal: S.pad }}>
         {!hasFilter ? (
@@ -383,26 +403,6 @@ export function MomentScreen({ navigation, route }) {
           })
         )}
       </ScrollView>
-
-      {/* CTA tri — visible dès qu'un moment OU une période est sélectionné */}
-      {(selected || (hasFilter && filteredPhotos.length > 0)) && (
-        <View style={{ padding: S.pad, paddingTop: 0 }}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("TriMode", {
-              preQueue: selected ? selected.photos : filteredPhotos,
-              ...(mode === "album" ? { skipToAlbum: true } : { skipToMenage: true }),
-            })}
-            style={{ backgroundColor: accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4,
-              shadowColor: accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }}
-          >
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
-              {selected
-                ? `🔀 Trier les ${selected.photos.length} photo${selected.photos.length > 1 ? "s" : ""} de ce moment`
-                : `🔀 Trier toute la période · ${filteredPhotos.length} photo${filteredPhotos.length > 1 ? "s" : ""}`}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* Modal calendrier plage */}
       <RangeCalendarPicker
