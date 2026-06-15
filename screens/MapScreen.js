@@ -14,8 +14,9 @@ import { loadPhotoLocation } from "../services/photoLibrary";
 export function MapScreen({ navigation, route }) {
   const mode = route.params?.mode ?? "menage";
   const accent = mode === "album" ? C.album : C.accent;
-  const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
-  const deleted       = usePhotoStore((s) => s.deleted);
+  const libraryPhotos  = usePhotoStore((s) => s.libraryPhotos);
+  const deleted        = usePhotoStore((s) => s.deleted);
+  const addAlbumFilter = usePhotoStore((s) => s.addAlbumFilter);
   const [photosWithGeo, setPhotosWithGeo] = useState([]);
   const [loading, setLoading]             = useState(true);
   // Set de clés "lat_lng" des clusters sélectionnés
@@ -140,6 +141,21 @@ export function MapScreen({ navigation, route }) {
 
   const selectionCount = selectedKeys.size;
 
+  // Ajoute les lieux sélectionnés comme filtre combiné (mode album), puis revient.
+  function addAsFilter() {
+    if (displayedPhotos.length === 0) return;
+    const label = selectionCount > 0
+      ? `${selectionCount} lieu${selectionCount > 1 ? "x" : ""}`
+      : "Tous les lieux";
+    addAlbumFilter({
+      id: `lieu-${[...selectedKeys].sort().join("|") || "all"}`,
+      type: "lieu",
+      label,
+      photoIds: displayedPhotos.map((p) => p.id),
+    });
+    navigation.goBack();
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
@@ -242,6 +258,16 @@ export function MapScreen({ navigation, route }) {
                 🔀 Trier {selectionCount > 0 ? `ces ${displayedPhotos.length}` : "toutes les"} photos
               </Text>
             </TouchableOpacity>
+
+            {/* Mode album : ajouter les lieux sélectionnés comme filtre combiné */}
+            {mode === "album" && displayedPhotos.length > 0 && (
+              <TouchableOpacity
+                onPress={addAsFilter}
+                style={{ marginTop: 8, borderRadius: S.radius, padding: 14, alignItems: "center", borderWidth: 1.5, borderColor: accent }}
+              >
+                <Text style={{ color: accent, fontWeight: "800", fontSize: 14 }}>➕ Ajouter comme filtre</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </>
       )}

@@ -26,9 +26,10 @@ export function SummaryScreen({ navigation, route }) {
   const accent  = isAlbum ? C.album : C.accent;
 
   // On garde le store uniquement pour les actions (reset) et la liste albums
-  const albums         = usePhotoStore((state) => state.albums);
-  const resetSkipped   = usePhotoStore((state) => state.resetSkipped);
-  const resetHesitated = usePhotoStore((state) => state.resetHesitated);
+  const albums            = usePhotoStore((state) => state.albums);
+  const resetSkipped      = usePhotoStore((state) => state.resetSkipped);
+  const resetHesitated    = usePhotoStore((state) => state.resetHesitated);
+  const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
 
   // Stats basées sur la SESSION uniquement
   const deletedSize = sessionDeleted.reduce((a, p) => a + (p.size || 0), 0);
@@ -37,9 +38,11 @@ export function SummaryScreen({ navigation, route }) {
   const createdAlbum = albumId ? albums.find((a) => a.id === albumId) : null;
 
   // Tri terminé → on libère les photos "skipped" pour le prochain tri
+  // et on réinitialise les filtres combinés de la session album.
   useEffect(() => {
     resetSkipped();
-  }, [resetSkipped]);
+    if (isAlbum) clearAlbumFilters();
+  }, [resetSkipped, clearAlbumFilters, isAlbum]);
 
   // Exporte les coups de cœur de la session dans un album natif "Phototri ❤️"
   // Relancer le tri uniquement sur les photos hésitées de cette session

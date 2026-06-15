@@ -220,8 +220,9 @@ export function MomentScreen({ navigation, route }) {
   const mode = route.params?.mode ?? "menage";
   // Couleur du mode : violet en mode album, orange en mode ménage
   const accent = mode === "album" ? C.album : C.accent;
-  const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
-  const deleted       = usePhotoStore((s) => s.deleted);
+  const libraryPhotos  = usePhotoStore((s) => s.libraryPhotos);
+  const deleted        = usePhotoStore((s) => s.deleted);
+  const addAlbumFilter = usePhotoStore((s) => s.addAlbumFilter);
   const [selectedId, setSelectedId] = useState(null);
 
   // Exclure les photos mises en corbeille
@@ -260,6 +261,22 @@ export function MomentScreen({ navigation, route }) {
   function clearFilter() { setDateFrom(null); setDateTo(null); setSelectedId(null); }
 
   const hasFilter = !!(dateFrom || dateTo);
+
+  // Ajoute la sélection courante (moment ou période) comme filtre combiné, puis revient.
+  function addAsFilter() {
+    const photos = selected ? selected.photos : filteredPhotos;
+    if (photos.length === 0) return;
+    const label = selected
+      ? selected.label
+      : `${dateLabel(dateFrom)}${dateTo ? `–${dateLabel(dateTo)}` : "→auj."}`;
+    addAlbumFilter({
+      id: `date-${selected ? selected.id : `${dateFrom?.getTime()}_${dateTo?.getTime() || "now"}`}`,
+      type: "date",
+      label,
+      photoIds: photos.map((p) => p.id),
+    });
+    navigation.goBack();
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
@@ -323,7 +340,7 @@ export function MomentScreen({ navigation, route }) {
 
       {/* CTA démarrer le tri — juste sous le calendrier, dès qu'une période/un moment est choisi */}
       {(selected || (hasFilter && filteredPhotos.length > 0)) && (
-        <View style={{ paddingHorizontal: S.pad, marginBottom: 14 }}>
+        <View style={{ paddingHorizontal: S.pad, marginBottom: 14, gap: 8 }}>
           <TouchableOpacity
             onPress={() => navigation.navigate("TriMode", {
               preQueue: selected ? selected.photos : filteredPhotos,
@@ -338,6 +355,16 @@ export function MomentScreen({ navigation, route }) {
                 : `🔀 Trier toute la période · ${filteredPhotos.length} photo${filteredPhotos.length > 1 ? "s" : ""}`}
             </Text>
           </TouchableOpacity>
+
+          {/* Mode album : ajouter cette sélection comme filtre combiné */}
+          {mode === "album" && (
+            <TouchableOpacity
+              onPress={addAsFilter}
+              style={{ borderRadius: S.radius, padding: 14, alignItems: "center", borderWidth: 1.5, borderColor: accent }}
+            >
+              <Text style={{ color: accent, fontWeight: "800", fontSize: 14 }}>➕ Ajouter comme filtre</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 

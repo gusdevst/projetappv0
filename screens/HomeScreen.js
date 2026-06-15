@@ -1,5 +1,5 @@
 // screens/HomeScreen.js
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ScrollView, StatusBar, View, Text,
   TouchableOpacity, Alert, Modal, ActivityIndicator, Linking,
@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S, FILTERS } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { getAlbums, getAlbumAssetIds } from "../services/photoLibrary";
+import { AlbumFiltersBar } from "../components/AlbumFiltersBar";
 
 const C_ALBUM = "#7c6fcd";
 
@@ -111,6 +112,10 @@ export function HomeScreen({ navigation }) {
   const libraryLoading    = usePhotoStore((state) => state.libraryLoading);
   const randomCount       = usePhotoStore((state) => state.randomCount);
   const albums            = usePhotoStore((state) => state.albums);
+  const albumFilters      = usePhotoStore((state) => state.albumFilters);
+  const removeAlbumFilter = usePhotoStore((state) => state.removeAlbumFilter);
+  const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
+  const addAlbumFilter    = usePhotoStore((state) => state.addAlbumFilter);
 
   // ── Mode actif : ménage (orange) ou album (violet) ──────────────────────
   const [activeMode, setActiveMode] = useState("menage");
@@ -168,6 +173,13 @@ export function HomeScreen({ navigation }) {
 
   function clearAlbum() { setSelectedAlbum(null); setAlbumPhotoIds(null); }
 
+  // Filtre "coups de cœur" : raccourci pour ajouter/retirer les favoris des filtres combinés.
+  const coeurActive = albumFilters.some((f) => f.id === "coeur");
+  function toggleCoeurFilter() {
+    if (coeurActive) removeAlbumFilter("coeur");
+    else addAlbumFilter({ id: "coeur", type: "coeur", label: "Coups de cœur", photoIds: kept.map((p) => p.id) });
+  }
+
   function toggleRandomFifty(filteredPool) {
     if (randomFiftyActive) {
       setRandomFiftyActive(false);
@@ -200,8 +212,18 @@ export function HomeScreen({ navigation }) {
   const progressPct = libraryPhotos.length > 0
     ? Math.min(100, (triees / libraryPhotos.length) * 100) : 0;
 
+  // Filtres combinés (mode album, intersection ET) : on précalcule un Set d'ids par filtre.
+  const albumFilterSets = useMemo(
+    () => albumFilters.map((f) => new Set(f.photoIds)),
+    [albumFilters]
+  );
+
   let remaining = libraryPhotos.filter((p) => !excludedIds.has(p.id));
   if (albumPhotoIds) remaining = remaining.filter((p) => albumPhotoIds.has(p.id));
+  // En mode album, une photo doit appartenir à TOUS les filtres actifs.
+  if (!isMenage && albumFilterSets.length > 0) {
+    remaining = remaining.filter((p) => albumFilterSets.every((s) => s.has(p.id)));
+  }
   const filteredPool = applyFilter(remaining, activeFilter);
   const queue = randomFiftyActive
     ? randomQueue.filter((p) => !excludedIds.has(p.id))
@@ -391,6 +413,24 @@ export function HomeScreen({ navigation }) {
               : <Text style={{ fontSize: 11, color: C.textMuted }}>▾</Text>}
           </TouchableOpacity>
 
+          {!isMenage && (
+            <TouchableOpacity
+              onPress={toggleCoeurFilter}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 5,
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
+                borderWidth: 1.5,
+                borderColor: coeurActive ? modeColor : C.border,
+                backgroundColor: coeurActive ? `${modeColor}18` : C.bgCard,
+              }}
+            >
+              <Text style={{ fontSize: 12 }}>❤️</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: coeurActive ? modeColor : C.textMuted }}>
+                Coups de cœur
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {isMenage && (
             <TouchableOpacity
               onPress={() => toggleRandomFifty(filteredPool)}
@@ -428,6 +468,16 @@ export function HomeScreen({ navigation }) {
 
           {albumFiltering && <ActivityIndicator size="small" color={modeColor} />}
         </View>
+
+        {/* ── Barre des filtres combinés (mode album) ──────────────────── */}
+        {!isMenage && (
+          <AlbumFiltersBar
+            filters={albumFilters}
+            matchCount={queue.length}
+            onRemove={removeAlbumFilter}
+            onClear={clearAlbumFilters}
+          />
+        )}
 
         {/* ── Grille 2×2 ──────────────────────────────────────────────── */}
         <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: -4, marginBottom: 10 }}>

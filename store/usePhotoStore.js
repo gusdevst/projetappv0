@@ -17,6 +17,11 @@ export const usePhotoStore = create(
       // Format : [{ id, name, photoIds: [] }]
       albums:  [],
 
+      // Filtres combinés du mode ALBUM (transitoires, NON persistés).
+      // Chaque filtre restreint la sélection en INTERSECTION (ET).
+      // Format : [{ id, type: "date"|"lieu"|"coeur", label, photoIds: [] }]
+      albumFilters: [],
+
       // Mappings swipe pour le mode MÉNAGE (nettoyer la photothèque).
       // Actions possibles : "skip" | "delete" | "favorite" | "hesitate" | "none"
       // up = "skip" : conserver la photo. Le bouton ❤️ est l'unique moyen d'ajouter aux coups de cœur.
@@ -153,6 +158,20 @@ export const usePhotoStore = create(
       restorePhoto: (photoId, section) => set((state) => ({
         [section]: state[section].filter((p) => p.id !== photoId),
       })),
+
+      // ─── Filtres combinés (mode album) ──────────────────────────────────
+      // Ajoute un filtre. Si un filtre du même id existe déjà, on le remplace
+      // (ex. re-sélectionner les coups de cœur met juste à jour la liste).
+      addAlbumFilter: (filter) => set((state) => ({
+        albumFilters: [
+          ...state.albumFilters.filter((f) => f.id !== filter.id),
+          filter,
+        ],
+      })),
+      removeAlbumFilter: (id) => set((state) => ({
+        albumFilters: state.albumFilters.filter((f) => f.id !== id),
+      })),
+      clearAlbumFilters: () => set({ albumFilters: [] }),
 
       // ─── Actions albums ─────────────────────────────────────────────────
       createAlbum: (name) => set((state) => ({
