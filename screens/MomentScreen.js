@@ -281,29 +281,29 @@ export function MomentScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* Sélecteur de créneau — un seul bouton */}
-      <View style={{ paddingHorizontal: S.pad, marginBottom: 12 }}>
+      {/* Sélecteur de créneau — gros bouton */}
+      <View style={{ paddingHorizontal: S.pad, marginBottom: 14 }}>
         <TouchableOpacity
           onPress={() => setShowRangePicker(true)}
           style={{
-            backgroundColor: C.bgCard, borderRadius: 16, padding: 12,
-            borderWidth: 1.5, borderColor: hasFilter ? C.accent : C.border,
-            flexDirection: "row", alignItems: "center", gap: 10,
+            backgroundColor: C.bgCard, borderRadius: 20, padding: 20,
+            borderWidth: 2, borderColor: hasFilter ? C.accent : C.border,
+            flexDirection: "row", alignItems: "center", gap: 14,
           }}
         >
-          <Text style={{ fontSize: 18 }}>📅</Text>
+          <Text style={{ fontSize: 30 }}>📅</Text>
           <View style={{ flex: 1 }}>
             {hasFilter ? (
-              <Text style={{ fontSize: 13, fontWeight: "700", color: C.accent }}>
+              <Text style={{ fontSize: 17, fontWeight: "800", color: C.accent }}>
                 {dateLabel(dateFrom)}{dateTo ? ` → ${dateLabel(dateTo)}` : " → aujourd'hui"}
               </Text>
             ) : (
-              <Text style={{ fontSize: 13, fontWeight: "700", color: C.textMuted }}>
-                Filtrer par période
+              <Text style={{ fontSize: 17, fontWeight: "800", color: C.text }}>
+                Choisir une période
               </Text>
             )}
-            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
-              {hasFilter ? `${filteredPhotos.length} photo${filteredPhotos.length > 1 ? "s" : ""} dans ce créneau` : "Touche pour choisir"}
+            <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 3 }}>
+              {hasFilter ? `${filteredPhotos.length} photo${filteredPhotos.length > 1 ? "s" : ""} dans ce créneau` : "Touche pour ouvrir le calendrier"}
             </Text>
           </View>
           {hasFilter ? (
@@ -311,21 +311,31 @@ export function MomentScreen({ navigation, route }) {
               onPress={(e) => { e.stopPropagation(); clearFilter(); }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text style={{ fontSize: 13, color: C.textMuted }}>✕</Text>
+              <Text style={{ fontSize: 16, color: C.textMuted }}>✕</Text>
             </TouchableOpacity>
           ) : (
-            <Text style={{ color: C.textMuted, fontSize: 14 }}>›</Text>
+            <Text style={{ color: C.textMuted, fontSize: 18 }}>›</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Liste des moments */}
+      {/* Liste des moments — affichée seulement après le choix d'une période */}
       <ScrollView style={{ flex: 1, paddingHorizontal: S.pad }}>
-        {moments.length === 0 ? (
+        {!hasFilter ? (
+          <View style={{ alignItems: "center", justifyContent: "center", padding: 40, marginTop: 30 }}>
+            <Text style={{ fontSize: 56, marginBottom: 14 }}>🗓️</Text>
+            <Text style={{ fontSize: 16, fontWeight: "800", color: C.text, textAlign: "center", marginBottom: 6 }}>
+              Choisis d'abord une période
+            </Text>
+            <Text style={{ fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 19 }}>
+              Sélectionne tes dates avec le calendrier ci-dessus pour voir tes moments.
+            </Text>
+          </View>
+        ) : moments.length === 0 ? (
           <View style={{ alignItems: "center", justifyContent: "center", padding: 40 }}>
             <Text style={{ fontSize: 56, marginBottom: 12 }}>📅</Text>
             <Text style={{ fontSize: 14, color: C.textMuted, textAlign: "center" }}>
-              {hasFilter ? "Aucune photo dans ce créneau." : "Aucun moment détecté pour le moment."}
+              Aucune photo dans ce créneau.
             </Text>
           </View>
         ) : (

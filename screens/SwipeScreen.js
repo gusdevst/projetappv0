@@ -11,6 +11,7 @@ import {
   Modal,
   TextInput,
   ScrollView,
+  Image,
 } from "react-native";
 
 let NavigationBar = null;
@@ -58,6 +59,7 @@ export function SwipeScreen({ navigation, route }) {
     addKept, addDeleted, addPrinted, addSkipped, addHesitated, undoLast,
     albums, createAlbum, addPhotoToAlbum,
     swipeMappingsMenage, swipeMappingsAlbum,
+    libraryPhotos,
   } = usePhotoStore();
 
   // Bon mapping selon le mode
@@ -82,6 +84,20 @@ export function SwipeScreen({ navigation, route }) {
   const [showAlbumPicker, setShowAlbumPicker] = useState(false);
   const [newAlbumName, setNewAlbumName]       = useState("");
   const [heartedThisPhoto, setHeartedThisPhoto] = useState(false);
+
+  // Aperçu du contenu de l'album courant (sans quitter la session)
+  const [showAlbumPreview, setShowAlbumPreview] = useState(false);
+  // Photos actuellement dans l'album = ids stockés, résolus en objets {url} via
+  // les photos de cette session, la file de tri et la photothèque chargée.
+  const currentAlbum = albums.find((a) => a.id === albumId) || null;
+  const albumPreviewPhotos = (() => {
+    if (!currentAlbum) return sessionAlbumPhotos;
+    const lookup = new Map();
+    [...libraryPhotos, ...queue, ...sessionAlbumPhotos].forEach((p) => {
+      if (p && !lookup.has(p.id)) lookup.set(p.id, p);
+    });
+    return currentAlbum.photoIds.map((id) => lookup.get(id)).filter(Boolean);
+  })();
 
   const zoomableRef = useRef(null);
 
@@ -281,22 +297,35 @@ export function SwipeScreen({ navigation, route }) {
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            {/* Compteur ou badge album */}
-            <View style={{
-              paddingHorizontal: 12, paddingVertical: 8,
-              backgroundColor: isAlbum ? "rgba(244,132,95,0.35)" : "rgba(255,255,255,0.2)",
-              borderRadius: S.radiusFull, maxWidth: 110,
-            }}>
-              {isAlbum ? (
+            {/* Compteur (ménage) ou badge album cliquable (album) */}
+            {isAlbum ? (
+              <TouchableOpacity
+                onPress={() => setShowAlbumPreview(true)}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 5,
+                  paddingHorizontal: 12, paddingVertical: 8,
+                  backgroundColor: "rgba(244,132,95,0.35)",
+                  borderRadius: S.radiusFull, maxWidth: 150,
+                }}
+              >
                 <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }} numberOfLines={1}>
                   📁 {albumName}
                 </Text>
-              ) : (
+                <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800", opacity: 0.85 }}>
+                  {albumPreviewPhotos.length} ›
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{
+                paddingHorizontal: 12, paddingVertical: 8,
+                backgroundColor: "rgba(255,255,255,0.2)",
+                borderRadius: S.radiusFull, maxWidth: 110,
+              }}>
                 <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>
                   {idx + 1} / {queue.length}
                 </Text>
-              )}
-            </View>
+              </View>
+            )}
 
             {/* ⚙️ Paramètres — ouvre la section swipe du mode courant */}
             <TouchableOpacity
@@ -421,9 +450,8 @@ export function SwipeScreen({ navigation, route }) {
 
       </View>
 
-      {/* 🚪 Fin de tri — discret, bas gauche, mode ménage uniquement */}
-      {isMenage && (
-        <TouchableOpacity
+      {/* 🚪 Fin de tri — discret, bas gauche (ménage et album) */}
+      <TouchableOpacity
           onPress={handleFinDeTri}
           style={{
             position: "absolute", bottom: 16, left: 20, zIndex: 15,
@@ -436,7 +464,6 @@ export function SwipeScreen({ navigation, route }) {
         >
           <Text style={{ fontSize: 22 }}>🚪</Text>
         </TouchableOpacity>
-      )}
 
       {/* Modal picker d'album (long-press sur 📁) */}
       <Modal
@@ -519,6 +546,62 @@ export function SwipeScreen({ navigation, route }) {
                 </TouchableOpacity>
               </View>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal aperçu de l'album — ne quitte pas la session de tri */}
+      <Modal
+        visible={showAlbumPreview}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAlbumPreview(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" }}>
+          <View style={{
+            backgroundColor: C.bg,
+            borderTopLeftRadius: 28, borderTopRightRadius: 28,
+            padding: 22, paddingBottom: 36, maxHeight: SH * 0.8,
+          }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }} numberOfLines={1}>
+                📁 {albumName}
+              </Text>
+              <TouchableOpacity onPress={() => setShowAlbumPreview(false)}>
+                <Text style={{ fontSize: 22, color: C.textMuted }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 16 }}>
+              {albumPreviewPhotos.length} photo{albumPreviewPhotos.length > 1 ? "s" : ""} dans cet album
+            </Text>
+
+            {albumPreviewPhotos.length === 0 ? (
+              <Text style={{ fontSize: 13, color: C.textMuted, fontStyle: "italic", textAlign: "center", paddingVertical: 30 }}>
+                Aucune photo dans l'album pour l'instant.{"\n"}Swipe vers le haut pour en ajouter.
+              </Text>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                  {albumPreviewPhotos.map((p) => (
+                    <Image
+                      key={p.id}
+                      source={{ uri: p.url }}
+                      style={{ width: (SW - 44 - 12) / 3, height: (SW - 44 - 12) / 3, borderRadius: 10 }}
+                    />
+                  ))}
+                </View>
+              </ScrollView>
+            )}
+
+            <TouchableOpacity
+              onPress={() => setShowAlbumPreview(false)}
+              style={{
+                marginTop: 18, backgroundColor: C.accent, borderRadius: 14,
+                padding: 15, alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>Continuer le tri →</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
