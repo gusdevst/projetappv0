@@ -2,8 +2,9 @@
 // ─────────────────────────────────────────────
 // screens/SummaryScreen.js
 // ─────────────────────────────────────────────
-import { useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions, Alert } from "react-native";
+import { useEffect, useState } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions, Alert, ActivityIndicator } from "react-native";
+import { exportKeptToGallery } from "../services/photoLibrary";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
@@ -11,16 +12,29 @@ import { usePhotoStore } from "../store/usePhotoStore";
 const { width: SW } = Dimensions.get("window");
 
 export function SummaryScreen({ navigation, route }) {
-  const { albumId, albumName } = route.params || {};
+  const {
+    albumId,
+    albumName,
+    // Stats de la session courante (envoyées par SwipeScreen)
+    sessionKept        = [],
+    sessionDeleted     = [],
+    sessionHesitated   = [],
+    sessionAlbumPhotos = [],
+  } = route.params || {};
 
-  const kept           = usePhotoStore((state) => state.kept);
-  const deleted        = usePhotoStore((state) => state.deleted);
-  const printed        = usePhotoStore((state) => state.printed);
-  const hesitated      = usePhotoStore((state) => state.hesitated);
+  // État local pour les boutons d'export
+  const [exportKeptLoading,  setExportKeptLoading]  = useState(false);
+  const [exportKeptDone,     setExportKeptDone]      = useState(false);
+  const [exportAlbumLoading, setExportAlbumLoading]  = useState(false);
+  const [exportAlbumDone,    setExportAlbumDone]     = useState(false);
+
+  // On garde le store uniquement pour les actions (reset) et la liste albums
   const albums         = usePhotoStore((state) => state.albums);
   const resetSkipped   = usePhotoStore((state) => state.resetSkipped);
   const resetHesitated = usePhotoStore((state) => state.resetHesitated);
-  const deletedSize    = deleted.reduce((a, p) => a + (p.size || 0), 0);
+
+  // Stats basées sur la SESSION uniquement
+  const deletedSize = sessionDeleted.reduce((a, p) => a + (p.size || 0), 0);
 
   // Album créé pendant cette session (mode album uniquement)
   const createdAlbum = albumId ? albums.find((a) => a.id === albumId) : null;
@@ -30,11 +44,40 @@ export function SummaryScreen({ navigation, route }) {
     resetSkipped();
   }, [resetSkipped]);
 
-  // Relancer le tri uniquement sur les photos hésitées
+  // Exporte les coups de cœur de la session dans un album natif "Phototri ❤️"
+  const handleExportKept = async () => {
+    if (exportKeptLoading || exportKeptDone) return;
+    setExportKeptLoading(true);
+    const result = await exportKeptToGallery(sessionKept.map((p) => p.id), "❤️ Coups de cœur");
+    setExportKeptLoading(false);
+    if (result.success) {
+      setExportKeptDone(true);
+      Alert.alert("Album créé ✅", `Tes ${sessionKept.length} coups de cœur sont dans l'album "Phototri ❤️" de ta galerie.`);
+    } else {
+      Alert.alert("Erreur", result.error ?? "Impossible de créer l'album.");
+    }
+  };
+
+  // Exporte les photos de l'album app dans un album natif du même nom
+  const handleExportAlbum = async () => {
+    if (exportAlbumLoading || exportAlbumDone || sessionAlbumPhotos.length === 0) return;
+    setExportAlbumLoading(true);
+    const subName = albumName ?? "Mon album";
+    const result = await exportKeptToGallery(sessionAlbumPhotos.map((p) => p.id), subName);
+    setExportAlbumLoading(false);
+    if (result.success) {
+      setExportAlbumDone(true);
+      Alert.alert("Album créé ✅", `L'album "${name}" avec ${sessionAlbumPhotos.length} photo${sessionAlbumPhotos.length > 1 ? "s" : ""} est dans ta galerie.`);
+    } else {
+      Alert.alert("Erreur", result.error ?? "Impossible de créer l'album.");
+    }
+  };
+
+  // Relancer le tri uniquement sur les photos hésitées de cette session
   const handleRetrierHesites = () => {
-    if (hesitated.length === 0) return;
-    const queue = hesitated.map((p) => ({ ...p }));
-    resetHesitated(); // on vide la pile avant de relancer
+    if (sessionHesitated.length === 0) return;
+    const queue = sessionHesitated.map((p) => ({ ...p }));
+    resetHesitated(); // on vide la pile du store avant de relancer
     navigation.navigate("Swipe", { queue });
   };
 
@@ -54,10 +97,10 @@ export function SummaryScreen({ navigation, route }) {
         {/* ── Grille de stats ───────────────────────────────────────────── */}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
           {[
-            { label: "Coups de cœur", val: kept.length,           color: C.green,  emoji: "❤️" },
-            { label: "Supprimées",    val: deleted.length,         color: C.red,    emoji: "🗑" },
-            { label: "À imprimer",    val: printed.length,         color: C.purple, emoji: "🖨" },
-            { label: "Mo libérés",    val: deletedSize.toFixed(1), color: C.yellow, emoji: "✨" },
+            { label: "Coups de cœur",    val: sessionKept.length,           color: C.green,  emoji: "❤️" },
+            { label: "Supprimées",      val: sessionDeleted.length,         color: C.red,    emoji: "🗑" },
+            { label: "À l'album",       val: sessionAlbumPhotos.length,     color: C.purple, emoji: "📁" },
+            { label: "Mo libérés",      val: deletedSize.toFixed(1),        color: C.yellow, emoji: "✨" },
           ].map((s) => (
             <View
               key={s.label}
@@ -78,6 +121,45 @@ export function SummaryScreen({ navigation, route }) {
           ))}
         </View>
 
+        {/* ── Export coups de cœur vers la galerie native ─────────────── */}
+        {sessionKept.length > 0 && (
+          <TouchableOpacity
+            onPress={handleExportKept}
+            disabled={exportKeptLoading || exportKeptDone}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              backgroundColor: exportKeptDone ? "#e8f5e9" : "#fff0f5",
+              borderRadius: S.radius,
+              padding: 16,
+              borderWidth: 2,
+              borderColor: exportKeptDone ? "#81c784" : C.accent,
+              marginBottom: 16,
+              opacity: exportKeptLoading ? 0.7 : 1,
+            }}
+          >
+            {exportKeptLoading ? (
+              <ActivityIndicator size="small" color={C.accent} />
+            ) : (
+              <Text style={{ fontSize: 20 }}>{exportKeptDone ? "✅" : "📲"}</Text>
+            )}
+            <View>
+              <Text style={{ fontWeight: "800", fontSize: 14, color: exportKeptDone ? "#388e3c" : C.accent }}>
+                {exportKeptDone
+                  ? "Album créé dans ta galerie !"
+                  : `Exporter ${sessionKept.length} coup${sessionKept.length > 1 ? "s" : ""} de cœur`}
+              </Text>
+              {!exportKeptDone && (
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                  Crée l'album "Phototri ❤️" dans ta galerie photo
+                </Text>
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* ── Section album créé (mode album uniquement) ──────────────── */}
         {createdAlbum && (
           <View style={{
@@ -88,22 +170,52 @@ export function SummaryScreen({ navigation, route }) {
             borderColor: `${C.accent}50`,
             marginBottom: 16,
           }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <Text style={{ fontSize: 24 }}>📁</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: "900", fontSize: 16, color: C.text }}>
                   {createdAlbum.name}
                 </Text>
                 <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-                  {createdAlbum.photoIds.length} photo{createdAlbum.photoIds.length > 1 ? "s" : ""} ajoutée{createdAlbum.photoIds.length > 1 ? "s" : ""} à l'album ✓
+                  {sessionAlbumPhotos.length} photo{sessionAlbumPhotos.length > 1 ? "s" : ""} ajoutée{sessionAlbumPhotos.length > 1 ? "s" : ""} à l'album ✓
                 </Text>
               </View>
             </View>
+
+            {/* Bouton export vers la galerie native */}
+            {sessionAlbumPhotos.length > 0 && (
+              <TouchableOpacity
+                onPress={handleExportAlbum}
+                disabled={exportAlbumLoading || exportAlbumDone}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  backgroundColor: exportAlbumDone ? "#e8f5e9" : "rgba(255,255,255,0.6)",
+                  borderRadius: 12,
+                  padding: 12,
+                  borderWidth: 1.5,
+                  borderColor: exportAlbumDone ? "#81c784" : `${C.accent}60`,
+                  opacity: exportAlbumLoading ? 0.7 : 1,
+                }}
+              >
+                {exportAlbumLoading
+                  ? <ActivityIndicator size="small" color={C.accent} />
+                  : <Text style={{ fontSize: 16 }}>{exportAlbumDone ? "✅" : "📲"}</Text>
+                }
+                <Text style={{ fontWeight: "700", fontSize: 13, color: exportAlbumDone ? "#388e3c" : C.accent }}>
+                  {exportAlbumDone
+                    ? "Album enregistré dans la galerie !"
+                    : `Enregistrer "${createdAlbum.name}" dans la galerie`}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
-        {/* ── Section "J'hésite" (visible seulement si des photos hésitées) ── */}
-        {hesitated.length > 0 && (
+        {/* ── Section "J'hésite" (visible seulement si des photos hésitées cette session) ── */}
+        {sessionHesitated.length > 0 && (
           <View
             style={{
               backgroundColor: C.bgCard,
@@ -119,7 +231,7 @@ export function SummaryScreen({ navigation, route }) {
               <Text style={{ fontSize: 20 }}>🤔</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: "800", fontSize: 14, color: C.text }}>
-                  {hesitated.length} photo{hesitated.length > 1 ? "s" : ""} en attente de décision
+                  {sessionHesitated.length} photo{sessionHesitated.length > 1 ? "s" : ""} en attente de décision
                 </Text>
                 <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
                   Tu avais hésité sur ces photos. Prêt à trancher ?
@@ -130,7 +242,7 @@ export function SummaryScreen({ navigation, route }) {
             {/* Miniatures */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
               <View style={{ flexDirection: "row", gap: 8 }}>
-                {hesitated.map((p) => (
+                {sessionHesitated.map((p) => (
                   <Image
                     key={p.id}
                     source={{ uri: p.url }}

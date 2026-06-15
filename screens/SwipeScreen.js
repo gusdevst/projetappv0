@@ -63,6 +63,15 @@ export function SwipeScreen({ navigation, route }) {
   const swipeMappings = isAlbum ? swipeMappingsAlbum : swipeMappingsMenage;
 
   const [history, setHistory]     = useState([]);
+
+  // ── Compteurs locaux de session ─────────────────────────────────────────
+  // Ces compteurs ne voient que CE tri, pas les sessions précédentes.
+  // On les passe à Summary via route.params.
+  const [sessionKept,          setSessionKept]          = useState([]);   // photos gardées ❤️
+  const [sessionDeleted,       setSessionDeleted]        = useState([]);   // photos supprimées 🗑
+  const [sessionHesitated,     setSessionHesitated]      = useState([]);   // photos hésitées 🤔
+  const [sessionAlbumPhotos,   setSessionAlbumPhotos]    = useState([]);   // photos ajoutées à l'album 📁
+
   const [aiPanel, setAiPanel]     = useState(false);
   const [aiMode, setAiMode]       = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -102,7 +111,15 @@ export function SwipeScreen({ navigation, route }) {
 
   // ── Fin de tri anticipée ─────────────────────────────────────────────────
   const handleFinDeTri = () => {
-    navigation.navigate("Summary", { albumId, albumName, mode });
+    navigation.navigate("Summary", {
+      albumId,
+      albumName,
+      mode,
+      sessionKept,
+      sessionDeleted,
+      sessionHesitated,
+      sessionAlbumPhotos,
+    });
   };
 
   // ── Actions de tri ────────────────────────────────────────────────────────
@@ -129,14 +146,26 @@ export function SwipeScreen({ navigation, route }) {
     if (actionKey === "album")    flashFeedback("rgba(176,122,216,0.7)", animDir);
     if (actionKey === "favorite") flashFeedback("rgba(92,184,122,0.7)", animDir);
 
-    if (actionKey === "delete")   addDeleted(photo);
-    if (actionKey === "album")    { addPrinted(photo); if (albumId) addPhotoToAlbum(albumId, photo.id); }
-    if (actionKey === "favorite") addKept(photo);
+    if (actionKey === "delete")   { addDeleted(photo);   setSessionDeleted((p) => [...p, photo]); }
+    if (actionKey === "album")    { addPrinted(photo);   setSessionAlbumPhotos((p) => [...p, photo]); if (albumId) addPhotoToAlbum(albumId, photo.id); }
+    if (actionKey === "favorite") { addKept(photo);      setSessionKept((p) => [...p, photo]); }
     if (actionKey === "skip")     addSkipped(photo);
-    if (actionKey === "hesitate") addHesitated(photo);
+    if (actionKey === "hesitate") { addHesitated(photo); setSessionHesitated((p) => [...p, photo]); }
 
-    if (idx >= queue.length - 1) navigation.navigate("Summary", { albumId, albumName, mode });
-    else setIdx((i) => i + 1);
+    if (idx >= queue.length - 1) {
+      navigation.navigate("Summary", {
+        albumId,
+        albumName,
+        mode,
+        // Stats de CETTE session uniquement
+        sessionKept:        [...sessionKept,        ...(actionKey === "favorite" ? [photo] : [])],
+        sessionDeleted:     [...sessionDeleted,     ...(actionKey === "delete"   ? [photo] : [])],
+        sessionHesitated:   [...sessionHesitated,   ...(actionKey === "hesitate" ? [photo] : [])],
+        sessionAlbumPhotos: [...sessionAlbumPhotos, ...(actionKey === "album"    ? [photo] : [])],
+      });
+    } else {
+      setIdx((i) => i + 1);
+    }
   };
 
   const swipe = (dir) => {

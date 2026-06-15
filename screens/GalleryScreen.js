@@ -105,7 +105,21 @@ export function GalleryScreen({ navigation, route }) {
     );
   };
 
-  const handleRestore = (photoId) => { restorePhoto(photoId, config.storeKey); closePhoto(); };
+  const handleRestore = (photoId) => {
+    restorePhoto(photoId, config.storeKey);
+
+    // Après retrait, le groupe courant perd une photo.
+    // On recalcule : si la photo suivante existe on y va, sinon on recule, sinon on ferme.
+    const remaining = (selectedGroup ?? []).filter((p) => p.id !== photoId);
+    if (remaining.length === 0) {
+      closePhoto();
+    } else {
+      // On reste au même index si possible (la photo suivante "remonte"), sinon on prend la dernière
+      const nextIndex = Math.min(selectedIndex, remaining.length - 1);
+      setSelectedGroup(remaining);
+      setSelectedIndex(nextIndex);
+    }
+  };
 
   // ─── Albums ─────────────────────────────────────────────────────────────
   const handleCreateAlbum = () => {

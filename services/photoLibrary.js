@@ -3,6 +3,7 @@
 // Toutes les fonctions sont async et lèvent en cas d'erreur — c'est au store de gérer.
 
 import * as MediaLibrary from "expo-media-library";
+import { Platform } from "react-native";
 
 // Plafond de sécurité : on charge au max 1500 photos pour éviter de figer l'app
 // chez les utilisateurs avec 50000+ photos. À ajuster post-MVP si besoin.
@@ -85,6 +86,60 @@ export async function loadPhotoLocation(assetId) {
 export async function deletePhotos(assetIds) {
   if (assetIds.length === 0) return true;
   return await MediaLibrary.deleteAssetsAsync(assetIds);
+}
+
+/**
+ * Exporte une liste de photos vers un album natif de la galerie.
+ * - Android : crée un dossier visible dans la galerie native.
+ * - iOS : crée un album dans l'app Photos (les photos ne sont PAS dupliquées,
+ *   on crée juste un lien vers les originaux).
+ *
+ * copyAsset=false = pas de duplication → l'original reste en place, on crée juste
+ * une référence dans l'album. C'est le comportement attendu (on ne veut pas doubler
+ * l'espace disque occupé).
+ *
+ * @param {string[]} assetIds  - IDs des photos à exporter (asset.id de la media library)
+ * @param {string}   albumName - Nom de l'album à créer (ex: "Phototri ❤️")
+ * @returns {Promise<{ success: boolean, albumId?: string, error?: string }>}
+ */
+/**
+ * Construit le nom final de l'album selon la plateforme.
+ *
+ * Android : les albums sont de vrais dossiers. "Phototri/Mon Album" crée
+ *   un sous-dossier "Mon Album" à l'intérieur du dossier "Phototri" dans la galerie.
+ *
+ * iOS : les albums sont plats, Apple interdit les sous-dossiers.
+ *   On préfixe le nom avec "Phototri — " pour que tous les albums Phototri
+ *   apparaissent groupés alphabétiquement dans l'app Photos.
+ */
+function buildAlbumName(subName) {
+  if (Platform.OS === "android") {
+    return `Phototri/${subName}`;
+  }
+  return `Phototri — ${subName}`;
+}
+
+export async function exportKeptToGallery(assetIds, subName = "❤️ Coups de cœur") {
+  if (assetIds.length === 0) {
+    return { success: false, error: "Aucune photo à exporter" };
+  }
+
+  const albumName = buildAlbumName(subName);
+
+  try {
+    // createAlbumAsync crée l'album en y ajoutant la 1ère photo obligatoirement.
+    // Sur iOS, on DOIT passer une photo à la création — c'est une contrainte Apple.
+    const album = await MediaLibrary.createAlbumAsync(albumName, assetIds[0], false);
+
+    // S'il y a d'autres photos, on les ajoute ensuite
+    if (assetIds.length > 1) {
+      await MediaLibrary.addAssetsToAlbumAsync(assetIds.slice(1), album.id, false);
+    }
+
+    return { success: true, albumId: album.id, albumName };
+  } catch (err) {
+    return { success: false, error: err.message ?? "Erreur inconnue" };
+  }
 }
 
 /**
