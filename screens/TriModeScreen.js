@@ -7,10 +7,10 @@
 //               step 2 (nouvel album) : filtres mois + nom → crée l'album → lance le swipe
 //               step 2 (album existant) : sélectionner l'album → lance le swipe
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, ScrollView,
-  StatusBar, KeyboardAvoidingView, Platform,
+  StatusBar, KeyboardAvoidingView, Platform, PanResponder,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
@@ -54,6 +54,24 @@ export function TriModeScreen({ navigation, route }) {
   // Id de l'album créé pendant cette config — évite d'en recréer un si l'user
   // revient depuis le swipe puis relance le tri.
   const [createdAlbumId, setCreatedAlbumId]   = useState(null);
+
+  // ── Swipe vers la droite = revenir en arrière ─────────────────────────────
+  // step 2 → step 1, step 1 → accueil. Ne capture que les gestes franchement
+  // horizontaux pour ne pas gêner le scroll vertical.
+  const stepRef = useRef(step);
+  useEffect(() => { stepRef.current = step; }, [step]);
+  const swipeBack = () => {
+    // step 2 (config) → revient au choix créer/continuer ; sinon → accueil
+    if (stepRef.current === 2) setStep(1);
+    else navigation.goBack();
+  };
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) =>
+        g.dx > 24 && Math.abs(g.dx) > Math.abs(g.dy) * 1.8,
+      onPanResponderRelease: (_, g) => { if (g.dx > 60) swipeBack(); },
+    })
+  ).current;
 
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
   const kept          = usePhotoStore((s) => s.kept);
@@ -216,7 +234,7 @@ export function TriModeScreen({ navigation, route }) {
   // ════════════════════════════════════════════════════════════════════════════
   if (step === 1) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} {...panResponder.panHandlers}>
         <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 8 }}>
           <TouchableOpacity
@@ -277,6 +295,16 @@ export function TriModeScreen({ navigation, route }) {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* ── Revenir à l'accueil ─────────────────────────────────────── */}
+        <View style={{ padding: S.pad, paddingTop: 0 }}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ padding: 16, alignItems: "center", borderRadius: S.radius, borderWidth: 1.5, borderColor: C.border }}
+          >
+            <Text style={{ color: C.textMuted, fontWeight: "800", fontSize: 14 }}>← Revenir à l'accueil</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -285,7 +313,7 @@ export function TriModeScreen({ navigation, route }) {
   // STEP 2 — Config filtres + nom/album
   // ════════════════════════════════════════════════════════════════════════════
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} {...panResponder.panHandlers}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
 
@@ -296,7 +324,7 @@ export function TriModeScreen({ navigation, route }) {
           >
             <Text style={{ color: C.textMuted, fontSize: 16, paddingHorizontal: 4 }}>←</Text>
           </TouchableOpacity>
-          <Text style={{ fontWeight: "900", fontSize: 20, color: C.text }}>
+          <Text style={{ fontWeight: "900", fontSize: 20, color: C.album }}>
             {albumSubStep === "new" ? "Nouvel album" : "Continuer un album"}
           </Text>
         </View>
@@ -484,6 +512,14 @@ export function TriModeScreen({ navigation, route }) {
               </Text>
             </TouchableOpacity>
           )}
+
+          {/* Revenir à l'accueil */}
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ paddingVertical: 12, alignItems: "center", marginTop: 6 }}
+          >
+            <Text style={{ color: C.textMuted, fontWeight: "800", fontSize: 14 }}>← Revenir à l'accueil</Text>
+          </TouchableOpacity>
         </View>
 
       </KeyboardAvoidingView>
