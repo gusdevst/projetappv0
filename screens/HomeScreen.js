@@ -413,24 +413,6 @@ export function HomeScreen({ navigation }) {
               : <Text style={{ fontSize: 11, color: C.textMuted }}>▾</Text>}
           </TouchableOpacity>
 
-          {!isMenage && (
-            <TouchableOpacity
-              onPress={toggleCoeurFilter}
-              style={{
-                flexDirection: "row", alignItems: "center", gap: 5,
-                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
-                borderWidth: 1.5,
-                borderColor: coeurActive ? modeColor : C.border,
-                backgroundColor: coeurActive ? `${modeColor}18` : C.bgCard,
-              }}
-            >
-              <Text style={{ fontSize: 12 }}>❤️</Text>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: coeurActive ? modeColor : C.textMuted }}>
-                Coups de cœur
-              </Text>
-            </TouchableOpacity>
-          )}
-
           {isMenage && (
             <TouchableOpacity
               onPress={() => toggleRandomFifty(filteredPool)}
@@ -532,8 +514,7 @@ export function HomeScreen({ navigation }) {
             </ScrollView>
 
             {/* Bande coups de cœur */}
-            <TouchableOpacity
-              onPress={() => navigation.navigate("Gallery", { section: "kept" })}
+            <View
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -543,19 +524,40 @@ export function HomeScreen({ navigation }) {
                 borderWidth: 1.5,
                 borderColor: "#f4a5c0",
                 marginBottom: 10,
+                gap: 10,
               }}
             >
-              <Text style={{ fontSize: 26, marginRight: 10 }}>❤️</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: "800", fontSize: 13, color: "#e8637a" }}>
-                  Coups de cœur · {kept.length} photos
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Gallery", { section: "kept" })}
+                style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 10 }}
+              >
+                <Text style={{ fontSize: 26 }}>❤️</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "800", fontSize: 13, color: "#e8637a" }}>
+                    Coups de cœur · {kept.length} photos
+                  </Text>
+                  <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                    Touche pour voir tes meilleures photos
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* CTA : sélectionne / désélectionne les coups de cœur dans les filtres */}
+              <TouchableOpacity
+                onPress={toggleCoeurFilter}
+                disabled={kept.length === 0}
+                style={{
+                  paddingHorizontal: 12, paddingVertical: 9, borderRadius: 99,
+                  backgroundColor: coeurActive ? "#e8637a" : "transparent",
+                  borderWidth: 1.5, borderColor: "#e8637a",
+                  opacity: kept.length === 0 ? 0.4 : 1,
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: "800", color: coeurActive ? "#fff" : "#e8637a" }}>
+                  {coeurActive ? "✓ Filtré" : "+ Filtrer"}
                 </Text>
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-                  Tes meilleures photos, parfaites pour imprimer
-                </Text>
-              </View>
-              <Text style={{ fontSize: 14, color: "#e8637a", fontWeight: "800" }}>→</Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
           </>
         )}
 
