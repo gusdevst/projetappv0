@@ -14,6 +14,9 @@ export const C = {
   accent2: "#e8637a",
   accentGrad: ["#f4845f", "#e8637a"], // pour futur LinearGradient
 
+  // Couleur du mode "Créer un album" (violet) — partagée par tous les écrans album
+  album:   "#7c6fcd",
+
   // Textes
   text:     "#3a1f10",
   textMid:  "#7a4a30",

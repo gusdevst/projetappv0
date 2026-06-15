@@ -40,7 +40,8 @@ export function GalleryScreen({ navigation, route }) {
   const removePhotoFromAlbum = usePhotoStore((s) => s.removePhotoFromAlbum);
 
   // Drill-down album : null = liste des albums, "__sans_album__" = photos sans album, sinon id album
-  const [activeAlbumId, setActiveAlbumId] = useState(null);
+  // On peut ouvrir directement un album via route.params.albumId (lien depuis le bilan de tri).
+  const [activeAlbumId, setActiveAlbumId] = useState(route?.params?.albumId ?? null);
   const activeAlbum = albums.find((a) => a.id === activeAlbumId) ?? null;
   const activeAlbumPhotos = activeAlbum
     ? photos.filter((p) => activeAlbum.photoIds.includes(p.id))

@@ -28,7 +28,7 @@ function dateLabel(d) {
  * 1er tap = date de début, 2e tap = date de fin.
  * Les jours entre les deux sont surlignés.
  */
-function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCancel }) {
+function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCancel, accent = C.accent }) {
   const today = new Date();
   const init  = initialFrom || today;
 
@@ -108,18 +108,18 @@ function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCan
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, justifyContent: "center" }}>
               <View style={{
                 paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99,
-                backgroundColor: picking === "from" ? C.accent : `${C.accent}15`,
+                backgroundColor: picking === "from" ? accent : `${accent}15`,
               }}>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: picking === "from" ? "#fff" : C.accent }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: picking === "from" ? "#fff" : accent }}>
                   {rangeFrom ? dateLabel(rangeFrom) : "Date de début"}
                 </Text>
               </View>
               <Text style={{ color: C.textMuted, alignSelf: "center" }}>→</Text>
               <View style={{
                 paddingHorizontal: 12, paddingVertical: 5, borderRadius: 99,
-                backgroundColor: picking === "to" ? C.accent : `${C.accent}15`,
+                backgroundColor: picking === "to" ? accent : `${accent}15`,
               }}>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: picking === "to" ? "#fff" : (rangeTo ? C.accent : C.textMuted) }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: picking === "to" ? "#fff" : (rangeTo ? accent : C.textMuted) }}>
                   {rangeTo ? dateLabel(rangeTo) : "Date de fin"}
                 </Text>
               </View>
@@ -164,20 +164,20 @@ function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCan
                     {inRange && (
                       <View style={{
                         position: "absolute", top: 3, bottom: 3, left: 0, right: 0,
-                        backgroundColor: `${C.accent}18`,
+                        backgroundColor: `${accent}18`,
                       }} />
                     )}
                     <View style={{
                       width: 34, height: 34, borderRadius: 17,
-                      backgroundColor: isEndpoint ? C.accent : "transparent",
+                      backgroundColor: isEndpoint ? accent : "transparent",
                       borderWidth: isToday && !isEndpoint ? 1.5 : 0,
-                      borderColor: C.accent,
+                      borderColor: accent,
                       alignItems: "center", justifyContent: "center",
                     }}>
                       <Text style={{
                         fontSize: 14,
                         fontWeight: isEndpoint || isToday ? "800" : "400",
-                        color: isEndpoint ? "#fff" : isFuture ? "#d0c0b0" : isToday ? C.accent : C.text,
+                        color: isEndpoint ? "#fff" : isFuture ? "#d0c0b0" : isToday ? accent : C.text,
                       }}>
                         {day}
                       </Text>
@@ -198,7 +198,7 @@ function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCan
               <TouchableOpacity
                 onPress={() => canConfirm && onConfirm(rangeFrom, rangeTo)}
                 disabled={!canConfirm}
-                style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: canConfirm ? C.accent : `${C.accent}40`, alignItems: "center" }}
+                style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: canConfirm ? accent : `${accent}40`, alignItems: "center" }}
               >
                 <Text style={{ color: "#fff", fontWeight: "800" }}>Valider</Text>
               </TouchableOpacity>
@@ -218,6 +218,8 @@ const styles = {
 // ─── MomentScreen ─────────────────────────────────────────────────────────────
 export function MomentScreen({ navigation, route }) {
   const mode = route.params?.mode ?? "menage";
+  // Couleur du mode : violet en mode album, orange en mode ménage
+  const accent = mode === "album" ? C.album : C.accent;
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
   const deleted       = usePhotoStore((s) => s.deleted);
   const [selectedId, setSelectedId] = useState(null);
@@ -287,14 +289,14 @@ export function MomentScreen({ navigation, route }) {
           onPress={() => setShowRangePicker(true)}
           style={{
             backgroundColor: C.bgCard, borderRadius: 20, padding: 20,
-            borderWidth: 2, borderColor: hasFilter ? C.accent : C.border,
+            borderWidth: 2, borderColor: hasFilter ? accent : C.border,
             flexDirection: "row", alignItems: "center", gap: 14,
           }}
         >
           <Text style={{ fontSize: 30 }}>📅</Text>
           <View style={{ flex: 1 }}>
             {hasFilter ? (
-              <Text style={{ fontSize: 17, fontWeight: "800", color: C.accent }}>
+              <Text style={{ fontSize: 17, fontWeight: "800", color: accent }}>
                 {dateLabel(dateFrom)}{dateTo ? ` → ${dateLabel(dateTo)}` : " → aujourd'hui"}
               </Text>
             ) : (
@@ -346,14 +348,14 @@ export function MomentScreen({ navigation, route }) {
                 key={m.id}
                 onPress={() => setSelectedId(isSelected ? null : m.id)}
                 style={{
-                  backgroundColor: isSelected ? `${C.accent}15` : C.bgCard,
+                  backgroundColor: isSelected ? `${accent}15` : C.bgCard,
                   borderRadius: S.radius, padding: 14, marginBottom: 10,
                   borderWidth: isSelected ? 2 : 1,
-                  borderColor: isSelected ? C.accent : C.border,
+                  borderColor: isSelected ? accent : C.border,
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <View style={{ width: 48, height: 48, borderRadius: 12, overflow: "hidden", borderWidth: 2, borderColor: isSelected ? C.accent : C.border }}>
+                  <View style={{ width: 48, height: 48, borderRadius: 12, overflow: "hidden", borderWidth: 2, borderColor: isSelected ? accent : C.border }}>
                     <Image source={{ uri: m.photos[0]?.url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
                   </View>
                   <View style={{ flex: 1 }}>
@@ -362,7 +364,7 @@ export function MomentScreen({ navigation, route }) {
                       {m.photos.length} photo{m.photos.length > 1 ? "s" : ""}
                     </Text>
                   </View>
-                  <Text style={{ color: isSelected ? C.accent : C.textMuted, fontSize: 18, fontWeight: "800" }}>
+                  <Text style={{ color: isSelected ? accent : C.textMuted, fontSize: 18, fontWeight: "800" }}>
                     {isSelected ? "✓" : "›"}
                   </Text>
                 </View>
@@ -390,8 +392,8 @@ export function MomentScreen({ navigation, route }) {
               preQueue: selected ? selected.photos : filteredPhotos,
               ...(mode === "album" ? { skipToAlbum: true } : { skipToMenage: true }),
             })}
-            style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4,
-              shadowColor: C.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }}
+            style={{ backgroundColor: accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4,
+              shadowColor: accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }}
           >
             <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
               {selected
@@ -407,6 +409,7 @@ export function MomentScreen({ navigation, route }) {
         visible={showRangePicker}
         initialFrom={dateFrom}
         initialTo={dateTo}
+        accent={accent}
         onConfirm={handleRangeConfirm}
         onCancel={() => setShowRangePicker(false)}
       />

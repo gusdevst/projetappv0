@@ -177,12 +177,12 @@ export function TriModeScreen({ navigation, route }) {
           <TouchableOpacity
             onPress={() => setStep(1)}
             style={{
-              backgroundColor: C.accent,
+              backgroundColor: C.album,
               borderRadius: S.radiusLg,
               padding: 24,
               alignItems: "center",
               elevation: 6,
-              shadowColor: C.accent,
+              shadowColor: C.album,
               shadowOffset: { width: 0, height: 6 },
               shadowOpacity: 0.3,
               shadowRadius: 14,
@@ -223,12 +223,12 @@ export function TriModeScreen({ navigation, route }) {
           <TouchableOpacity
             onPress={() => { setAlbumSubStep("new"); setStep(2); }}
             style={{
-              backgroundColor: C.accent,
+              backgroundColor: C.album,
               borderRadius: S.radiusLg,
               padding: 24,
               marginBottom: 16,
               elevation: 6,
-              shadowColor: C.accent,
+              shadowColor: C.album,
               shadowOffset: { width: 0, height: 6 },
               shadowOpacity: 0.3,
               shadowRadius: 14,
@@ -307,10 +307,10 @@ export function TriModeScreen({ navigation, route }) {
                     key={a.id}
                     onPress={() => setSelectedExistingAlbum(a)}
                     style={{
-                      backgroundColor: isActive ? `${C.accent}15` : C.bgCard,
+                      backgroundColor: isActive ? `${C.album}15` : C.bgCard,
                       borderRadius: S.radius,
                       borderWidth: 1.5,
-                      borderColor: isActive ? C.accent : C.border,
+                      borderColor: isActive ? C.album : C.border,
                       padding: 14,
                       marginBottom: 8,
                       flexDirection: "row",
@@ -325,7 +325,7 @@ export function TriModeScreen({ navigation, route }) {
                         {a.photoIds.length} photo{a.photoIds.length > 1 ? "s" : ""}
                       </Text>
                     </View>
-                    {isActive && <Text style={{ color: C.accent, fontSize: 18 }}>✓</Text>}
+                    {isActive && <Text style={{ color: C.album, fontSize: 18 }}>✓</Text>}
                   </TouchableOpacity>
                 );
               })}
@@ -338,12 +338,12 @@ export function TriModeScreen({ navigation, route }) {
             // Résumé de la sélection pré-filtrée (par moment, par lieu…)
             <View style={{
               flexDirection: "row", alignItems: "center", gap: 10,
-              backgroundColor: `${C.accent}12`, borderRadius: S.radius,
-              padding: 14, borderWidth: 1.5, borderColor: C.accent, marginBottom: 28,
+              backgroundColor: `${C.album}12`, borderRadius: S.radius,
+              padding: 14, borderWidth: 1.5, borderColor: C.album, marginBottom: 28,
             }}>
               <Text style={{ fontSize: 22 }}>✅</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: "800", color: C.accent }}>
+                <Text style={{ fontSize: 14, fontWeight: "800", color: C.album }}>
                   {preQueue.length} photo{preQueue.length > 1 ? "s" : ""} déjà sélectionnée{preQueue.length > 1 ? "s" : ""}
                 </Text>
                 <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
@@ -367,7 +367,7 @@ export function TriModeScreen({ navigation, route }) {
                       onPress={() => toggleKey(g.key)}
                       style={[chip, on ? chipOn : chipOff]}
                     >
-                      <Text style={[chipText, { color: on ? C.accent : C.textMuted }]}>
+                      <Text style={[chipText, { color: on ? C.album : C.textMuted }]}>
                         {g.label}{"  "}
                         <Text style={{ fontWeight: "500", fontSize: 11 }}>{g.count}</Text>
                       </Text>
@@ -414,7 +414,7 @@ export function TriModeScreen({ navigation, route }) {
                   backgroundColor: C.bgCard,
                   borderRadius: S.radius,
                   borderWidth: 1.5,
-                  borderColor: albumName.trim() ? C.accent : C.border,
+                  borderColor: albumName.trim() ? C.album : C.border,
                   paddingHorizontal: 16,
                   paddingVertical: 14,
                   fontSize: 15,
@@ -438,10 +438,10 @@ export function TriModeScreen({ navigation, route }) {
               onPress={handleLancerNouvelAlbum}
               disabled={!canLaunchNew}
               style={{
-                backgroundColor: canLaunchNew ? C.accent : `${C.accent}40`,
+                backgroundColor: canLaunchNew ? C.album : `${C.album}40`,
                 borderRadius: S.radius, padding: 16, alignItems: "center",
                 elevation: canLaunchNew ? 4 : 0,
-                shadowColor: C.accent, shadowOffset: { width: 0, height: 4 },
+                shadowColor: C.album, shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: canLaunchNew ? 0.3 : 0, shadowRadius: 8,
               }}
             >
@@ -458,10 +458,10 @@ export function TriModeScreen({ navigation, route }) {
               onPress={handleLancerAlbumExistant}
               disabled={!canLaunchExisting}
               style={{
-                backgroundColor: canLaunchExisting ? C.accent : `${C.accent}40`,
+                backgroundColor: canLaunchExisting ? C.album : `${C.album}40`,
                 borderRadius: S.radius, padding: 16, alignItems: "center",
                 elevation: canLaunchExisting ? 4 : 0,
-                shadowColor: C.accent, shadowOffset: { width: 0, height: 4 },
+                shadowColor: C.album, shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: canLaunchExisting ? 0.3 : 0, shadowRadius: 8,
               }}
             >
@@ -491,6 +491,6 @@ const chip = {
   paddingHorizontal: 14, paddingVertical: 8,
   borderRadius: S.radiusFull, borderWidth: 1.5,
 };
-const chipOn  = { borderColor: C.accent, backgroundColor: `${C.accent}15` };
+const chipOn  = { borderColor: C.album, backgroundColor: `${C.album}15` };
 const chipOff = { borderColor: C.border, backgroundColor: C.bgCard };
 const chipText = { fontSize: 13, fontWeight: "700" };

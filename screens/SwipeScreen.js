@@ -264,7 +264,7 @@ export function SwipeScreen({ navigation, route }) {
 
       {/* Barre de progression */}
       <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, zIndex: 20, backgroundColor: "#333" }}>
-        <View style={{ height: 3, width: `${pct}%`, backgroundColor: C.accent }} />
+        <View style={{ height: 3, width: `${pct}%`, backgroundColor: isAlbum ? C.album : C.accent }} />
       </View>
 
       {/* Header */}
@@ -304,7 +304,7 @@ export function SwipeScreen({ navigation, route }) {
                 style={{
                   flexDirection: "row", alignItems: "center", gap: 5,
                   paddingHorizontal: 12, paddingVertical: 8,
-                  backgroundColor: "rgba(244,132,95,0.35)",
+                  backgroundColor: `${C.album}59`,
                   borderRadius: S.radiusFull, maxWidth: 150,
                 }}
               >
@@ -510,7 +510,7 @@ export function SwipeScreen({ navigation, route }) {
                         {a.photoIds.length} photo{a.photoIds.length > 1 ? "s" : ""}
                       </Text>
                     </View>
-                    <Text style={{ fontSize: 18, color: C.accent }}>＋</Text>
+                    <Text style={{ fontSize: 18, color: C.album }}>＋</Text>
                   </TouchableOpacity>
                 ))
               )}
@@ -537,7 +537,7 @@ export function SwipeScreen({ navigation, route }) {
                   onPress={handleCreateAndAdd}
                   disabled={!newAlbumName.trim()}
                   style={{
-                    backgroundColor: C.accent, borderRadius: 12,
+                    backgroundColor: C.album, borderRadius: 12,
                     paddingHorizontal: 16, justifyContent: "center",
                     opacity: newAlbumName.trim() ? 1 : 0.4,
                   }}
@@ -596,7 +596,7 @@ export function SwipeScreen({ navigation, route }) {
             <TouchableOpacity
               onPress={() => setShowAlbumPreview(false)}
               style={{
-                marginTop: 18, backgroundColor: C.accent, borderRadius: 14,
+                marginTop: 18, backgroundColor: C.album, borderRadius: 14,
                 padding: 15, alignItems: "center",
               }}
             >

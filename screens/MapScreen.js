@@ -13,6 +13,7 @@ import { loadPhotoLocation } from "../services/photoLibrary";
 
 export function MapScreen({ navigation, route }) {
   const mode = route.params?.mode ?? "menage";
+  const accent = mode === "album" ? C.album : C.accent;
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
   const deleted       = usePhotoStore((s) => s.deleted);
   const [photosWithGeo, setPhotosWithGeo] = useState([]);
@@ -173,7 +174,7 @@ export function MapScreen({ navigation, route }) {
 
       {loading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color={C.accent} />
+          <ActivityIndicator color={accent} />
           <Text style={{ color: C.textMuted, marginTop: 12 }}>Analyse des coordonnées GPS…</Text>
         </View>
       ) : photosWithGeo.length === 0 ? (
@@ -232,7 +233,7 @@ export function MapScreen({ navigation, route }) {
               })}
               disabled={displayedPhotos.length === 0}
               style={{
-                backgroundColor: C.accent, borderRadius: S.radius, padding: 16,
+                backgroundColor: accent, borderRadius: S.radius, padding: 16,
                 alignItems: "center", elevation: 4,
                 opacity: displayedPhotos.length === 0 ? 0.4 : 1,
               }}

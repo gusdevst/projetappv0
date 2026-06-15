@@ -14,12 +14,16 @@ export function SummaryScreen({ navigation, route }) {
   const {
     albumId,
     albumName,
+    mode = "menage",
     // Stats de la session courante (envoyées par SwipeScreen)
     sessionKept        = [],
     sessionDeleted     = [],
     sessionHesitated   = [],
     sessionAlbumPhotos = [],
   } = route.params || {};
+
+  const isAlbum = mode === "album";
+  const accent  = isAlbum ? C.album : C.accent;
 
   // On garde le store uniquement pour les actions (reset) et la liste albums
   const albums         = usePhotoStore((state) => state.albums);
@@ -51,15 +55,16 @@ export function SummaryScreen({ navigation, route }) {
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
       <ScrollView contentContainerStyle={{ padding: 24 }}>
 
-        <Text style={{ fontSize: 56, textAlign: "center", marginBottom: 8 }}>🎉</Text>
+        <Text style={{ fontSize: 56, textAlign: "center", marginBottom: 8 }}>{isAlbum ? "📔" : "🎉"}</Text>
         <Text style={{ fontSize: 26, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 4 }}>
-          Tri terminé !
+          {isAlbum ? "Album mis à jour !" : "Tri terminé !"}
         </Text>
         <Text style={{ fontSize: 14, color: C.textMuted, textAlign: "center", marginBottom: 24 }}>
-          Voici ton bilan
+          {isAlbum ? (albumName || "Ton album") : "Voici ton bilan"}
         </Text>
 
-        {/* ── Grille de stats ───────────────────────────────────────────── */}
+        {/* ── Grille de stats (mode ménage uniquement) ──────────────────── */}
+        {!isAlbum && (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
           {[
             { label: "Coups de cœur",    val: sessionKept.length,           color: C.green,  emoji: "❤️" },
@@ -85,28 +90,54 @@ export function SummaryScreen({ navigation, route }) {
             </View>
           ))}
         </View>
+        )}
 
-        {/* ── Section album créé (mode album uniquement) ──────────────── */}
-        {createdAlbum && (
+        {/* ── Bilan album (mode album) ──────────────────────────────────── */}
+        {isAlbum && createdAlbum && (
           <View style={{
-            backgroundColor: `${C.accent}12`,
+            backgroundColor: `${C.album}12`,
             borderRadius: S.radius,
-            padding: 18,
+            padding: 20,
             borderWidth: 2,
-            borderColor: `${C.accent}50`,
+            borderColor: `${C.album}50`,
             marginBottom: 16,
           }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Text style={{ fontSize: 24 }}>📁</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <Text style={{ fontSize: 26 }}>📔</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: "900", fontSize: 16, color: C.text }}>
+                <Text style={{ fontWeight: "900", fontSize: 18, color: C.text }}>
                   {createdAlbum.name}
                 </Text>
-                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-                  {sessionAlbumPhotos.length} photo{sessionAlbumPhotos.length > 1 ? "s" : ""} ajoutée{sessionAlbumPhotos.length > 1 ? "s" : ""} · Synchronisé dans ta galerie ✓
+                <Text style={{ fontSize: 13, color: C.album, fontWeight: "700", marginTop: 2 }}>
+                  {createdAlbum.photoIds.length} photo{createdAlbum.photoIds.length > 1 ? "s" : ""} dans l'album
                 </Text>
               </View>
             </View>
+
+            {sessionAlbumPhotos.length > 0 && (
+              <>
+                <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 10 }}>
+                  +{sessionAlbumPhotos.length} ajoutée{sessionAlbumPhotos.length > 1 ? "s" : ""} cette session · Synchronisé dans ta galerie ✓
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {sessionAlbumPhotos.map((p) => (
+                      <Image key={p.id} source={{ uri: p.url }} style={{ width: 70, height: 70, borderRadius: 12 }} />
+                    ))}
+                  </View>
+                </ScrollView>
+              </>
+            )}
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Gallery", { section: "album", albumId: createdAlbum.id })}
+              style={{
+                backgroundColor: C.album, borderRadius: 14,
+                padding: 15, alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>📂 Voir l'album</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -167,7 +198,8 @@ export function SummaryScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* ── Section partenaires ──────────────────────────────────────── */}
+        {/* ── Section partenaires (mode ménage uniquement) ─────────────── */}
+        {!isAlbum && (
         <View style={{
           backgroundColor: C.bgCard,
           borderRadius: S.radius,
@@ -239,12 +271,13 @@ export function SummaryScreen({ navigation, route }) {
             </TouchableOpacity>
           ))}
         </View>
+        )}
 
         {/* ── Retour accueil ───────────────────────────────────────────── */}
         <TouchableOpacity
           onPress={() => navigation.popToTop()}
           style={{
-            backgroundColor: C.accent,
+            backgroundColor: accent,
             borderRadius: S.radius,
             padding: 16,
             alignItems: "center",

@@ -269,21 +269,21 @@ export function HomeScreen({ navigation }) {
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ padding: 14, paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
       >
 
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <View>
-            <Text style={{ fontSize: 32, fontWeight: "900", color: C.accent }}>Phototri 🌸</Text>
-            <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>Tes souvenirs méritent mieux</Text>
+            <Text style={{ fontSize: 29, fontWeight: "900", color: C.accent }}>Phototri 🌸</Text>
+            <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>Tes souvenirs méritent mieux</Text>
           </View>
           <TouchableOpacity
             onPress={() => navigation.navigate("Settings")}
-            style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: C.border }}
+            style={{ backgroundColor: C.bgCard, borderRadius: 14, padding: 11, borderWidth: 1, borderColor: C.border }}
           >
-            <Text style={{ fontSize: 20 }}>⚙️</Text>
+            <Text style={{ fontSize: 18 }}>⚙️</Text>
           </TouchableOpacity>
         </View>
 
@@ -309,14 +309,14 @@ export function HomeScreen({ navigation }) {
                 onPress={() => switchMode(m.key)}
                 style={{
                   flex: 1,
-                  paddingVertical: 13,
-                  borderRadius: 12,
+                  paddingVertical: 11,
+                  borderRadius: 11,
                   alignItems: "center",
                   backgroundColor: active ? m.color : "transparent",
                 }}
               >
                 <Text style={{
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: "800",
                   color: active ? "#fff" : C.textMuted,
                 }}>
@@ -333,19 +333,19 @@ export function HomeScreen({ navigation }) {
           disabled={libraryLoading || albumFiltering || queue.length === 0}
           style={{
             backgroundColor: modeColor,
-            borderRadius: 20,
-            padding: 22,
+            borderRadius: 18,
+            padding: 18,
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 14,
+            marginBottom: 12,
             opacity: libraryLoading || albumFiltering || queue.length === 0 ? 0.6 : 1,
           }}
         >
-          <Text style={{ fontSize: 18, fontWeight: "800", color: "#fff" }}>
+          <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>
             {ctaLabel()}
           </Text>
           {!libraryLoading && !albumFiltering && queue.length > 0 && (
-            <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 4 }}>
+            <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 3 }}>
               {isMenage
                 ? `${libraryPhotos.length - triees} restantes à trier`
                 : "Toutes tes photos sauf les supprimées"}
@@ -353,20 +353,20 @@ export function HomeScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        {/* ── Filtres : tout centré sous le CTA ────────────────────────── */}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8, marginBottom: 14, alignItems: "center" }}>
+        {/* ── Filtres : compacts et centrés sous le CTA (2 lignes max) ──── */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginBottom: 12, alignItems: "center" }}>
           {dateFilters.map((f) => (
             <TouchableOpacity
               key={f}
               onPress={() => setActiveFilter(f)}
               style={{
-                paddingHorizontal: 15, paddingVertical: 9, borderRadius: 99,
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
                 borderWidth: 1.5,
                 borderColor: activeFilter === f ? modeColor : C.border,
                 backgroundColor: activeFilter === f ? modeColor : C.bgCard,
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: activeFilter === f ? "#fff" : C.textMuted }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: activeFilter === f ? "#fff" : C.textMuted }}>
                 {f}
               </Text>
             </TouchableOpacity>
@@ -375,34 +375,34 @@ export function HomeScreen({ navigation }) {
           <TouchableOpacity
             onPress={openAlbumPicker}
             style={{
-              flexDirection: "row", alignItems: "center", gap: 6,
-              paddingHorizontal: 15, paddingVertical: 9, borderRadius: 99,
+              flexDirection: "row", alignItems: "center", gap: 5,
+              paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
               borderWidth: 1.5,
               borderColor: selectedAlbum ? modeColor : C.border,
               backgroundColor: selectedAlbum ? `${modeColor}18` : C.bgCard,
             }}
           >
-            <Text style={{ fontSize: 14 }}>📁</Text>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: selectedAlbum ? modeColor : C.textMuted, maxWidth: 90 }} numberOfLines={1}>
+            <Text style={{ fontSize: 12 }}>📁</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: selectedAlbum ? modeColor : C.textMuted, maxWidth: 90 }} numberOfLines={1}>
               {selectedAlbum ? selectedAlbum.title : "Dossiers"}
             </Text>
             {selectedAlbum
-              ? <TouchableOpacity onPress={clearAlbum} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Text style={{ fontSize: 12, color: C.textMuted }}>✕</Text></TouchableOpacity>
-              : <Text style={{ fontSize: 12, color: C.textMuted }}>▾</Text>}
+              ? <TouchableOpacity onPress={clearAlbum} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Text style={{ fontSize: 11, color: C.textMuted }}>✕</Text></TouchableOpacity>
+              : <Text style={{ fontSize: 11, color: C.textMuted }}>▾</Text>}
           </TouchableOpacity>
 
           {isMenage && (
             <TouchableOpacity
               onPress={() => toggleRandomFifty(filteredPool)}
               style={{
-                flexDirection: "row", alignItems: "center", gap: 6,
-                paddingHorizontal: 15, paddingVertical: 9, borderRadius: 99,
+                flexDirection: "row", alignItems: "center", gap: 5,
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
                 borderWidth: 1.5,
                 borderColor: randomFiftyActive ? C.accent : C.border,
                 backgroundColor: randomFiftyActive ? C.accent : C.bgCard,
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: randomFiftyActive ? "#fff" : C.textMuted }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: randomFiftyActive ? "#fff" : C.textMuted }}>
                 🎲 Aléatoire {randomCount}
               </Text>
             </TouchableOpacity>
@@ -412,15 +412,15 @@ export function HomeScreen({ navigation }) {
             <TouchableOpacity
               onPress={() => setActiveFilter(activeFilter === "Screenshots" ? "Toutes" : "Screenshots")}
               style={{
-                flexDirection: "row", alignItems: "center", gap: 6,
-                paddingHorizontal: 15, paddingVertical: 9, borderRadius: 99,
+                flexDirection: "row", alignItems: "center", gap: 5,
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
                 borderWidth: 1.5,
                 borderColor: activeFilter === "Screenshots" ? modeColor : C.border,
                 backgroundColor: activeFilter === "Screenshots" ? modeColor : C.bgCard,
               }}
             >
-              <Text style={{ fontSize: 14 }}>📸</Text>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: activeFilter === "Screenshots" ? "#fff" : C.textMuted }}>
+              <Text style={{ fontSize: 12 }}>📸</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: activeFilter === "Screenshots" ? "#fff" : C.textMuted }}>
                 Screenshots
               </Text>
             </TouchableOpacity>
@@ -435,11 +435,11 @@ export function HomeScreen({ navigation }) {
             <View key={t.label} style={{ width: "50%", padding: 4 }}>
               <TouchableOpacity
                 onPress={t.onPress}
-                style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: C.border, alignItems: "center" }}
+                style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: C.border, alignItems: "center" }}
               >
-                <Text style={{ fontSize: 26, marginBottom: 6 }}>{t.emoji}</Text>
-                <Text style={{ fontWeight: "700", fontSize: 14, color: C.text, textAlign: "center" }}>{t.label}</Text>
-                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2, textAlign: "center" }}>{t.desc}</Text>
+                <Text style={{ fontSize: 22, marginBottom: 4 }}>{t.emoji}</Text>
+                <Text style={{ fontWeight: "700", fontSize: 13, color: C.text, textAlign: "center" }}>{t.label}</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1, textAlign: "center" }}>{t.desc}</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -570,15 +570,15 @@ export function HomeScreen({ navigation }) {
               onPress={s.nav}
               style={{
                 flex: 1, backgroundColor: C.bgCard, borderRadius: S.radius,
-                padding: 14, borderWidth: 1, borderColor: C.border, alignItems: "center",
+                padding: 11, borderWidth: 1, borderColor: C.border, alignItems: "center",
               }}
             >
-              <View style={{ width: 44, height: 44, backgroundColor: s.bg, borderRadius: 13, alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
-                <Text style={{ fontSize: 20 }}>{s.emoji}</Text>
+              <View style={{ width: 40, height: 40, backgroundColor: s.bg, borderRadius: 12, alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
+                <Text style={{ fontSize: 18 }}>{s.emoji}</Text>
               </View>
-              <Text style={{ fontSize: 22, fontWeight: "900", color: s.color }}>{s.count}</Text>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: C.text, marginTop: 3 }}>{s.label}</Text>
-              <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>{s.sub}</Text>
+              <Text style={{ fontSize: 19, fontWeight: "900", color: s.color }}>{s.count}</Text>
+              <Text style={{ fontSize: 11, fontWeight: "700", color: C.text, marginTop: 2 }}>{s.label}</Text>
+              <Text style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>{s.sub}</Text>
             </TouchableOpacity>
           ))}
         </View>
