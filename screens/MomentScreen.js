@@ -216,7 +216,8 @@ const styles = {
 };
 
 // ─── MomentScreen ─────────────────────────────────────────────────────────────
-export function MomentScreen({ navigation }) {
+export function MomentScreen({ navigation, route }) {
+  const mode = route.params?.mode ?? "menage";
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
   const deleted       = usePhotoStore((s) => s.deleted);
   const [selectedId, setSelectedId] = useState(null);
@@ -377,6 +378,7 @@ export function MomentScreen({ navigation }) {
           <TouchableOpacity
             onPress={() => navigation.navigate("TriMode", {
               preQueue: selected ? selected.photos : filteredPhotos,
+              ...(mode === "album" ? { skipToAlbum: true } : { skipToMenage: true }),
             })}
             style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4,
               shadowColor: C.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }}

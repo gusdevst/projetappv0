@@ -17,6 +17,7 @@ import { MapScreen }              from "../screens/MapScreen";
 import { GalleryScreen }          from "../screens/GalleryScreen";
 import { SummaryScreen }          from "../screens/SummaryScreen";
 import { SettingsScreen }         from "../screens/SettingsScreen";
+import { PartenairesScreen }      from "../screens/PartenairesScreen";
 import { usePhotoStore }          from "../store/usePhotoStore";
 
 const Stack = createStackNavigator();
@@ -65,7 +66,8 @@ export function AppNavigator() {
       <Stack.Screen name="Map"        component={MapScreen} />
       <Stack.Screen name="Gallery"    component={GalleryScreen} />
       <Stack.Screen name="Summary"    component={SummaryScreen} />
-      <Stack.Screen name="Settings"   component={SettingsScreen} />
+      <Stack.Screen name="Settings"    component={SettingsScreen} />
+      <Stack.Screen name="Partenaires" component={PartenairesScreen} />
     </Stack.Navigator>
   );
 }

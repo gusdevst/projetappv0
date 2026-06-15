@@ -11,7 +11,8 @@ import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { loadPhotoLocation } from "../services/photoLibrary";
 
-export function MapScreen({ navigation }) {
+export function MapScreen({ navigation, route }) {
+  const mode = route.params?.mode ?? "menage";
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
   const deleted       = usePhotoStore((s) => s.deleted);
   const [photosWithGeo, setPhotosWithGeo] = useState([]);
@@ -225,7 +226,10 @@ export function MapScreen({ navigation }) {
             )}
 
             <TouchableOpacity
-              onPress={() => navigation.navigate("TriMode", { preQueue: displayedPhotos })}
+              onPress={() => navigation.navigate("TriMode", {
+                preQueue: displayedPhotos,
+                ...(mode === "album" ? { skipToAlbum: true } : { skipToMenage: true }),
+              })}
               disabled={displayedPhotos.length === 0}
               style={{
                 backgroundColor: C.accent, borderRadius: S.radius, padding: 16,
