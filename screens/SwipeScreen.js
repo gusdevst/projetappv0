@@ -237,20 +237,36 @@ export function SwipeScreen({ navigation, route }) {
             <Text style={{ color: "rgba(255,255,255,.6)", fontSize: 11 }}>{photo.year}</Text>
           </View>
 
-          <View style={{
-            paddingHorizontal: 14, paddingVertical: 8,
-            backgroundColor: isAlbum ? "rgba(244,132,95,0.35)" : "rgba(255,255,255,0.2)",
-            borderRadius: S.radiusFull, maxWidth: 130,
-          }}>
-            {isAlbum ? (
-              <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }} numberOfLines={1}>
-                📁 {albumName}
-              </Text>
-            ) : (
-              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>
-                {idx + 1} / {queue.length}
-              </Text>
-            )}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {/* Compteur ou badge album */}
+            <View style={{
+              paddingHorizontal: 12, paddingVertical: 8,
+              backgroundColor: isAlbum ? "rgba(244,132,95,0.35)" : "rgba(255,255,255,0.2)",
+              borderRadius: S.radiusFull, maxWidth: 110,
+            }}>
+              {isAlbum ? (
+                <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }} numberOfLines={1}>
+                  📁 {albumName}
+                </Text>
+              ) : (
+                <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>
+                  {idx + 1} / {queue.length}
+                </Text>
+              )}
+            </View>
+
+            {/* ⚙️ Paramètres — ouvre la section swipe du mode courant */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Settings", { focusSection: mode })}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.2)",
+                borderRadius: S.radiusFull,
+                width: 34, height: 34,
+                alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <Text style={{ fontSize: 15 }}>⚙️</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -272,19 +288,21 @@ export function SwipeScreen({ navigation, route }) {
         alignItems: "center", gap: 14, zIndex: 10,
       }}>
 
-        {/* 🗑 Supprimer (bas) */}
-        <View style={{ alignItems: "center", gap: 5 }}>
-          <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(232,99,122,0.9)", letterSpacing: 0.3 }}>↓ bas</Text>
-          <TouchableOpacity
-            onPress={handleTrashPress}
-            style={{
-              backgroundColor: "rgba(232,99,122,0.2)", borderWidth: 2, borderColor: "rgba(232,99,122,.5)",
-              borderRadius: S.radiusFull, padding: 18,
-            }}
-          >
-            <Text style={{ fontSize: 22 }}>🗑</Text>
-          </TouchableOpacity>
-        </View>
+        {/* 🗑 Supprimer — masqué si le swipe bas est désactivé ("none") */}
+        {swipeMappings.down !== "none" && (
+          <View style={{ alignItems: "center", gap: 5 }}>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(232,99,122,0.9)", letterSpacing: 0.3 }}>↓ bas</Text>
+            <TouchableOpacity
+              onPress={handleTrashPress}
+              style={{
+                backgroundColor: "rgba(232,99,122,0.2)", borderWidth: 2, borderColor: "rgba(232,99,122,.5)",
+                borderRadius: S.radiusFull, padding: 18,
+              }}
+            >
+              <Text style={{ fontSize: 22 }}>🗑</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* ↩ Annuler */}
         <View style={{ alignItems: "center", gap: 5 }}>
@@ -322,8 +340,8 @@ export function SwipeScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Mode ALBUM : 📁 ajouter à l'album (haut) */}
-        {isAlbum && (
+        {/* Mode ALBUM : 📁 ajouter à l'album — masqué si le swipe haut est désactivé */}
+        {isAlbum && swipeMappings.up !== "none" && (
           <View style={{ alignItems: "center", gap: 5 }}>
             <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(176,122,216,0.9)", letterSpacing: 0.3 }}>↑ album</Text>
             <TouchableOpacity

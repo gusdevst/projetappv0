@@ -1,8 +1,8 @@
 //─────────────────────────────────────────────
 // screens/SettingsScreen.js
 // ─────────────────────────────────────────────
-import { useState, useMemo } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Modal, StatusBar, Alert, Dimensions } from "react-native";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Modal, StatusBar, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { RowSetting } from "../components/RowSetting";
@@ -69,17 +69,80 @@ const NOTIF_OPTIONS = [
 
 const getActionMeta = (key) => SWIPE_ACTIONS.find((a) => a.key === key) || SWIPE_ACTIONS[0];
 
+// ── Drum générique pour le picker d'heure en modal ───────────────────────────
+// Placé ici (hors composant) pour éviter les re-renders : pas de conflit avec
+// le ScrollView principal puisqu'il vit à l'intérieur d'un Modal.
+const DRUM_H = 46;
+
+function Drum({ items, value, onChange }) {
+  const ref       = useRef(null);
+  const selectedIdx = items.indexOf(value);
+
+  useEffect(() => {
+    if (selectedIdx < 0) return;
+    const t = setTimeout(() => {
+      ref.current?.scrollTo({ y: selectedIdx * DRUM_H, animated: false });
+    }, 80);
+    return () => clearTimeout(t);
+  }, [selectedIdx]);
+
+  return (
+    <View style={{ flex: 1, height: DRUM_H * 3, overflow: "hidden" }}>
+      <View pointerEvents="none" style={{
+        position: "absolute", top: DRUM_H, left: 0, right: 0, height: DRUM_H,
+        borderTopWidth: 1.5, borderBottomWidth: 1.5,
+        borderColor: C.accent, backgroundColor: `${C.accent}10`, zIndex: 2,
+      }} />
+      <ScrollView
+        ref={ref}
+        snapToInterval={DRUM_H}
+        decelerationRate="fast"
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+        onMomentumScrollEnd={(e) => {
+          const idx = Math.min(items.length - 1, Math.max(0, Math.round(e.nativeEvent.contentOffset.y / DRUM_H)));
+          onChange(items[idx]);
+        }}
+        contentContainerStyle={{ paddingTop: DRUM_H, paddingBottom: DRUM_H }}
+      >
+        {items.map((item, i) => {
+          const dist = Math.abs(i - selectedIdx);
+          return (
+            <View key={item} style={{ height: DRUM_H, justifyContent: "center", alignItems: "center" }}>
+              <Text style={{
+                fontSize: dist === 0 ? 22 : 16,
+                fontWeight: dist === 0 ? "900" : "500",
+                color: dist === 0 ? C.text : C.textMuted,
+                opacity: dist > 1 ? 0.3 : 1,
+              }}>
+                {item}
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
 // ── Composant ─────────────────────────────────────────────────────────────────
 
-export function SettingsScreen({ navigation }) {
+export function SettingsScreen({ navigation, route }) {
+  // focusSection = "menage" | "album" — passé depuis SwipeScreen via le bouton ⚙️
+  const focusSection = route?.params?.focusSection ?? null;
+
   const [showPremium, setShowPremium]           = useState(false);
   const [showTutorial, setShowTutorial]         = useState(false);
   const [tutorialIdx, setTutorialIdx]           = useState(0);
-  const [menageExpanded, setMenageExpanded]     = useState(false);
-  const [albumExpanded, setAlbumExpanded]       = useState(false);
+  const [menageExpanded, setMenageExpanded]     = useState(focusSection === "menage");
+  const [albumExpanded, setAlbumExpanded]       = useState(focusSection === "album");
   // editingSwipe = { mode: "menage"|"album", direction: string } | null
   const [editingSwipe, setEditingSwipe]         = useState(null);
   const [notifLoading, setNotifLoading]         = useState(false);
+  // Picker heure/minute
+  const [showTimePicker, setShowTimePicker]     = useState(false);
+  const [tempHour, setTempHour]                 = useState(0);
+  const [tempMinute, setTempMinute]             = useState(0);
 
   const swipeMappingsMenage      = usePhotoStore((s) => s.swipeMappingsMenage);
   const swipeMappingsAlbum       = usePhotoStore((s) => s.swipeMappingsAlbum);
@@ -89,6 +152,8 @@ export function SettingsScreen({ navigation }) {
   const setNotificationFrequency = usePhotoStore((s) => s.setNotificationFrequency);
   const notificationHour         = usePhotoStore((s) => s.notificationHour);
   const setNotificationHour      = usePhotoStore((s) => s.setNotificationHour);
+  const notificationMinute       = usePhotoStore((s) => s.notificationMinute);
+  const setNotificationMinute    = usePhotoStore((s) => s.setNotificationMinute);
   const randomCount              = usePhotoStore((s) => s.randomCount);
   const setRandomCount           = usePhotoStore((s) => s.setRandomCount);
   const libraryPhotos            = usePhotoStore((s) => s.libraryPhotos);
@@ -133,11 +198,12 @@ export function SettingsScreen({ navigation }) {
   };
 
   // ── Notifications ──────────────────────────────────────────────────────────
-  // Quand l'heure change, on reprogramme immédiatement si un rappel est actif
-  const handleChangeHour = async (newHour) => {
-    setNotificationHour(newHour);
+  // Appelé quand l'user confirme le picker — sauvegarde et reprogramme
+  const confirmTimePicker = async (hour, minute) => {
+    setNotificationHour(hour);
+    setNotificationMinute(minute);
     if (notificationFrequency !== "off") {
-      await scheduleReminder(notificationFrequency, { remainingCount, randomCount, notificationHour: newHour });
+      await scheduleReminder(notificationFrequency, { remainingCount, randomCount, notificationHour: hour, notificationMinute: minute });
     }
   };
 
@@ -160,7 +226,7 @@ export function SettingsScreen({ navigation }) {
 
     // Enregistre dans le store (persisté) et programme le rappel avec les stats actuelles
     setNotificationFrequency(freq);
-    const result = await scheduleReminder(freq, { remainingCount, randomCount, notificationHour });
+    const result = await scheduleReminder(freq, { remainingCount, randomCount, notificationHour, notificationMinute });
 
     if (freq !== "off" && !result.success) {
       Alert.alert("Erreur", "Impossible de programmer le rappel. Réessaie dans un moment.");
@@ -232,186 +298,6 @@ export function SettingsScreen({ navigation }) {
             <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>2,99 €/mois</Text>
           </View>
         </TouchableOpacity>
-
-        {/* ── Section Session aléatoire ────────────────────────────────────── */}
-        <Section title="🎲 Session aléatoire" />
-        <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 12, marginTop: -4, lineHeight: 17 }}>
-          Nombre de photos tirées au sort à chaque session. Ajuste par dizaine selon ton rythme.
-        </Text>
-        <View style={{
-          backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1,
-          borderColor: C.border, padding: 16, marginBottom: 8,
-          flexDirection: "row", alignItems: "center", gap: 16,
-        }}>
-          {/* Moins */}
-          <TouchableOpacity
-            onPress={() => setRandomCount(Math.max(10, randomCount - 10))}
-            disabled={randomCount <= 10}
-            style={{
-              width: 40, height: 40, borderRadius: 20,
-              backgroundColor: randomCount <= 10 ? C.bgMuted : C.bgCard,
-              borderWidth: 1.5, borderColor: randomCount <= 10 ? C.border : C.accent,
-              alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <Text style={{ fontSize: 22, fontWeight: "800", color: randomCount <= 10 ? C.textMuted : C.accent }}>−</Text>
-          </TouchableOpacity>
-
-          {/* Valeur */}
-          <View style={{ flex: 1, alignItems: "center" }}>
-            <Text style={{ fontSize: 36, fontWeight: "900", color: C.text }}>{randomCount}</Text>
-            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>photos</Text>
-          </View>
-
-          {/* Plus */}
-          <TouchableOpacity
-            onPress={() => setRandomCount(Math.min(200, randomCount + 10))}
-            disabled={randomCount >= 200}
-            style={{
-              width: 40, height: 40, borderRadius: 20,
-              backgroundColor: randomCount >= 200 ? C.bgMuted : C.bgCard,
-              borderWidth: 1.5, borderColor: randomCount >= 200 ? C.border : C.accent,
-              alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <Text style={{ fontSize: 22, fontWeight: "800", color: randomCount >= 200 ? C.textMuted : C.accent }}>+</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginBottom: 16 }}>
-          Min 10 · Max 200 · Affiché sur le toggle de l'accueil
-        </Text>
-
-        {/* ── Section Rappels ─────────────────────────────────────────────── */}
-        <Section title="Rappels" />
-        <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 12, marginTop: -4, lineHeight: 17 }}>
-          Reçois une notification pour te rappeler de trier tes photos.
-        </Text>
-
-        {/* ── Sélecteur d'heure ──────────────────────────────────────────── */}
-        <Text style={{ fontSize: 11, fontWeight: "800", color: C.textMuted, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
-          Heure du rappel
-        </Text>
-        <View style={{
-          backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1,
-          borderColor: C.border, padding: 14, marginBottom: 16,
-          flexDirection: "row", alignItems: "center", gap: 16,
-        }}>
-          {/* Moins */}
-          <TouchableOpacity
-            onPress={() => handleChangeHour((notificationHour + 23) % 24)}
-            style={{
-              width: 40, height: 40, borderRadius: 20,
-              backgroundColor: C.bgCard, borderWidth: 1.5, borderColor: C.accent,
-              alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <Text style={{ fontSize: 22, fontWeight: "800", color: C.accent }}>−</Text>
-          </TouchableOpacity>
-
-          {/* Heure affichée */}
-          <View style={{ flex: 1, alignItems: "center" }}>
-            <Text style={{ fontSize: 34, fontWeight: "900", color: C.text }}>
-              {String(notificationHour).padStart(2, "0")}h00
-            </Text>
-            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-              {notificationHour < 12 ? "matin" : notificationHour < 18 ? "après-midi" : "soirée"}
-            </Text>
-          </View>
-
-          {/* Plus */}
-          <TouchableOpacity
-            onPress={() => handleChangeHour((notificationHour + 1) % 24)}
-            style={{
-              width: 40, height: 40, borderRadius: 20,
-              backgroundColor: C.bgCard, borderWidth: 1.5, borderColor: C.accent,
-              alignItems: "center", justifyContent: "center",
-            }}
-          >
-            <Text style={{ fontSize: 22, fontWeight: "800", color: C.accent }}>+</Text>
-          </TouchableOpacity>
-        </View>
-
-        {NOTIF_OPTIONS.map((opt) => {
-          const isSelected = notificationFrequency === opt.key;
-          return (
-            <TouchableOpacity
-              key={opt.key}
-              onPress={() => !notifLoading && handleSetFrequency(opt.key)}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                padding: 14,
-                backgroundColor: isSelected ? `${C.accent}15` : C.bgCard,
-                borderRadius: S.radius,
-                borderWidth: 1,
-                borderColor: isSelected ? C.accent : C.border,
-                marginBottom: 8,
-                opacity: notifLoading ? 0.5 : 1,
-              }}
-            >
-              {/* Icône */}
-              <View style={{
-                width: 36, height: 36, backgroundColor: isSelected ? `${C.accent}25` : C.bgMuted,
-                borderRadius: S.radiusSm, alignItems: "center", justifyContent: "center",
-              }}>
-                <Text style={{ fontSize: 18 }}>{opt.emoji}</Text>
-              </View>
-
-              {/* Texte */}
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>{opt.label}</Text>
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{opt.desc}</Text>
-              </View>
-
-              {/* Coche si sélectionné */}
-              {isSelected && (
-                <Text style={{ color: C.accent, fontSize: 18, fontWeight: "900" }}>✓</Text>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-
-        {/* Aperçu de la notification quand un rappel est actif */}
-        {notificationFrequency !== "off" && (
-          <View style={{
-            backgroundColor: `${C.accent}10`,
-            borderRadius: S.radius,
-            borderWidth: 1,
-            borderColor: `${C.accent}30`,
-            padding: 14,
-            marginTop: 4,
-            marginBottom: 8,
-            flexDirection: "row",
-            alignItems: "flex-start",
-            gap: 10,
-          }}>
-            <Text style={{ fontSize: 18, marginTop: 1 }}>💬</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 11, fontWeight: "800", color: C.accent, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.8 }}>
-                Aperçu de la notification
-              </Text>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: C.text, marginBottom: 1 }}>
-                Phototri 📷
-              </Text>
-              <Text style={{ fontSize: 12, color: C.textMuted, lineHeight: 17 }}>
-                {sessionsLeft > 0
-                  ? `Il te reste ${sessionsLeft} session${sessionsLeft > 1 ? "s" : ""} de ${randomCount} photos à trier 📸`
-                  : "Ta galerie est au top 🌸 Bravo !"}
-              </Text>
-              {/* Heure et note selon la fréquence */}
-              {notificationFrequency === "every2days" ? (
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 6 }}>
-                  ⚠️ Rappel toutes les 48h depuis l'activation — heure non garantie.
-                </Text>
-              ) : (
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 6 }}>
-                  🕐 Se déclenche à {String(notificationHour).padStart(2, "0")}h00 — appuie pour lancer une session.
-                </Text>
-              )}
-            </View>
-          </View>
-        )}
 
         {/* ── Section Tri par swipe — Mode Ménage ──────────────────────────── */}
         <Section title="🧹 Swipe — Mode Ménage" />
@@ -503,6 +389,138 @@ export function SettingsScreen({ navigation }) {
               <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: "700" }}>↺ Réinitialiser</Text>
             </TouchableOpacity>
           </>
+        )}
+
+        {/* ── Section Session aléatoire (compacte) ─────────────────────────── */}
+        <Section title="🎲 Photos par session" />
+        <View style={{
+          backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1,
+          borderColor: C.border, paddingVertical: 10, paddingHorizontal: 16,
+          flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4,
+        }}>
+          <TouchableOpacity
+            onPress={() => setRandomCount(Math.max(10, randomCount - 10))}
+            disabled={randomCount <= 10}
+            style={{
+              width: 34, height: 34, borderRadius: 17,
+              backgroundColor: randomCount <= 10 ? C.bgMuted : `${C.accent}15`,
+              borderWidth: 1.5, borderColor: randomCount <= 10 ? C.border : C.accent,
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 20, fontWeight: "800", color: randomCount <= 10 ? C.textMuted : C.accent }}>−</Text>
+          </TouchableOpacity>
+
+          <View style={{ flex: 1, alignItems: "center" }}>
+            <Text style={{ fontSize: 24, fontWeight: "900", color: C.text }}>{randomCount}</Text>
+            <Text style={{ fontSize: 10, color: C.textMuted }}>photos / session</Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => setRandomCount(Math.min(200, randomCount + 10))}
+            disabled={randomCount >= 200}
+            style={{
+              width: 34, height: 34, borderRadius: 17,
+              backgroundColor: randomCount >= 200 ? C.bgMuted : `${C.accent}15`,
+              borderWidth: 1.5, borderColor: randomCount >= 200 ? C.border : C.accent,
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 20, fontWeight: "800", color: randomCount >= 200 ? C.textMuted : C.accent }}>+</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginBottom: 4 }}>
+          Min 10 · Max 200
+        </Text>
+
+        {/* ── Section Rappels ─────────────────────────────────────────────── */}
+        <Section title="🔔 Rappels" />
+        <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 12, marginTop: -4, lineHeight: 17 }}>
+          Reçois une notification pour te rappeler de trier tes photos.
+        </Text>
+
+        {/* ── Bouton heure — ouvre le picker modal ─────────────────────────── */}
+        <Text style={{ fontSize: 11, fontWeight: "800", color: C.textMuted, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+          Heure du rappel
+        </Text>
+        <TouchableOpacity
+          onPress={() => {
+            setTempHour(notificationHour);
+            setTempMinute(notificationMinute);
+            setShowTimePicker(true);
+          }}
+          style={{
+            backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1.5,
+            borderColor: C.accent, padding: 16,
+            flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12,
+          }}
+        >
+          <Text style={{ fontSize: 36, fontWeight: "900", color: C.text }}>
+            {String(notificationHour).padStart(2, "0")}:{String(notificationMinute).padStart(2, "0")}
+          </Text>
+          <View style={{ backgroundColor: `${C.accent}15`, borderRadius: S.radiusSm, paddingHorizontal: 12, paddingVertical: 6 }}>
+            <Text style={{ fontSize: 13, color: C.accent, fontWeight: "700" }}>Modifier</Text>
+          </View>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginTop: 6, marginBottom: 16 }}>
+          {notificationHour < 12 ? "☀️ Matin" : notificationHour < 18 ? "🌤 Après-midi" : "🌙 Soirée"}
+          {notificationFrequency === "every2days" ? " · heure approximative pour ce mode" : ""}
+        </Text>
+
+        {/* Fréquence */}
+        {NOTIF_OPTIONS.map((opt) => {
+          const isSelected = notificationFrequency === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              onPress={() => !notifLoading && handleSetFrequency(opt.key)}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 12, padding: 14,
+                backgroundColor: isSelected ? `${C.accent}15` : C.bgCard,
+                borderRadius: S.radius, borderWidth: 1,
+                borderColor: isSelected ? C.accent : C.border,
+                marginBottom: 8, opacity: notifLoading ? 0.5 : 1,
+              }}
+            >
+              <View style={{
+                width: 36, height: 36, backgroundColor: isSelected ? `${C.accent}25` : C.bgMuted,
+                borderRadius: S.radiusSm, alignItems: "center", justifyContent: "center",
+              }}>
+                <Text style={{ fontSize: 18 }}>{opt.emoji}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>{opt.label}</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{opt.desc}</Text>
+              </View>
+              {isSelected && <Text style={{ color: C.accent, fontSize: 18, fontWeight: "900" }}>✓</Text>}
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* Aperçu de la notification */}
+        {notificationFrequency !== "off" && (
+          <View style={{
+            backgroundColor: `${C.accent}10`, borderRadius: S.radius,
+            borderWidth: 1, borderColor: `${C.accent}30`,
+            padding: 16, marginTop: 4, marginBottom: 8, alignItems: "center",
+          }}>
+            <Text style={{ fontSize: 11, fontWeight: "800", color: C.accent, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.8 }}>
+              Aperçu de la notification
+            </Text>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: C.text, textAlign: "center", marginBottom: 4 }}>
+              Phototri 📷
+            </Text>
+            <Text style={{ fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 19 }}>
+              {sessionsLeft > 0
+                ? `Il te reste ${sessionsLeft} session${sessionsLeft > 1 ? "s" : ""} pour terminer le tri de tes photos 📸`
+                : "Ta galerie est au top 🌸 Bravo !"}
+            </Text>
+            <Text style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginTop: 8 }}>
+              {notificationFrequency === "every2days"
+                ? "⚠️ Heure approximative — 48h depuis l'activation"
+                : `🕐 ${String(notificationHour).padStart(2, "0")}h${String(notificationMinute).padStart(2, "0")} · appuie pour lancer une session`}
+            </Text>
+          </View>
         )}
 
         {/* ── Section Aide ─────────────────────────────────────────────────── */}
@@ -620,6 +638,54 @@ export function SettingsScreen({ navigation }) {
               onPress={() => setEditingSwipe(null)}
               style={{ marginTop: 8, alignItems: "center", paddingVertical: 10 }}
             >
+              <Text style={{ color: C.textMuted, fontSize: 14 }}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Modal picker heure / minute ─────────────────────────────────── */}
+      <Modal visible={showTimePicker} transparent animationType="slide" onRequestClose={() => setShowTimePicker(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <View style={{
+            backgroundColor: C.bgCard,
+            borderTopLeftRadius: S.radiusLg, borderTopRightRadius: S.radiusLg,
+            padding: S.padLg, paddingBottom: 44,
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 4 }}>
+              Heure du rappel
+            </Text>
+            <Text style={{ fontSize: 13, color: C.textMuted, textAlign: "center", marginBottom: 20 }}>
+              Fais défiler pour choisir l'heure et les minutes
+            </Text>
+
+            {/* Drums côte à côte — pas de ScrollView parent, pas de conflit */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 24, paddingHorizontal: 24 }}>
+              <Drum
+                items={Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0"))}
+                value={String(tempHour).padStart(2, "0")}
+                onChange={(v) => setTempHour(parseInt(v, 10))}
+              />
+              <Text style={{ fontSize: 36, fontWeight: "900", color: C.text, paddingBottom: 2 }}>:</Text>
+              <Drum
+                items={Array.from({ length: 60 }, (_, m) => String(m).padStart(2, "0"))}
+                value={String(tempMinute).padStart(2, "0")}
+                onChange={(v) => setTempMinute(parseInt(v, 10))}
+              />
+            </View>
+
+            <TouchableOpacity
+              onPress={async () => {
+                setShowTimePicker(false);
+                await confirmTimePicker(tempHour, tempMinute);
+              }}
+              style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", elevation: 4, marginBottom: 10 }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>
+                Confirmer — {String(tempHour).padStart(2, "0")}:{String(tempMinute).padStart(2, "0")}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowTimePicker(false)} style={{ alignItems: "center", paddingVertical: 10 }}>
               <Text style={{ color: C.textMuted, fontSize: 14 }}>Annuler</Text>
             </TouchableOpacity>
           </View>

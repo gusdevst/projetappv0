@@ -44,6 +44,10 @@ export const usePhotoStore = create(
       notificationHour: 9,
       setNotificationHour: (h) => set({ notificationHour: h }),
 
+      // Minutes du rappel (0-59). Persistées.
+      notificationMinute: 0,
+      setNotificationMinute: (m) => set({ notificationMinute: m }),
+
       // ─── État de la photothèque (NON persisté — rechargé à chaque ouverture) ─
       permission:      "undetermined", // "undetermined" | "granted" | "denied"
       libraryPhotos:     [],
@@ -253,6 +257,7 @@ export const usePhotoStore = create(
         swipeMappingsAlbum:      state.swipeMappingsAlbum,
         notificationFrequency:   state.notificationFrequency,
         notificationHour:        state.notificationHour,
+        notificationMinute:      state.notificationMinute,
         randomCount:             state.randomCount,
       }),
     }

@@ -1,8 +1,10 @@
 // navigation/AppNavigator.js
-// Le NavigationContainer est dans App.js (une seule fois dans toute l'app).
-// Ici on choisit dynamiquement la pile à afficher selon l'état de la permission photo.
+// Utilise createStackNavigator (JS-based) à la place du native-stack afin
+// d'activer le swipe-to-go-back sur iOS ET Android.
+// SwipeScreen a gestureEnabled: false pour ne pas interférer avec les swipes photo.
 
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { Dimensions } from "react-native";
+import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 
 import { OnboardingScreen }       from "../screens/OnboardingScreen";
 import { PermissionDeniedScreen } from "../screens/PermissionDeniedScreen";
@@ -17,16 +19,24 @@ import { SummaryScreen }          from "../screens/SummaryScreen";
 import { SettingsScreen }         from "../screens/SettingsScreen";
 import { usePhotoStore }          from "../store/usePhotoStore";
 
-const Stack = createNativeStackNavigator();
+const Stack = createStackNavigator();
+const W     = Dimensions.get("window").width;
+
+// Options communes : transition iOS + swipe-to-go-back sur tout l'écran gauche
+const defaultOptions = {
+  headerShown:           false,
+  gestureEnabled:        true,
+  gestureDirection:      "horizontal",
+  gestureResponseDistance: Math.round(W * 0.15), // swipeable depuis 15 % gauche de l'écran
+  cardStyleInterpolator:  CardStyleInterpolators.forHorizontalIOS,
+};
 
 export function AppNavigator() {
   const permission = usePhotoStore((s) => s.permission);
 
-  // Tant que le check initial n'est pas fait, on affiche l'onboarding par défaut.
-  // Le store passe à "granted"/"denied"/"undetermined" après le check au démarrage.
   if (permission === "undetermined") {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ headerShown: false, cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS }}>
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       </Stack.Navigator>
     );
@@ -34,24 +44,28 @@ export function AppNavigator() {
 
   if (permission === "denied") {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ headerShown: false, cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS }}>
         <Stack.Screen name="PermissionDenied" component={PermissionDeniedScreen} />
       </Stack.Navigator>
     );
   }
 
-  // Permission accordée → pile principale de l'app
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Home"        component={HomeScreen} />
-      <Stack.Screen name="TriMode"     component={TriModeScreen} options={{ presentation: "modal" }} />
-      <Stack.Screen name="Swipe"       component={SwipeScreen} />
-      <Stack.Screen name="Moments"     component={MomentScreen} />
-      <Stack.Screen name="Duplicates"  component={DuplicatesScreen} />
-      <Stack.Screen name="Map"         component={MapScreen} />
-      <Stack.Screen name="Gallery"     component={GalleryScreen} />
-      <Stack.Screen name="Summary"     component={SummaryScreen} />
-      <Stack.Screen name="Settings"    component={SettingsScreen} />
+    <Stack.Navigator screenOptions={defaultOptions}>
+      <Stack.Screen name="Home"       component={HomeScreen} />
+      <Stack.Screen name="TriMode"    component={TriModeScreen}
+        options={{ cardStyleInterpolator: CardStyleInterpolators.forModalPresentationIOS, gestureDirection: "vertical" }}
+      />
+      {/* SwipeScreen : swipe désactivé — le geste appartient au tri des photos */}
+      <Stack.Screen name="Swipe"      component={SwipeScreen}
+        options={{ gestureEnabled: false }}
+      />
+      <Stack.Screen name="Moments"    component={MomentScreen} />
+      <Stack.Screen name="Duplicates" component={DuplicatesScreen} />
+      <Stack.Screen name="Map"        component={MapScreen} />
+      <Stack.Screen name="Gallery"    component={GalleryScreen} />
+      <Stack.Screen name="Summary"    component={SummaryScreen} />
+      <Stack.Screen name="Settings"   component={SettingsScreen} />
     </Stack.Navigator>
   );
 }

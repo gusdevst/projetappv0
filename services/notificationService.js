@@ -6,9 +6,9 @@
 //   scheduleReminder(frequency, stats?)      → programme le rappel selon la fréquence choisie
 //   cancelReminders()                        → annule tous les rappels en cours
 //
-// stats (optionnel) : { remainingCount, randomCount, notificationHour }
+// stats (optionnel) : { remainingCount, randomCount, notificationHour, notificationMinute }
 //   remainingCount + randomCount → message personnalisé avec nb de sessions restantes
-//   notificationHour (0-23)      → heure précise pour DAILY et WEEKLY
+//   notificationHour (0-23), notificationMinute (0-59) → heure précise pour DAILY et WEEKLY
 //   data.action = "start_menage_random" → l'app lance une session au tap
 //
 // Fréquences supportées :
@@ -44,7 +44,7 @@ function buildNotifBody(remainingCount, randomCount) {
   if (!remainingCount || !randomCount) return randomMessage();
   if (remainingCount <= 0) return "Ta galerie est au top 🌸 Bravo !";
   const sessions = Math.ceil(remainingCount / randomCount);
-  return `Il te reste ${sessions} session${sessions > 1 ? "s" : ""} de ${randomCount} photos à trier 📸`;
+  return `Il te reste ${sessions} session${sessions > 1 ? "s" : ""} pour terminer le tri de tes photos 📸`;
 }
 
 // ── Demande la permission ────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ export async function requestPermission() {
 }
 
 // ── Programme le rappel ──────────────────────────────────────────────────────
-// stats = { remainingCount, randomCount, notificationHour }
+// stats = { remainingCount, randomCount, notificationHour, notificationMinute }
 export async function scheduleReminder(frequency, stats = {}) {
   await Notifications.cancelAllScheduledNotificationsAsync();
   if (frequency === "off") return { success: true };
@@ -64,7 +64,7 @@ export async function scheduleReminder(frequency, stats = {}) {
   const granted = await requestPermission();
   if (!granted) return { success: false, reason: "permission_denied" };
 
-  const { remainingCount = null, randomCount = 50, notificationHour = 9 } = stats;
+  const { remainingCount = null, randomCount = 50, notificationHour = 9, notificationMinute = 0 } = stats;
   const body = buildNotifBody(remainingCount, randomCount);
 
   const content = {
@@ -84,10 +84,10 @@ export async function scheduleReminder(frequency, stats = {}) {
     let trigger;
     if (frequency === "daily") {
       // Heure exacte chaque jour
-      trigger = { type: TT.DAILY, hour: notificationHour, minute: 0 };
+      trigger = { type: TT.DAILY, hour: notificationHour, minute: notificationMinute };
     } else if (frequency === "weekly") {
       // Heure exacte, même jour de la semaine que l'activation
-      trigger = { type: TT.WEEKLY, weekday: expoWeekday, hour: notificationHour, minute: 0 };
+      trigger = { type: TT.WEEKLY, weekday: expoWeekday, hour: notificationHour, minute: notificationMinute };
     } else {
       // every2days : TIME_INTERVAL 48h (pas de trigger "toutes les N heures à HH:MM" natif)
       trigger = { type: TT.TIME_INTERVAL, seconds: 2 * 24 * 60 * 60, repeats: true };
@@ -101,9 +101,9 @@ export async function scheduleReminder(frequency, stats = {}) {
     try {
       let trigger;
       if (frequency === "daily") {
-        trigger = { hour: notificationHour, minute: 0, repeats: true };
+        trigger = { hour: notificationHour, minute: notificationMinute, repeats: true };
       } else if (frequency === "weekly") {
-        trigger = { weekday: expoWeekday, hour: notificationHour, minute: 0, repeats: true };
+        trigger = { weekday: expoWeekday, hour: notificationHour, minute: notificationMinute, repeats: true };
       } else {
         trigger = { seconds: 2 * 24 * 60 * 60, repeats: true };
       }
