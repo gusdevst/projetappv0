@@ -40,11 +40,13 @@ export function TriModeScreen({ navigation, route }) {
   // preQueue : file de photos pré-construite (depuis MomentScreen / DuplicatesScreen)
   const preQueue      = route.params?.preQueue      ?? null;
   const skipToMenage  = route.params?.skipToMenage  ?? false;
+  // skipToAlbum : vient du toggle "Album" de HomeScreen → on saute le step 0
+  const skipToAlbum   = route.params?.skipToAlbum   ?? false;
 
   // step 0 = choix ménage/album
   // step 1 = album : nouveau ou existant ?
   // step 2 = config (filtres + nom si nouvel album ; liste si existant)
-  const [step, setStep]                       = useState(0);
+  const [step, setStep]                       = useState(skipToAlbum ? 1 : 0);
   const [albumSubStep, setAlbumSubStep]       = useState(null); // "new" | "existing"
   const [selectedKeys, setSelectedKeys]       = useState([]);
   const [albumName, setAlbumName]             = useState("");
