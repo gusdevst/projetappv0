@@ -89,20 +89,6 @@ export async function deletePhotos(assetIds) {
 }
 
 /**
- * Exporte une liste de photos vers un album natif de la galerie.
- * - Android : crée un dossier visible dans la galerie native.
- * - iOS : crée un album dans l'app Photos (les photos ne sont PAS dupliquées,
- *   on crée juste un lien vers les originaux).
- *
- * copyAsset=false = pas de duplication → l'original reste en place, on crée juste
- * une référence dans l'album. C'est le comportement attendu (on ne veut pas doubler
- * l'espace disque occupé).
- *
- * @param {string[]} assetIds  - IDs des photos à exporter (asset.id de la media library)
- * @param {string}   albumName - Nom de l'album à créer (ex: "Phototri ❤️")
- * @returns {Promise<{ success: boolean, albumId?: string, error?: string }>}
- */
-/**
  * Construit le nom final de l'album selon la plateforme.
  *
  * Android : les albums sont de vrais dossiers. "Phototri/Mon Album" crée
@@ -119,26 +105,33 @@ function buildAlbumName(subName) {
   return `Phototri — ${subName}`;
 }
 
-export async function exportKeptToGallery(assetIds, subName = "❤️ Coups de cœur") {
-  if (assetIds.length === 0) {
-    return { success: false, error: "Aucune photo à exporter" };
-  }
+/**
+ * Ajoute UNE photo au dossier Phototri natif correspondant à subName.
+ * Si le dossier n'existe pas encore, il est créé avec cette première photo.
+ * Appelée automatiquement à chaque coup de cœur ou ajout à un album.
+ *
+ * @param {string} assetId - ID de la photo (asset.id de la media library)
+ * @param {string} subName - Nom du sous-dossier, ex: "❤️ Coups de cœur" ou "Vacances"
+ */
+export async function addPhotoToPhototriAlbum(assetId, subName) {
+  if (!assetId || !subName) return;
 
   const albumName = buildAlbumName(subName);
 
   try {
-    // createAlbumAsync crée l'album en y ajoutant la 1ère photo obligatoirement.
-    // Sur iOS, on DOIT passer une photo à la création — c'est une contrainte Apple.
-    const album = await MediaLibrary.createAlbumAsync(albumName, assetIds[0], false);
+    const existing = await MediaLibrary.getAlbumAsync(albumName);
 
-    // S'il y a d'autres photos, on les ajoute ensuite
-    if (assetIds.length > 1) {
-      await MediaLibrary.addAssetsToAlbumAsync(assetIds.slice(1), album.id, false);
+    if (existing) {
+      // Le dossier existe déjà → on y ajoute simplement la photo
+      await MediaLibrary.addAssetsToAlbumAsync([assetId], existing.id, false);
+    } else {
+      // Première photo → on crée le dossier avec elle
+      // Sur iOS comme Android, createAlbumAsync exige au moins une photo
+      await MediaLibrary.createAlbumAsync(albumName, assetId, false);
     }
-
-    return { success: true, albumId: album.id, albumName };
   } catch (err) {
-    return { success: false, error: err.message ?? "Erreur inconnue" };
+    // On ne bloque pas l'UX si la synchro galerie échoue (permission partielle, etc.)
+    console.warn("[Phototri] addPhotoToPhototriAlbum:", err.message);
   }
 }
 

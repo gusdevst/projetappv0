@@ -2,9 +2,8 @@
 // ─────────────────────────────────────────────
 // screens/SummaryScreen.js
 // ─────────────────────────────────────────────
-import { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions, Alert, ActivityIndicator } from "react-native";
-import { exportKeptToGallery } from "../services/photoLibrary";
+import { useEffect } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
@@ -21,12 +20,6 @@ export function SummaryScreen({ navigation, route }) {
     sessionHesitated   = [],
     sessionAlbumPhotos = [],
   } = route.params || {};
-
-  // État local pour les boutons d'export
-  const [exportKeptLoading,  setExportKeptLoading]  = useState(false);
-  const [exportKeptDone,     setExportKeptDone]      = useState(false);
-  const [exportAlbumLoading, setExportAlbumLoading]  = useState(false);
-  const [exportAlbumDone,    setExportAlbumDone]     = useState(false);
 
   // On garde le store uniquement pour les actions (reset) et la liste albums
   const albums         = usePhotoStore((state) => state.albums);
@@ -45,34 +38,6 @@ export function SummaryScreen({ navigation, route }) {
   }, [resetSkipped]);
 
   // Exporte les coups de cœur de la session dans un album natif "Phototri ❤️"
-  const handleExportKept = async () => {
-    if (exportKeptLoading || exportKeptDone) return;
-    setExportKeptLoading(true);
-    const result = await exportKeptToGallery(sessionKept.map((p) => p.id), "❤️ Coups de cœur");
-    setExportKeptLoading(false);
-    if (result.success) {
-      setExportKeptDone(true);
-      Alert.alert("Album créé ✅", `Tes ${sessionKept.length} coups de cœur sont dans l'album "Phototri ❤️" de ta galerie.`);
-    } else {
-      Alert.alert("Erreur", result.error ?? "Impossible de créer l'album.");
-    }
-  };
-
-  // Exporte les photos de l'album app dans un album natif du même nom
-  const handleExportAlbum = async () => {
-    if (exportAlbumLoading || exportAlbumDone || sessionAlbumPhotos.length === 0) return;
-    setExportAlbumLoading(true);
-    const subName = albumName ?? "Mon album";
-    const result = await exportKeptToGallery(sessionAlbumPhotos.map((p) => p.id), subName);
-    setExportAlbumLoading(false);
-    if (result.success) {
-      setExportAlbumDone(true);
-      Alert.alert("Album créé ✅", `L'album "${name}" avec ${sessionAlbumPhotos.length} photo${sessionAlbumPhotos.length > 1 ? "s" : ""} est dans ta galerie.`);
-    } else {
-      Alert.alert("Erreur", result.error ?? "Impossible de créer l'album.");
-    }
-  };
-
   // Relancer le tri uniquement sur les photos hésitées de cette session
   const handleRetrierHesites = () => {
     if (sessionHesitated.length === 0) return;
@@ -121,45 +86,6 @@ export function SummaryScreen({ navigation, route }) {
           ))}
         </View>
 
-        {/* ── Export coups de cœur vers la galerie native ─────────────── */}
-        {sessionKept.length > 0 && (
-          <TouchableOpacity
-            onPress={handleExportKept}
-            disabled={exportKeptLoading || exportKeptDone}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              backgroundColor: exportKeptDone ? "#e8f5e9" : "#fff0f5",
-              borderRadius: S.radius,
-              padding: 16,
-              borderWidth: 2,
-              borderColor: exportKeptDone ? "#81c784" : C.accent,
-              marginBottom: 16,
-              opacity: exportKeptLoading ? 0.7 : 1,
-            }}
-          >
-            {exportKeptLoading ? (
-              <ActivityIndicator size="small" color={C.accent} />
-            ) : (
-              <Text style={{ fontSize: 20 }}>{exportKeptDone ? "✅" : "📲"}</Text>
-            )}
-            <View>
-              <Text style={{ fontWeight: "800", fontSize: 14, color: exportKeptDone ? "#388e3c" : C.accent }}>
-                {exportKeptDone
-                  ? "Album créé dans ta galerie !"
-                  : `Exporter ${sessionKept.length} coup${sessionKept.length > 1 ? "s" : ""} de cœur`}
-              </Text>
-              {!exportKeptDone && (
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-                  Crée l'album "Phototri ❤️" dans ta galerie photo
-                </Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        )}
-
         {/* ── Section album créé (mode album uniquement) ──────────────── */}
         {createdAlbum && (
           <View style={{
@@ -170,47 +96,17 @@ export function SummaryScreen({ navigation, route }) {
             borderColor: `${C.accent}50`,
             marginBottom: 16,
           }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <Text style={{ fontSize: 24 }}>📁</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: "900", fontSize: 16, color: C.text }}>
                   {createdAlbum.name}
                 </Text>
                 <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-                  {sessionAlbumPhotos.length} photo{sessionAlbumPhotos.length > 1 ? "s" : ""} ajoutée{sessionAlbumPhotos.length > 1 ? "s" : ""} à l'album ✓
+                  {sessionAlbumPhotos.length} photo{sessionAlbumPhotos.length > 1 ? "s" : ""} ajoutée{sessionAlbumPhotos.length > 1 ? "s" : ""} · Synchronisé dans ta galerie ✓
                 </Text>
               </View>
             </View>
-
-            {/* Bouton export vers la galerie native */}
-            {sessionAlbumPhotos.length > 0 && (
-              <TouchableOpacity
-                onPress={handleExportAlbum}
-                disabled={exportAlbumLoading || exportAlbumDone}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  backgroundColor: exportAlbumDone ? "#e8f5e9" : "rgba(255,255,255,0.6)",
-                  borderRadius: 12,
-                  padding: 12,
-                  borderWidth: 1.5,
-                  borderColor: exportAlbumDone ? "#81c784" : `${C.accent}60`,
-                  opacity: exportAlbumLoading ? 0.7 : 1,
-                }}
-              >
-                {exportAlbumLoading
-                  ? <ActivityIndicator size="small" color={C.accent} />
-                  : <Text style={{ fontSize: 16 }}>{exportAlbumDone ? "✅" : "📲"}</Text>
-                }
-                <Text style={{ fontWeight: "700", fontSize: 13, color: exportAlbumDone ? "#388e3c" : C.accent }}>
-                  {exportAlbumDone
-                    ? "Album enregistré dans la galerie !"
-                    : `Enregistrer "${createdAlbum.name}" dans la galerie`}
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
         )}
 

@@ -24,6 +24,7 @@ import { C, S } from "../constants/theme";
 import { getPhotoAdvice, enhancePhoto } from "../services/aiService";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { ZoomableImage } from "../components/ZoomableImage";
+import { addPhotoToPhototriAlbum } from "../services/photoLibrary";
 
 function getEdgeContainerStyle(edge) {
   if (edge === "up")    return { position: "absolute", top: 0,    left: 0, right: 0, height: 220 };
@@ -147,8 +148,19 @@ export function SwipeScreen({ navigation, route }) {
     if (actionKey === "favorite") flashFeedback("rgba(92,184,122,0.7)", animDir);
 
     if (actionKey === "delete")   { addDeleted(photo);   setSessionDeleted((p) => [...p, photo]); }
-    if (actionKey === "album")    { addPrinted(photo);   setSessionAlbumPhotos((p) => [...p, photo]); if (albumId) addPhotoToAlbum(albumId, photo.id); }
-    if (actionKey === "favorite") { addKept(photo);      setSessionKept((p) => [...p, photo]); }
+    if (actionKey === "album")    {
+      addPrinted(photo);
+      setSessionAlbumPhotos((p) => [...p, photo]);
+      if (albumId) addPhotoToAlbum(albumId, photo.id);
+      // Synchro galerie native : crée/met à jour le dossier Phototri/Nom-album
+      if (albumName) addPhotoToPhototriAlbum(photo.id, albumName);
+    }
+    if (actionKey === "favorite") {
+      addKept(photo);
+      setSessionKept((p) => [...p, photo]);
+      // Synchro galerie native : crée/met à jour Phototri/❤️ Coups de cœur
+      addPhotoToPhototriAlbum(photo.id, "❤️ Coups de cœur");
+    }
     if (actionKey === "skip")     addSkipped(photo);
     if (actionKey === "hesitate") { addHesitated(photo); setSessionHesitated((p) => [...p, photo]); }
 
@@ -179,6 +191,8 @@ export function SwipeScreen({ navigation, route }) {
   const handleHeartPress = () => {
     if (!photo) return;
     addKept(photo);
+    setSessionKept((p) => [...p, photo]);
+    addPhotoToPhototriAlbum(photo.id, "❤️ Coups de cœur");
     setHeartedThisPhoto(true);
   };
   const handleAlbumPress = () => {
