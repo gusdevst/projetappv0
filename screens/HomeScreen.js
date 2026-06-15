@@ -254,7 +254,7 @@ export function HomeScreen({ navigation }) {
     { emoji: "👤", label: "Par visage", desc: "Bientôt disponible", onPress: () => Alert.alert("Bientôt disponible", "La reconnaissance des visages arrive prochainement 🌸") },
     isMenage
       ? { emoji: "🪞", label: "Doublons",      desc: "Photos similaires", onPress: () => navigation.navigate("Duplicates") }
-      : { emoji: "❤️", label: "Coup de cœur",  desc: "Photos aimées",     onPress: () => navigation.navigate("Gallery", { section: "kept" }) },
+      : { emoji: "❤️", label: "Coup de cœur",  desc: coeurActive ? "✓ Dans les filtres" : "Photos aimées", onPress: toggleCoeurFilter, active: coeurActive },
   ];
 
   // ── Cartes du bas : 3e carte selon le mode ───────────────────────────────
@@ -467,11 +467,16 @@ export function HomeScreen({ navigation }) {
             <View key={t.label} style={{ width: "50%", padding: 4 }}>
               <TouchableOpacity
                 onPress={t.onPress}
-                style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: C.border, alignItems: "center" }}
+                style={{
+                  backgroundColor: t.active ? `${modeColor}15` : C.bgCard,
+                  borderRadius: 16, padding: 12, alignItems: "center",
+                  borderWidth: t.active ? 1.5 : 1,
+                  borderColor: t.active ? modeColor : C.border,
+                }}
               >
                 <Text style={{ fontSize: 22, marginBottom: 4 }}>{t.emoji}</Text>
                 <Text style={{ fontWeight: "700", fontSize: 13, color: C.text, textAlign: "center" }}>{t.label}</Text>
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1, textAlign: "center" }}>{t.desc}</Text>
+                <Text style={{ fontSize: 11, color: t.active ? modeColor : C.textMuted, marginTop: 1, textAlign: "center" }}>{t.desc}</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -514,7 +519,8 @@ export function HomeScreen({ navigation }) {
             </ScrollView>
 
             {/* Bande coups de cœur */}
-            <View
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Gallery", { section: "kept" })}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -524,40 +530,19 @@ export function HomeScreen({ navigation }) {
                 borderWidth: 1.5,
                 borderColor: "#f4a5c0",
                 marginBottom: 10,
-                gap: 10,
               }}
             >
-              <TouchableOpacity
-                onPress={() => navigation.navigate("Gallery", { section: "kept" })}
-                style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 10 }}
-              >
-                <Text style={{ fontSize: 26 }}>❤️</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", fontSize: 13, color: "#e8637a" }}>
-                    Coups de cœur · {kept.length} photos
-                  </Text>
-                  <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-                    Touche pour voir tes meilleures photos
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* CTA : sélectionne / désélectionne les coups de cœur dans les filtres */}
-              <TouchableOpacity
-                onPress={toggleCoeurFilter}
-                disabled={kept.length === 0}
-                style={{
-                  paddingHorizontal: 12, paddingVertical: 9, borderRadius: 99,
-                  backgroundColor: coeurActive ? "#e8637a" : "transparent",
-                  borderWidth: 1.5, borderColor: "#e8637a",
-                  opacity: kept.length === 0 ? 0.4 : 1,
-                }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: "800", color: coeurActive ? "#fff" : "#e8637a" }}>
-                  {coeurActive ? "✓ Filtré" : "+ Filtrer"}
+              <Text style={{ fontSize: 26, marginRight: 10 }}>❤️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: "800", fontSize: 13, color: "#e8637a" }}>
+                  Coups de cœur · {kept.length} photos
                 </Text>
-              </TouchableOpacity>
-            </View>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                  Tes meilleures photos, parfaites pour imprimer
+                </Text>
+              </View>
+              <Text style={{ fontSize: 14, color: "#e8637a", fontWeight: "800" }}>→</Text>
+            </TouchableOpacity>
           </>
         )}
 
