@@ -133,12 +133,13 @@ export const usePhotoStore = create(
         if (mode === "album") {
           set({ swipeMappingsAlbum: { up: "album", down: "delete", left: "hesitate", right: "skip" } });
         } else if (mode === "menage") {
-          set({ swipeMappingsMenage: { up: "favorite", down: "delete", left: "hesitate", right: "skip" } });
+          // up = "skip" : conserver la photo (PAS coup de cœur — ça, c'est le bouton ❤️).
+          set({ swipeMappingsMenage: { up: "skip", down: "delete", left: "hesitate", right: "skip" } });
         } else {
           // reset les deux
           set({
-            swipeMappingsMenage: { up: "favorite", down: "delete", left: "hesitate", right: "skip" },
-            swipeMappingsAlbum:  { up: "album",    down: "delete", left: "hesitate", right: "skip" },
+            swipeMappingsMenage: { up: "skip",  down: "delete", left: "hesitate", right: "skip" },
+            swipeMappingsAlbum:  { up: "album", down: "delete", left: "hesitate", right: "skip" },
           });
         }
       },
@@ -152,6 +153,12 @@ export const usePhotoStore = create(
       })),
 
       reset: () => set({ kept: [], deleted: [], printed: [], skipped: [], hesitated: [], albums: [] }),
+
+      // Relance le tri depuis zéro : renvoie dans la file à trier toutes les
+      // photos non supprimées qui avaient été classées (pile album, passées,
+      // hésitations). CONSERVE volontairement les coups de cœur (kept), la
+      // corbeille (deleted) et les albums souvenirs créés.
+      restartTri: () => set({ printed: [], skipped: [], hesitated: [] }),
 
       // Retire une photo d'une section (kept/deleted/printed). Elle redevient
       // disponible pour le tri dans la file principale.
@@ -263,6 +270,22 @@ export const usePhotoStore = create(
     {
       name: "phototri-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      // v1 : "favorite" n'est plus une action de swipe (le coup de cœur se fait
+      // uniquement via le bouton ❤️). On remappe les anciens swipes "favorite"
+      // vers "skip" (= conserver la photo).
+      version: 1,
+      migrate: (persisted) => {
+        if (!persisted) return persisted;
+        const fix = (m) =>
+          m
+            ? Object.fromEntries(
+                Object.entries(m).map(([dir, action]) => [dir, action === "favorite" ? "skip" : action])
+              )
+            : m;
+        if (persisted.swipeMappingsMenage) persisted.swipeMappingsMenage = fix(persisted.swipeMappingsMenage);
+        if (persisted.swipeMappingsAlbum)  persisted.swipeMappingsAlbum  = fix(persisted.swipeMappingsAlbum);
+        return persisted;
+      },
       // On persiste UNIQUEMENT le tri + les albums + le mapping swipe.
       // La photothèque est rechargée à chaque ouverture.
       partialize: (state) => ({

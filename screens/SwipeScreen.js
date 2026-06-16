@@ -25,7 +25,6 @@ import { C, S } from "../constants/theme";
 import { getPhotoAdvice, enhancePhoto } from "../services/aiService";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { ZoomableImage } from "../components/ZoomableImage";
-import { addPhotoToPhototriAlbum } from "../services/photoLibrary";
 
 function getEdgeContainerStyle(edge) {
   if (edge === "up")    return { position: "absolute", top: 0,    left: 0, right: 0, height: 220 };
@@ -64,6 +63,11 @@ export function SwipeScreen({ navigation, route }) {
 
   // Bon mapping selon le mode
   const swipeMappings = isAlbum ? swipeMappingsAlbum : swipeMappingsMenage;
+
+  // Direction de swipe qui "conserve" la photo (action "skip"), pour afficher
+  // un bouton repère à côté d'Annuler en mode ménage. Priorité haut > droite > gauche > bas.
+  const keepDir = ["up", "right", "left", "down"].find((d) => swipeMappings?.[d] === "skip") || null;
+  const DIR_LABEL = { up: "↑ haut", down: "↓ bas", left: "← gauche", right: "→ droite" };
 
   const [history, setHistory]     = useState([]);
 
@@ -168,14 +172,10 @@ export function SwipeScreen({ navigation, route }) {
       addPrinted(photo);
       setSessionAlbumPhotos((p) => [...p, photo]);
       if (albumId) addPhotoToAlbum(albumId, photo.id);
-      // Synchro galerie native : crée/met à jour le dossier Phototri/Nom-album
-      if (albumName) addPhotoToPhototriAlbum(photo.id, albumName);
     }
     if (actionKey === "favorite") {
       addKept(photo);
       setSessionKept((p) => [...p, photo]);
-      // Synchro galerie native : crée/met à jour Phototri/❤️ Coups de cœur
-      addPhotoToPhototriAlbum(photo.id, "❤️ Coups de cœur");
     }
     if (actionKey === "skip")     addSkipped(photo);
     if (actionKey === "hesitate") { addHesitated(photo); setSessionHesitated((p) => [...p, photo]); }
@@ -204,12 +204,17 @@ export function SwipeScreen({ navigation, route }) {
   const handleTrashPress = () => {
     zoomableRef.current?.flyOff("down", () => performAction("delete", "down"));
   };
+  // Cœur = coup de cœur (favoris) + on conserve la photo et on passe à la suivante.
+  // performAction("favorite") gère l'ajout aux favoris, l'historique (undo) et l'avance.
   const handleHeartPress = () => {
     if (!photo) return;
-    addKept(photo);
-    setSessionKept((p) => [...p, photo]);
-    addPhotoToPhototriAlbum(photo.id, "❤️ Coups de cœur");
     setHeartedThisPhoto(true);
+    performAction("favorite", null);
+  };
+  // Bouton "conserver" (mode ménage) : même action que le swipe qui conserve.
+  const handleKeepPress = () => {
+    if (!keepDir) return;
+    zoomableRef.current?.flyOff(keepDir, () => performAction("skip", keepDir));
   };
   const handleAlbumPress = () => {
     zoomableRef.current?.flyOff("up", () => performAction("album", "up"));
@@ -394,7 +399,23 @@ export function SwipeScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
-        {/* Mode MÉNAGE : ❤️ coup de cœur (appui direct — ne fait pas avancer) */}
+        {/* Mode MÉNAGE : ✅ conserver — repère du swipe qui garde la photo (contraire de 🗑) */}
+        {isMenage && keepDir && (
+          <View style={{ alignItems: "center", gap: 5 }}>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>{DIR_LABEL[keepDir]}</Text>
+            <TouchableOpacity
+              onPress={handleKeepPress}
+              style={{
+                backgroundColor: "rgba(92,184,122,0.2)", borderWidth: 2, borderColor: "rgba(92,184,122,.5)",
+                borderRadius: S.radiusFull, padding: 18,
+              }}
+            >
+              <Text style={{ fontSize: 22 }}>✅</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Mode MÉNAGE : ❤️ coup de cœur (favoris + passe à la suivante) */}
         {isMenage && (
           <View style={{ alignItems: "center", gap: 5 }}>
             <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>appui</Text>

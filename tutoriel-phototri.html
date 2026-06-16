@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Phototri — Guide d'utilisation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f7f5ff;
+    color: #1a1a2e;
+    line-height: 1.6;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, #ff6b9d 0%, #c84b8b 50%, #7c3aed 100%);
+    color: white;
+    text-align: center;
+    padding: 64px 24px 48px;
+  }
+  .hero-logo { font-size: 72px; margin-bottom: 16px; }
+  .hero h1 { font-size: 36px; font-weight: 900; letter-spacing: -1px; margin-bottom: 8px; }
+  .hero p { font-size: 17px; opacity: 0.88; max-width: 420px; margin: 0 auto; }
+
+  /* ── CONTAINER ── */
+  .container { max-width: 680px; margin: 0 auto; padding: 0 20px; }
+
+  /* ── SECTION ── */
+  .section { padding: 48px 0 32px; }
+  .section-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #9c7fe6;
+    margin-bottom: 8px;
+  }
+  .section h2 { font-size: 26px; font-weight: 900; margin-bottom: 12px; color: #1a1a2e; }
+  .section > p { font-size: 16px; color: #555; margin-bottom: 24px; }
+
+  /* ── DIVIDER ── */
+  .divider { height: 1px; background: #e8e0ff; margin: 0 0 0; }
+
+  /* ── CONCEPT CARDS ── */
+  .concept-cards { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+  .concept-card {
+    flex: 1 1 180px;
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1.5px solid #ede9ff;
+  }
+  .concept-card .icon { font-size: 32px; margin-bottom: 10px; }
+  .concept-card h3 { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+  .concept-card p { font-size: 14px; color: #666; }
+
+  /* ── MODE CARD ── */
+  .mode-card {
+    background: white;
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    border: 2px solid transparent;
+  }
+  .mode-card.menage { border-color: #ff6b9d; }
+  .mode-card.album  { border-color: #7c6fcd; }
+
+  .mode-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+  .mode-badge {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+    flex-shrink: 0;
+  }
+  .mode-badge.menage { background: #fff0f5; }
+  .mode-badge.album  { background: #f0edff; }
+  .mode-header h3 { font-size: 20px; font-weight: 900; }
+  .mode-header p  { font-size: 13px; color: #888; margin-top: 2px; }
+
+  .mode-desc { font-size: 15px; color: #444; margin-bottom: 20px; background: #fafafa; border-radius: 12px; padding: 14px 16px; }
+
+  /* ── SWIPE GRID ── */
+  .swipe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .swipe-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: #f8f7ff; border-radius: 12px; padding: 12px 14px;
+  }
+  .swipe-arrow {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 900; flex-shrink: 0;
+    font-size: 18px;
+  }
+  .swipe-item .text h4 { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .swipe-item .text p  { font-size: 12px; color: #888; }
+
+  /* couleurs directions */
+  .dir-right { background: #e8faf0; color: #27ae60; }
+  .dir-left  { background: #fff8e0; color: #f5a623; }
+  .dir-down  { background: #fff0f5; color: #e8637a; }
+  .dir-up    { background: #f0edff; color: #7c6fcd; }
+  .dir-heart { background: #fff0f5; color: #e8637a; }
+  .dir-up-album { background: #7c6fcd; color: white; }
+
+  /* ── PHONE MOCKUP ── */
+  .phone-demo {
+    display: flex; justify-content: center; margin: 24px 0 16px;
+  }
+  .phone {
+    width: 180px; height: 300px;
+    background: #1a1a2e; border-radius: 30px;
+    position: relative; overflow: hidden;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+    border: 3px solid #333;
+  }
+  .phone-screen {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative;
+  }
+  .phone-photo {
+    width: 140px; height: 180px; border-radius: 16px;
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    position: relative;
+  }
+  .swipe-hint {
+    font-size: 11px; color: rgba(255,255,255,0.5);
+    text-align: center; margin-top: 12px; letter-spacing: 0.5px;
+  }
+
+  /* arrow overlays around phone */
+  .phone-wrapper { position: relative; width: 260px; height: 360px; display: flex; align-items: center; justify-content: center; }
+  .arrow-label {
+    position: absolute; font-size: 13px; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .arrow-label .big { font-size: 20px; }
+  .arrow-label.top    { top: 0; left: 50%; transform: translateX(-50%); color: #7c6fcd; }
+  .arrow-label.bottom { bottom: 0; left: 50%; transform: translateX(-50%); color: #e8637a; }
+  .arrow-label.left-a  { left: 0; top: 50%; transform: translateY(-50%); color: #f5a623; }
+  .arrow-label.right-a { right: 0; top: 50%; transform: translateY(-50%); color: #27ae60; }
+
+  /* ── ÉTAPES ── */
+  .steps { display: flex; flex-direction: column; gap: 14px; }
+  .step {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: white; border-radius: 14px; padding: 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .step-num {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg, #ff6b9d, #c84b8b);
+    color: white; font-weight: 900; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .step h4 { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .step p  { font-size: 13px; color: #666; }
+
+  /* ── PARTNERS ── */
+  .partners-grid { display: flex; flex-direction: column; gap: 14px; }
+  .partner-card {
+    background: white; border-radius: 16px; padding: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    display: flex; align-items: center; gap: 16px;
+  }
+  .partner-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+    flex-shrink: 0;
+  }
+  .partner-card h3 { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+  .partner-card p  { font-size: 13px; color: #666; }
+  .partner-promo {
+    margin-left: auto; text-align: center; flex-shrink: 0;
+  }
+  .partner-code {
+    background: #f0edff; color: #7c3aed;
+    font-size: 11px; font-weight: 800; letter-spacing: 1px;
+    padding: 5px 10px; border-radius: 8px; white-space: nowrap;
+  }
+  .partner-discount { font-size: 12px; color: #888; margin-top: 4px; }
+
+  /* ── PRODUCTS ── */
+  .products-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+  .product-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: white; border-radius: 20px;
+    padding: 8px 14px; font-size: 13px; font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    border: 1.5px solid #ede9ff;
+  }
+
+  /* ── TIP BOX ── */
+  .tip {
+    background: linear-gradient(135deg, #fff0f5, #f0edff);
+    border-radius: 14px; padding: 16px 18px;
+    margin: 20px 0;
+    display: flex; gap: 12px; align-items: flex-start;
+    border: 1px solid #e8d9ff;
+  }
+  .tip .tip-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+  .tip p { font-size: 14px; color: #444; }
+  .tip strong { color: #7c3aed; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: #1a1a2e; color: rgba(255,255,255,0.6);
+    text-align: center; padding: 32px 24px;
+    font-size: 13px;
+  }
+  footer strong { color: white; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 480px) {
+    .hero h1 { font-size: 28px; }
+    .swipe-grid { grid-template-columns: 1fr; }
+    .concept-cards { flex-direction: column; }
+    .phone-wrapper { width: 220px; height: 320px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-logo">🌸</div>
+  <h1>Phototri</h1>
+  <p>Le moyen le plus simple de trier et valoriser ta photothèque.</p>
+</div>
+
+<!-- CONCEPT -->
+<div class="container">
+  <div class="section">
+    <span class="section-label">C'est quoi ?</span>
+    <h2>Phototri, en deux phrases</h2>
+    <p>Ton téléphone accumule des centaines (voire des milliers) de photos. Phototri te permet de les trier une par une, comme on swipe sur Tinder — en quelques minutes par jour.</p>
+
+    <div class="concept-cards">
+      <div class="concept-card">
+        <div class="icon">📱</div>
+        <h3>Tout sur ton téléphone</h3>
+        <p>Tes photos ne quittent jamais ton appareil. Aucun envoi sur un serveur.</p>
+      </div>
+      <div class="concept-card">
+        <div class="icon">🔀</div>
+        <h3>Un swipe = une décision</h3>
+        <p>Garde, supprime, hésite ou ajoute à un album. En un geste.</p>
+      </div>
+      <div class="concept-card">
+        <div class="icon">🖨️</div>
+        <h3>Imprime en 3 clics</h3>
+        <p>Tes meilleures photos commandées chez nos partenaires en quelques secondes.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- MODE MÉNAGE -->
+<div class="container">
+  <div class="section">
+    <span class="section-label">Mode 1</span>
+    <h2>Le Ménage 🔀</h2>
+    <p>L'idée : faire un grand nettoyage de ta photothèque. Tu passes en revue toutes tes photos et tu décides quoi garder, quoi jeter.</p>
+
+    <div class="mode-card menage">
+      <div class="mode-header">
+        <div class="mode-badge menage">🔀</div>
+        <div>
+          <h3>Faire le ménage</h3>
+          <p>Nettoyer ta photothèque photo par photo</p>
+        </div>
+      </div>
+
+      <div class="mode-desc">
+        💡 Imagine que tu vides une boîte de photos papier. Tu prends chaque photo, tu la regardes, et tu décides en 2 secondes : <em>je garde</em>, <em>je jette</em>, ou <em>j'hésite</em>.
+      </div>
+
+      <!-- Visualisation téléphone -->
+      <div class="phone-demo">
+        <div class="phone-wrapper">
+          <div class="arrow-label top">
+            <span class="big">⬆️</span>
+            <span style="color:#7c6fcd">Passer</span>
+          </div>
+          <div class="arrow-label bottom">
+            <span class="big">⬇️</span>
+            <span style="color:#e8637a">Supprimer</span>
+          </div>
+          <div class="arrow-label left-a">
+            <span class="big">⬅️</span>
+            <span style="color:#f5a623">Hésiter</span>
+          </div>
+          <div class="arrow-label right-a">
+            <span class="big">➡️</span>
+            <span style="color:#27ae60">Passer</span>
+          </div>
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="phone-photo">🏖️</div>
+              <div class="swipe-hint">SWIPE POUR DÉCIDER</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swipe-grid">
+        <div class="swipe-item">
+          <div class="swipe-arrow dir-right">➡️</div>
+          <div class="text">
+            <h4>Swipe droite</h4>
+            <p>Passer — la photo reste dans ta galerie</p>
+          </div>
+        </div>
+        <div class="swipe-item">
+          <div class="swipe-arrow dir-down">⬇️</div>
+          <div class="text">
+            <h4>Swipe bas</h4>
+            <p>Supprimer — va dans la corbeille</p>
+          </div>
+        </div>
+        <div class="swipe-item">
+          <div class="swipe-arrow dir-left">⬅️</div>
+          <div class="text">
+            <h4>Swipe gauche</h4>
+            <p>Hésiter — tu décideras plus tard</p>
+          </div>
+        </div>
+        <div class="swipe-item">
+          <div class="swipe-arrow dir-heart">❤️</div>
+          <div class="text">
+            <h4>Bouton ❤️</h4>
+            <p>Coup de cœur — retrouve-la facilement</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip" style="margin-top:20px; margin-bottom:0;">
+        <span class="tip-icon">🗑️</span>
+        <p>Les photos supprimées vont dans la <strong>Corbeille</strong>. Elles ne sont <strong>pas effacées définitivement</strong> — tu confirmes le nettoyage final depuis l'accueil.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- MODE ALBUM -->
+<div class="container">
+  <div class="section">
+    <span class="section-label">Mode 2</span>
+    <h2>L'Album 📔</h2>
+    <p>L'idée : construire une sélection précise de photos pour un événement — un voyage, un anniversaire, une soirée. Tu nommes l'album, tu choisis les photos en swipant.</p>
+
+    <div class="mode-card album">
+      <div class="mode-header">
+        <div class="mode-badge album">📔</div>
+        <div>
+          <h3>Créer un album</h3>
+          <p>Sélectionner tes meilleures photos</p>
+        </div>
+      </div>
+
+      <div class="mode-desc">
+        💡 Imagine que tu construis un album photo physique. Tu prends chaque photo et tu décides : <em>elle entre dans l'album</em> ou <em>je passe</em>. À la fin, tu as une sélection prête à imprimer.
+      </div>
+
+      <!-- Étapes de lancement -->
+      <div class="steps" style="margin-bottom: 20px;">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div>
+            <h4>Donne un nom à l'album</h4>
+            <p>Ex. "Vacances Corse 2025" — tu peux aussi choisir un album déjà créé pour le compléter.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div>
+            <h4>Filtre par mois (optionnel)</h4>
+            <p>Sélectionne une période pour ne voir que les photos d'un voyage ou d'un événement précis.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div>
+            <h4>Swipe pour sélectionner</h4>
+            <p>Swipe vers le haut pour ajouter une photo à l'album. Les autres gestes fonctionnent comme en mode Ménage.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="swipe-grid">
+        <div class="swipe-item">
+          <div class="swipe-arrow dir-up-album" style="background:#7c6fcd; color:white;">⬆️</div>
+          <div class="text">
+            <h4>Swipe haut</h4>
+            <p>Ajouter à l'album 📁</p>
+          </div>
+        </div>
+        <div class="swipe-item">
+          <div class="swipe-arrow dir-right">➡️</div>
+          <div class="text">
+            <h4>Swipe droite</h4>
+            <p>Passer — pas dans l'album</p>
+          </div>
+        </div>
+        <div class="swipe-item">
+          <div class="swipe-arrow dir-down">⬇️</div>
+          <div class="text">
+            <h4>Swipe bas</h4>
+            <p>Supprimer — corbeille</p>
+          </div>
+        </div>
+        <div class="swipe-item">
+          <div class="swipe-arrow dir-left">⬅️</div>
+          <div class="text">
+            <h4>Swipe gauche</h4>
+            <p>Hésiter — décider plus tard</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip" style="margin-top:20px; margin-bottom:0;">
+        <span class="tip-icon">📍</span>
+        <p>Sur l'accueil, filtre les photos <strong>par lieu ou par moment</strong> avant de lancer un album — tu ne swiperasz que les photos du bon voyage.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- EXPORT / IMPRESSION -->
+<div class="container">
+  <div class="section">
+    <span class="section-label">Valorise tes photos</span>
+    <h2>Imprimer, c'est 3 clics 🖨️</h2>
+    <p>Une fois ton album ou tes coups de cœur sélectionnés, Phototri te guide directement vers nos partenaires d'impression. Tu choisis le produit, tu es redirigé sur leur site.</p>
+
+    <!-- Ce qu'on peut créer -->
+    <div class="products-row">
+      <div class="product-chip">📖 Livre photo</div>
+      <div class="product-chip">🖼️ Tirage papier</div>
+      <div class="product-chip">📅 Calendrier</div>
+      <div class="product-chip">🎁 Objets (mug, puzzle…)</div>
+    </div>
+
+    <!-- Comment ça marche -->
+    <div class="steps" style="margin-bottom: 28px;">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h4>Sélectionne tes photos</h4>
+          <p>Via un album ou tes coups de cœur ❤️ — ce sont les photos qui partiront à l'impression.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h4>Choisis un produit</h4>
+          <p>Depuis l'accueil Phototri, tape "Imprimer" — choisis parmi Livre photo, Tirage, Calendrier ou Objets.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h4>Va sur le site partenaire</h4>
+          <p>Tu es redirigé directement avec ton code promo Phototri. Tu finalises la commande sur leur site.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Partenaires -->
+    <div class="partners-grid">
+      <div class="partner-card">
+        <div class="partner-icon" style="background:#fef3e2;">🎨</div>
+        <div>
+          <h3>Cheerz</h3>
+          <p>Tirages, polaroids, livres haut de gamme. Interface simple, rendu de qualité.</p>
+        </div>
+        <div class="partner-promo">
+          <div class="partner-code">PHOTOTRI15</div>
+          <div class="partner-discount">−15%</div>
+        </div>
+      </div>
+      <div class="partner-card">
+        <div class="partner-icon" style="background:#e8f4fd;">📚</div>
+        <div>
+          <h3>CEWE</h3>
+          <p>Le leader européen. Large gamme, très bon rapport qualité-prix sur les livres.</p>
+        </div>
+        <div class="partner-promo">
+          <div class="partner-code">PHOTOTRI10</div>
+          <div class="partner-discount">−10%</div>
+        </div>
+      </div>
+      <div class="partner-card">
+        <div class="partner-icon" style="background:#fce4ec;">🎁</div>
+        <div>
+          <h3>Photobox</h3>
+          <p>Tirages, posters, objets personnalisés. Livraison rapide partout en France.</p>
+        </div>
+        <div class="partner-promo">
+          <div class="partner-code">PHOTOTRI12</div>
+          <div class="partner-discount">−12%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tip">
+      <span class="tip-icon">💰</span>
+      <p>Les codes promo sont <strong>générés automatiquement</strong> depuis l'app — pas besoin de les noter, Phototri te les affiche au moment de la commande.</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ASTUCES RAPIDES -->
+<div class="container">
+  <div class="section">
+    <span class="section-label">Astuces</span>
+    <h2>Quelques conseils pour bien démarrer</h2>
+
+    <div class="concept-cards">
+      <div class="concept-card">
+        <div class="icon">⏱️</div>
+        <h3>5 minutes par jour</h3>
+        <p>Pas besoin de tout faire d'un coup. 20 photos par jour, et tu es à jour en 3 semaines.</p>
+      </div>
+      <div class="concept-card">
+        <div class="icon">↩️</div>
+        <h3>Annuler une décision</h3>
+        <p>Tu as swipé trop vite ? Appuie sur le bouton "Annuler" pour revenir en arrière.</p>
+      </div>
+      <div class="concept-card">
+        <div class="icon">🗺️</div>
+        <h3>Trier par lieu</h3>
+        <p>Phototri affiche tes photos sur une carte. Tape sur un pays pour trier uniquement ces photos.</p>
+      </div>
+      <div class="concept-card">
+        <div class="icon">🔍</div>
+        <h3>Trouver les doublons</h3>
+        <p>Phototri détecte automatiquement tes photos similaires pour t'aider à faire le ménage plus vite.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <strong>Phototri</strong> — Tes souvenirs méritent mieux 🌸<br />
+  <span style="font-size:12px; margin-top:8px; display:block;">Toutes tes photos restent sur ton téléphone. Rien n'est envoyé sur un serveur.</span>
+</footer>
+
+</body>
+</html>

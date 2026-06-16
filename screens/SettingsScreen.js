@@ -45,12 +45,11 @@ const TUTORIAL_SLIDES = [
 ];
 
 const SWIPE_ACTIONS = [
-  { key: "skip",     label: "Passer",              desc: "Aucune action, la photo reviendra plus tard", emoji: "⏭" },
-  { key: "delete",   label: "Supprimer",           desc: "Envoyer dans la corbeille",                   emoji: "🗑" },
-  { key: "album",    label: "Album",               desc: "Ajouter à la pile à imprimer",                emoji: "🖨" },
-  { key: "favorite", label: "Coup de cœur",        desc: "Ajouter aux favoris",                         emoji: "❤️" },
-  { key: "hesitate", label: "Je déciderai plus tard", desc: "Mettre de côté pour décider ensuite",      emoji: "🤔" },
-  { key: "none",     label: "Désactivée",          desc: "Rien ne se passe, la photo rebondit",         emoji: "🚫" },
+  { key: "skip",     label: "Conserver la photo",     desc: "Garder sur le téléphone et passer à la suivante", emoji: "💚" },
+  { key: "delete",   label: "Supprimer",              desc: "Envoyer dans la corbeille",                       emoji: "🗑" },
+  { key: "album",    label: "Album",                  desc: "Ajouter à la pile à imprimer",                    emoji: "🖨" },
+  { key: "hesitate", label: "Je déciderai plus tard", desc: "Mettre de côté pour décider ensuite",             emoji: "🤔" },
+  { key: "none",     label: "Désactivée",             desc: "Rien ne se passe, la photo rebondit",             emoji: "🚫" },
 ];
 
 const DIRECTIONS = [
@@ -156,6 +155,7 @@ export function SettingsScreen({ navigation, route }) {
   const setNotificationMinute    = usePhotoStore((s) => s.setNotificationMinute);
   const randomCount              = usePhotoStore((s) => s.randomCount);
   const setRandomCount           = usePhotoStore((s) => s.setRandomCount);
+  const restartTri               = usePhotoStore((s) => s.restartTri);
   const libraryPhotos            = usePhotoStore((s) => s.libraryPhotos);
   const kept                     = usePhotoStore((s) => s.kept);
   const deleted                  = usePhotoStore((s) => s.deleted);
@@ -193,6 +193,26 @@ export function SettingsScreen({ navigation, route }) {
       [
         { text: "Annuler", style: "cancel" },
         { text: "Réinitialiser", style: "destructive", onPress: () => resetSwipeMappings(swipeMode) },
+      ]
+    );
+  };
+
+  // ── Remettre à 0 le tri ──────────────────────────────────────────────────
+  const confirmRestartTri = () => {
+    Alert.alert(
+      "Recommencer le tri ?",
+      "Toutes tes photos non supprimées reviendront dans la file à trier. " +
+        "Tes coups de cœur ❤️, tes albums et ta corbeille sont conservés.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Tout retrier",
+          style: "destructive",
+          onPress: () => {
+            restartTri();
+            Alert.alert("C'est reparti 🌸", "Tes photos sont prêtes à être triées à nouveau.");
+          },
+        },
       ]
     );
   };
@@ -321,7 +341,7 @@ export function SettingsScreen({ navigation, route }) {
         {menageExpanded && (
           <>
             <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 10, lineHeight: 17 }}>
-              Suppression, coup de cœur, hésitation. Le bouton 🗑 reste toujours "Supprimer".
+              Conserver, supprimer ou hésiter. Le coup de cœur ❤️ se fait uniquement avec le bouton cœur pendant le tri.
             </Text>
             {DIRECTIONS.map((dir) => {
               const action = getActionMeta(swipeMappingsMenage?.[dir.key] ?? "none");
@@ -522,6 +542,32 @@ export function SettingsScreen({ navigation, route }) {
             </Text>
           </View>
         )}
+
+        {/* ── Section Recommencer le tri ───────────────────────────────────── */}
+        <Section title="🔄 Recommencer" />
+        <TouchableOpacity
+          onPress={confirmRestartTri}
+          style={{
+            backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1.5,
+            borderColor: C.red, padding: 16,
+            flexDirection: "row", alignItems: "center", gap: 12,
+          }}
+        >
+          <View style={{
+            width: 36, height: 36, backgroundColor: `${C.red}15`,
+            borderRadius: S.radiusSm, alignItems: "center", justifyContent: "center",
+          }}>
+            <Text style={{ fontSize: 18 }}>🔄</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: "800", fontSize: 14, color: C.red }}>
+              Remettre à 0 les photos à trier
+            </Text>
+            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 16 }}>
+              Renvoie toutes tes photos dans la file. Coups de cœur, albums et corbeille conservés.
+            </Text>
+          </View>
+        </TouchableOpacity>
 
         {/* ── Section Aide ─────────────────────────────────────────────────── */}
         <Section title="Aide" />
