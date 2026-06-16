@@ -64,9 +64,13 @@ export function SwipeScreen({ navigation, route }) {
   // Bon mapping selon le mode
   const swipeMappings = isAlbum ? swipeMappingsAlbum : swipeMappingsMenage;
 
-  // Direction de swipe qui "conserve" la photo (action "skip"), pour afficher
-  // un bouton repère à côté d'Annuler en mode ménage. Priorité haut > droite > gauche > bas.
-  const keepDir = ["up", "right", "left", "down"].find((d) => swipeMappings?.[d] === "skip") || null;
+  // Retrouve la direction de swipe configurée par l'user pour une action donnée.
+  // Les flèches affichées au-dessus des boutons suivent ainsi le paramétrage.
+  // Priorité haut > droite > gauche > bas si plusieurs directions ont la même action.
+  const dirFor = (action) => ["up", "right", "left", "down"].find((d) => swipeMappings?.[d] === action) || null;
+  const keepDir   = dirFor("skip");   // conserver la photo (mode ménage)
+  const deleteDir = dirFor("delete"); // supprimer
+  const albumDir  = dirFor("album");  // ajouter à l'album (mode album)
   const DIR_LABEL = { up: "↑ haut", down: "↓ bas", left: "← gauche", right: "→ droite" };
 
   const [history, setHistory]     = useState([]);
@@ -202,7 +206,8 @@ export function SwipeScreen({ navigation, route }) {
   };
 
   const handleTrashPress = () => {
-    zoomableRef.current?.flyOff("down", () => performAction("delete", "down"));
+    const d = deleteDir || "down";
+    zoomableRef.current?.flyOff(d, () => performAction("delete", d));
   };
   // Cœur = coup de cœur (favoris) + on conserve la photo et on passe à la suivante.
   // performAction("favorite") gère l'ajout aux favoris, l'historique (undo) et l'avance.
@@ -217,7 +222,8 @@ export function SwipeScreen({ navigation, route }) {
     zoomableRef.current?.flyOff(keepDir, () => performAction("skip", keepDir));
   };
   const handleAlbumPress = () => {
-    zoomableRef.current?.flyOff("up", () => performAction("album", "up"));
+    const d = albumDir || "up";
+    zoomableRef.current?.flyOff(d, () => performAction("album", d));
   };
 
   const undo = () => {
@@ -365,10 +371,10 @@ export function SwipeScreen({ navigation, route }) {
         alignItems: "center", gap: 14, zIndex: 10,
       }}>
 
-        {/* 🗑 Supprimer — masqué si le swipe bas est désactivé ("none") */}
-        {swipeMappings.down !== "none" && (
+        {/* 🗑 Supprimer — la flèche suit la direction configurée ; masqué si "supprimer" n'est mappé sur aucun swipe */}
+        {deleteDir && (
           <View style={{ alignItems: "center", gap: 5 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(232,99,122,0.9)", letterSpacing: 0.3 }}>↓ bas</Text>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(232,99,122,0.9)", letterSpacing: 0.3 }}>{DIR_LABEL[deleteDir]}</Text>
             <TouchableOpacity
               onPress={handleTrashPress}
               style={{
@@ -376,7 +382,7 @@ export function SwipeScreen({ navigation, route }) {
                 borderRadius: S.radiusFull, padding: 18,
               }}
             >
-              <Text style={{ fontSize: 22 }}>🗑</Text>
+              <Text style={{ fontSize: 20 }}>🗑</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -410,7 +416,7 @@ export function SwipeScreen({ navigation, route }) {
                 borderRadius: S.radiusFull, padding: 18,
               }}
             >
-              <Text style={{ fontSize: 22 }}>✅</Text>
+              <Text style={{ fontSize: 20 }}>✅</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -428,15 +434,15 @@ export function SwipeScreen({ navigation, route }) {
                 borderRadius: S.radiusFull, padding: 18,
               }}
             >
-              <Text style={{ fontSize: 22 }}>{heartedThisPhoto ? "❤️✓" : "❤️"}</Text>
+              <Text style={{ fontSize: 20 }}>{heartedThisPhoto ? "❤️✓" : "❤️"}</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Mode ALBUM : 📁 ajouter à l'album — masqué si le swipe haut est désactivé */}
-        {isAlbum && swipeMappings.up !== "none" && (
+        {/* Mode ALBUM : 📁 ajouter à l'album — la flèche suit la direction configurée */}
+        {isAlbum && albumDir && (
           <View style={{ alignItems: "center", gap: 5 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(176,122,216,0.9)", letterSpacing: 0.3 }}>↑ album</Text>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(176,122,216,0.9)", letterSpacing: 0.3 }}>{DIR_LABEL[albumDir]}</Text>
             <TouchableOpacity
               onPress={handleAlbumPress}
               onLongPress={() => setShowAlbumPicker(true)}
@@ -446,7 +452,7 @@ export function SwipeScreen({ navigation, route }) {
                 borderRadius: S.radiusFull, padding: 18,
               }}
             >
-              <Text style={{ fontSize: 22 }}>📁</Text>
+              <Text style={{ fontSize: 20 }}>📁</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -464,7 +470,7 @@ export function SwipeScreen({ navigation, route }) {
                 borderRadius: S.radiusFull, padding: 18,
               }}
             >
-              <Text style={{ fontSize: 22 }}>{heartedThisPhoto ? "❤️✓" : "❤️"}</Text>
+              <Text style={{ fontSize: 20 }}>{heartedThisPhoto ? "❤️✓" : "❤️"}</Text>
             </TouchableOpacity>
           </View>
         )}

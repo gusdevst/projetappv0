@@ -1,5 +1,5 @@
 // screens/HomeScreen.js
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ScrollView, StatusBar, View, Text,
   TouchableOpacity, Alert, Modal, ActivityIndicator, Linking,
@@ -102,7 +102,7 @@ function applyFilter(photos, filter) {
 const MENAGE_DATE_FILTERS = FILTERS.filter((f) => f !== "Screenshots");
 const ALBUM_DATE_FILTERS  = ["Toutes", "2026", "2025"];
 
-export function HomeScreen({ navigation }) {
+export function HomeScreen({ navigation, route }) {
   const kept              = usePhotoStore((state) => state.kept);
   const deleted           = usePhotoStore((state) => state.deleted);
   const printed           = usePhotoStore((state) => state.printed);
@@ -134,6 +134,14 @@ export function HomeScreen({ navigation }) {
     const allowed = key === "menage" ? MENAGE_DATE_FILTERS : ALBUM_DATE_FILTERS;
     setActiveFilter((f) => (allowed.includes(f) ? f : "Toutes"));
   }
+
+  // Ouverture directe sur le mode album (ex. CTA depuis le bilan de tri).
+  useEffect(() => {
+    if (route?.params?.startMode === "album") {
+      switchMode("album");
+      navigation.setParams({ startMode: undefined }); // évite de rebasculer au prochain focus
+    }
+  }, [route?.params?.startMode]);
 
   // ── Aléatoire ────────────────────────────────────────────────────────────
   const [randomFiftyActive, setRandomFiftyActive] = useState(false);

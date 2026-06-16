@@ -3,7 +3,7 @@
 // screens/SummaryScreen.js
 // ─────────────────────────────────────────────
 import { useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
@@ -201,79 +201,33 @@ export function SummaryScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* ── Section partenaires (mode ménage uniquement) ─────────────── */}
+        {/* ── CTA création d'album (mode ménage uniquement) ────────────── */}
         {!isAlbum && (
-        <View style={{
-          backgroundColor: C.bgCard,
-          borderRadius: S.radius,
-          padding: 18,
-          borderWidth: 1.5,
-          borderColor: `${C.accent}40`,
-          marginBottom: 16,
-        }}>
-          {/* Badge promo */}
-          <View style={{
-            backgroundColor: C.accent, borderRadius: 99, alignSelf: "flex-start",
-            paddingHorizontal: 10, paddingVertical: 4, marginBottom: 10,
-          }}>
-            <Text style={{ fontSize: 11, fontWeight: "900", color: "#fff", letterSpacing: 0.5 }}>
-              OFFRE EXCLUSIVE
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Home", { startMode: "album" })}
+          style={{
+            backgroundColor: `${C.album}12`,
+            borderRadius: S.radius,
+            padding: 18,
+            borderWidth: 1.5,
+            borderColor: `${C.album}50`,
+            marginBottom: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 14,
+          }}
+        >
+          <Text style={{ fontSize: 34 }}>📔</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: "900", fontSize: 15, color: C.text, marginBottom: 3 }}>
+              Crée un album de tes plus belles photos
+            </Text>
+            <Text style={{ fontSize: 12, color: C.textMuted, lineHeight: 17 }}>
+              Regroupe tes souvenirs et fais-les imprimer via nos partenaires.
             </Text>
           </View>
-
-          <Text style={{ fontWeight: "900", fontSize: 15, color: C.text, marginBottom: 4 }}>
-            15% de réduction chez nos partenaires
-          </Text>
-          <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 14, lineHeight: 17 }}>
-            Imprime tes plus belles photos avec ton code Phototri.
-          </Text>
-
-          {/* Code promo */}
-          <View style={{
-            backgroundColor: `${C.accent}12`, borderRadius: 12,
-            borderWidth: 1.5, borderColor: `${C.accent}40`,
-            padding: 12, alignItems: "center", marginBottom: 16,
-          }}>
-            <Text style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>Ton code</Text>
-            <Text style={{ fontSize: 22, fontWeight: "900", color: C.accent, letterSpacing: 2 }}>
-              PHOTOTRI15
-            </Text>
-          </View>
-
-          {/* Logos partenaires */}
-          {[
-            { name: "Cheerz",   desc: "Tirages & livres photo",  emoji: "🖼️" },
-            { name: "CEWE",     desc: "Albums & photobooks",     emoji: "📚" },
-            { name: "Photobox", desc: "Impressions & cadeaux",   emoji: "🎁" },
-          ].map((p, i) => (
-            <TouchableOpacity
-              key={p.name}
-              onPress={() => Alert.alert(
-                `Commander chez ${p.name}`,
-                `Rendez-vous sur ${p.name.toLowerCase()}.fr et saisis le code PHOTOTRI15 pour bénéficier de 15% de réduction sur ta commande !`
-              )}
-              style={{
-                flexDirection: "row", alignItems: "center", gap: 12,
-                paddingVertical: 12,
-                borderTopWidth: i === 0 ? 0 : 1,
-                borderTopColor: C.border,
-              }}
-            >
-              <View style={{
-                width: 42, height: 42, borderRadius: 12,
-                backgroundColor: "#f5f0eb",
-                alignItems: "center", justifyContent: "center",
-              }}>
-                <Text style={{ fontSize: 20 }}>{p.emoji}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: "800", fontSize: 14, color: C.text }}>{p.name}</Text>
-                <Text style={{ fontSize: 12, color: C.textMuted }}>{p.desc}</Text>
-              </View>
-              <Text style={{ fontSize: 13, color: C.accent, fontWeight: "700" }}>Voir →</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+          <Text style={{ fontSize: 16, color: C.album, fontWeight: "800" }}>→</Text>
+        </TouchableOpacity>
         )}
 
         {/* ── Retour accueil ───────────────────────────────────────────── */}
