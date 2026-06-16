@@ -38,6 +38,7 @@ export function GalleryScreen({ navigation, route }) {
   const createAlbum          = usePhotoStore((s) => s.createAlbum);
   const deleteAlbum          = usePhotoStore((s) => s.deleteAlbum);
   const removePhotoFromAlbum = usePhotoStore((s) => s.removePhotoFromAlbum);
+  const addPhotoToAlbum      = usePhotoStore((s) => s.addPhotoToAlbum);
 
   // Drill-down album : null = liste des albums, "__sans_album__" = photos sans album, sinon id album
   // On peut ouvrir directement un album via route.params.albumId (lien depuis le bilan de tri).
@@ -56,6 +57,10 @@ export function GalleryScreen({ navigation, route }) {
   const [deleting, setDeleting]     = useState(false);
   const [newAlbumModal, setNewAlbumModal] = useState(false);
   const [newAlbumName, setNewAlbumName]   = useState("");
+  // Affectation d'une photo "sans album" : la photo à ranger (null = feuille fermée)
+  const [assignPhoto, setAssignPhoto] = useState(null);
+  // Nom saisi pour créer un album directement depuis la feuille d'affectation
+  const [assignNewName, setAssignNewName] = useState("");
 
   // ── Masquer StatusBar + NavigationBar Android en plein écran ────────────
   const hideAndroidBars = () => {
@@ -128,6 +133,30 @@ export function GalleryScreen({ navigation, route }) {
     createAlbum(newAlbumName);
     setNewAlbumName("");
     setNewAlbumModal(false);
+  };
+
+  // ─── Photo "sans album" : affecter à un album ou retirer du menu ─────────
+  // Tout se passe dans UNE seule feuille (pas d'empilement de modales) :
+  // on n'ouvre pas le plein écran, on ouvre directement la feuille d'affectation.
+  const closeAssign = () => { setAssignPhoto(null); setAssignNewName(""); };
+  const handleAssignToAlbum = (albumId) => {
+    if (assignPhoto) addPhotoToAlbum(albumId, assignPhoto.id);
+    closeAssign();
+  };
+  // Crée un album et y range la photo, directement depuis la feuille.
+  const handleCreateAndAssign = () => {
+    const name = assignNewName.trim();
+    if (!name || !assignPhoto) return;
+    createAlbum(name);
+    const fresh = usePhotoStore.getState().albums;
+    const newId = fresh[fresh.length - 1]?.id;
+    if (newId) addPhotoToAlbum(newId, assignPhoto.id);
+    closeAssign();
+  };
+  // Retire la photo de "Album souvenirs" (pile printed) → elle quitte ce menu.
+  const handleRemoveFromSouvenirs = () => {
+    if (assignPhoto) restorePhoto(assignPhoto.id, "printed");
+    closeAssign();
   };
 
   const confirmDeleteAlbum = (album) => {
@@ -270,8 +299,8 @@ export function GalleryScreen({ navigation, route }) {
           </>
 
         ) : section === "album" && activeAlbumId === "__sans_album__" ? (
-          // ── Vue "Sans album" ──────────────────────────────────────────────
-          <PhotoGrid photos={photosSansAlbum} onPress={(p) => openPhoto(photosSansAlbum, p)} />
+          // ── Vue "Sans album" : un tap ouvre la feuille d'affectation ──────
+          <PhotoGrid photos={photosSansAlbum} onPress={(p) => setAssignPhoto(p)} />
 
         ) : section === "album" && activeAlbum ? (
           // ── Vue grille d'un album ─────────────────────────────────────────
@@ -387,6 +416,101 @@ export function GalleryScreen({ navigation, route }) {
             </View>
           )}
         </GestureHandlerRootView>
+      </Modal>
+
+      {/* ── Feuille "Affecter / retirer" (photo sans album) ── */}
+      <Modal
+        visible={!!assignPhoto}
+        transparent
+        animationType="slide"
+        onRequestClose={closeAssign}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(60,20,0,0.5)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: C.bgCard, borderRadius: S.radiusLg, padding: S.padLg, paddingBottom: 44, maxHeight: SH * 0.85 }}>
+
+            {/* Aperçu de la photo */}
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              {assignPhoto && (
+                <Image source={{ uri: assignPhoto.url }} style={{ width: 56, height: 56, borderRadius: 12 }} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }}>Ranger cette photo</Text>
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                  {albums.length === 0 ? "Crée un album pour la ranger" : "Choisis un album ou crée-en un"}
+                </Text>
+              </View>
+            </View>
+
+            {albums.length > 0 && (
+              <ScrollView style={{ maxHeight: SH * 0.35 }}>
+                {albums.map((a) => (
+                  <TouchableOpacity
+                    key={a.id}
+                    onPress={() => handleAssignToAlbum(a.id)}
+                    style={{
+                      backgroundColor: C.bg, borderRadius: 14, padding: 14,
+                      borderWidth: 1, borderColor: C.border, marginBottom: 8,
+                      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: C.text }}>📁 {a.name}</Text>
+                      <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                        {a.photoIds.length} photo{a.photoIds.length > 1 ? "s" : ""}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 18, color: C.purple }}>＋</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+
+            {/* Création d'un album directement ici (pas de 2e modale) */}
+            <View style={{ marginTop: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border }}>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: C.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                Nouvel album
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TextInput
+                  value={assignNewName}
+                  onChangeText={setAssignNewName}
+                  placeholder="Ex. Vacances 2026"
+                  placeholderTextColor={C.textMuted}
+                  style={{
+                    flex: 1, backgroundColor: C.bg, borderRadius: 12,
+                    borderWidth: 1, borderColor: C.border,
+                    paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.text,
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={handleCreateAndAssign}
+                  disabled={!assignNewName.trim()}
+                  style={{
+                    backgroundColor: C.purple, borderRadius: 12, paddingHorizontal: 16,
+                    justifyContent: "center", opacity: assignNewName.trim() ? 1 : 0.4,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>Créer</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Retirer du menu "Album souvenirs" */}
+            <TouchableOpacity
+              onPress={handleRemoveFromSouvenirs}
+              style={{
+                marginTop: 16, borderRadius: S.radius, padding: 14, alignItems: "center",
+                borderWidth: 1.5, borderColor: C.red,
+              }}
+            >
+              <Text style={{ color: C.red, fontWeight: "800", fontSize: 14 }}>🗑 Retirer du menu album</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={closeAssign} style={{ marginTop: 12, alignItems: "center" }}>
+              <Text style={{ color: C.textMuted, fontSize: 14 }}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
 
       {/* ── Modal "Nouvel album" ── */}

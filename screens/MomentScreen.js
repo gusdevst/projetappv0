@@ -1,5 +1,5 @@
 // screens/MomentScreen.js
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, Image,
   StatusBar, Dimensions, Modal,
@@ -28,7 +28,7 @@ function dateLabel(d) {
  * 1er tap = date de début, 2e tap = date de fin.
  * Les jours entre les deux sont surlignés.
  */
-function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCancel, accent = C.accent }) {
+function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCancel, accent = C.accent, minYear }) {
   const today = new Date();
   const init  = initialFrom || today;
 
@@ -38,6 +38,26 @@ function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCan
   const [rangeTo,   setRangeTo]   = useState(initialTo   || null);
   // "picking" : "from" → on attend le 1er tap, "to" → on attend le 2e tap
   const [picking, setPicking] = useState("from");
+  // "header" : null = grille des jours, "month" = choix du mois, "year" = choix de l'année
+  const [header, setHeader] = useState(null);
+  // À chaque réouverture, on repart sur la grille des jours.
+  useEffect(() => { if (visible) setHeader(null); }, [visible]);
+
+  // Bornes de l'année : de la plus vieille photo jusqu'à l'année courante.
+  const firstYear = Math.min(minYear ?? today.getFullYear() - 12, today.getFullYear());
+  const years = Array.from({ length: today.getFullYear() - firstYear + 1 }, (_, i) => firstYear + i);
+
+  // Sélectionne un mois depuis le sélecteur rapide (en bornant au mois courant pour l'année en cours).
+  const pickMonth = (m) => {
+    setViewMonth(m);
+    setHeader(null);
+  };
+  // Sélectionne une année ; si on dépasse le mois courant pour l'année en cours, on borne.
+  const pickYear = (y) => {
+    setViewYear(y);
+    if (y === today.getFullYear() && viewMonth > today.getMonth()) setViewMonth(today.getMonth());
+    setHeader("month");
+  };
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstSlot   = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
@@ -125,19 +145,74 @@ function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCan
               </View>
             </View>
 
-            {/* Navigation mois */}
+            {/* Navigation mois — le mois et l'année sont cliquables pour un saut rapide */}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <TouchableOpacity onPress={prevMonth} style={styles.navBtn}>
+              <TouchableOpacity onPress={prevMonth} style={[styles.navBtn, { opacity: header ? 0 : 1 }]} disabled={!!header}>
                 <Text style={styles.navTxt}>‹</Text>
               </TouchableOpacity>
-              <Text style={{ fontWeight: "700", fontSize: 15, color: C.text }}>
-                {MOIS[viewMonth]} {viewYear}
-              </Text>
-              <TouchableOpacity onPress={nextMonth} style={[styles.navBtn, { opacity: nextBlocked ? 0.25 : 1 }]}>
+              <View style={{ flexDirection: "row", gap: 6 }}>
+                <TouchableOpacity
+                  onPress={() => setHeader(header === "month" ? null : "month")}
+                  style={[styles.headerChip, header === "month" && { backgroundColor: `${accent}18`, borderColor: accent }]}
+                >
+                  <Text style={{ fontWeight: "800", fontSize: 15, color: header === "month" ? accent : C.text }}>{MOIS[viewMonth]}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setHeader(header === "year" ? null : "year")}
+                  style={[styles.headerChip, header === "year" && { backgroundColor: `${accent}18`, borderColor: accent }]}
+                >
+                  <Text style={{ fontWeight: "800", fontSize: 15, color: header === "year" ? accent : C.text }}>{viewYear}</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={nextMonth} style={[styles.navBtn, { opacity: header ? 0 : (nextBlocked ? 0.25 : 1) }]} disabled={!!header || nextBlocked}>
                 <Text style={styles.navTxt}>›</Text>
               </TouchableOpacity>
             </View>
 
+            {/* Sélecteur rapide de MOIS */}
+            {header === "month" ? (
+              <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                {MOIS.map((m, i) => {
+                  const disabled = viewYear === today.getFullYear() && i > today.getMonth();
+                  const active = i === viewMonth;
+                  return (
+                    <View key={m} style={{ width: "33.33%", padding: 4 }}>
+                      <TouchableOpacity disabled={disabled} onPress={() => pickMonth(i)}
+                        style={{
+                          paddingVertical: 14, borderRadius: 12, alignItems: "center",
+                          backgroundColor: active ? accent : `${accent}10`, opacity: disabled ? 0.3 : 1,
+                        }}>
+                        <Text style={{ fontWeight: "700", fontSize: 13, color: active ? "#fff" : C.text }}>{m.slice(0, 4)}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+
+            /* Sélecteur rapide d'ANNÉE */
+            ) : header === "year" ? (
+              <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+                <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                  {years.map((y) => {
+                    const active = y === viewYear;
+                    return (
+                      <View key={y} style={{ width: "33.33%", padding: 4 }}>
+                        <TouchableOpacity onPress={() => pickYear(y)}
+                          style={{
+                            paddingVertical: 14, borderRadius: 12, alignItems: "center",
+                            backgroundColor: active ? accent : `${accent}10`,
+                          }}>
+                          <Text style={{ fontWeight: "700", fontSize: 14, color: active ? "#fff" : C.text }}>{y}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+            /* Grille des jours (vue par défaut) */
+            ) : (
+            <>
             {/* Entêtes jours */}
             <View style={{ flexDirection: "row", marginBottom: 4 }}>
               {JOURS.map((j) => (
@@ -186,6 +261,8 @@ function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCan
                 );
               })}
             </View>
+            </>
+            )}
 
             {/* Boutons */}
             <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
@@ -213,6 +290,10 @@ function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCan
 const styles = {
   navBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: "#f5f0eb", alignItems: "center", justifyContent: "center" },
   navTxt: { fontSize: 20, color: C.text },
+  headerChip: {
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
+    borderWidth: 1.5, borderColor: "transparent", backgroundColor: "#f5f0eb",
+  },
 };
 
 // ─── MomentScreen ─────────────────────────────────────────────────────────────
@@ -230,6 +311,16 @@ export function MomentScreen({ navigation, route }) {
     const ids = new Set(deleted.map((p) => p.id));
     return libraryPhotos.filter((p) => !ids.has(p.id));
   }, [libraryPhotos, deleted]);
+
+  // Année de la plus vieille photo → borne basse du sélecteur d'année du calendrier.
+  const minYear = useMemo(() => {
+    let min = new Date().getFullYear();
+    for (const p of activePhotos) {
+      const y = new Date(p.creationTime).getFullYear();
+      if (y < min) min = y;
+    }
+    return min;
+  }, [activePhotos]);
 
   // Créneau de dates
   const [dateFrom,      setDateFrom]      = useState(null); // Date | null
@@ -437,6 +528,7 @@ export function MomentScreen({ navigation, route }) {
         initialFrom={dateFrom}
         initialTo={dateTo}
         accent={accent}
+        minYear={minYear}
         onConfirm={handleRangeConfirm}
         onCancel={() => setShowRangePicker(false)}
       />

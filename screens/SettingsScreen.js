@@ -44,13 +44,24 @@ const TUTORIAL_SLIDES = [
   },
 ];
 
-const SWIPE_ACTIONS = [
+// Actions proposées en mode MÉNAGE.
+const SWIPE_ACTIONS_MENAGE = [
   { key: "skip",     label: "Conserver la photo",     desc: "Garder sur le téléphone et passer à la suivante", emoji: "💚" },
   { key: "delete",   label: "Supprimer",              desc: "Envoyer dans la corbeille",                       emoji: "🗑" },
-  { key: "album",    label: "Album",                  desc: "Ajouter à la pile à imprimer",                    emoji: "🖨" },
   { key: "hesitate", label: "Je déciderai plus tard", desc: "Mettre de côté pour décider ensuite",             emoji: "🤔" },
   { key: "none",     label: "Désactivée",             desc: "Rien ne se passe, la photo rebondit",             emoji: "🚫" },
 ];
+
+// Actions proposées en mode ALBUM (suppression possible pour faire le ménage en même temps).
+const SWIPE_ACTIONS_ALBUM = [
+  { key: "album",    label: "Envoyer dans l'album",        desc: "Ajouter cette photo à l'album",                       emoji: "📁" },
+  { key: "skip",     label: "Ne pas envoyer dans l'album", desc: "Photo conservée, elle pourra revenir pour un autre album", emoji: "⏭️" },
+  { key: "delete",   label: "Supprimer",                   desc: "Envoyer dans la corbeille (ménage en même temps)",    emoji: "🗑" },
+  { key: "hesitate", label: "Je déciderai plus tard",      desc: "Mettre de côté pour décider ensuite",                 emoji: "🤔" },
+  { key: "none",     label: "Désactivée",                  desc: "Rien ne se passe, la photo rebondit",                 emoji: "🚫" },
+];
+
+const actionsFor = (mode) => (mode === "album" ? SWIPE_ACTIONS_ALBUM : SWIPE_ACTIONS_MENAGE);
 
 const DIRECTIONS = [
   { key: "up",    label: "Swipe vers le haut",   emoji: "↑" },
@@ -66,7 +77,10 @@ const NOTIF_OPTIONS = [
   { key: "weekly",     label: "Hebdomadaire",           desc: "Un rappel toutes les semaines",    emoji: "📆" },
 ];
 
-const getActionMeta = (key) => SWIPE_ACTIONS.find((a) => a.key === key) || SWIPE_ACTIONS[0];
+const getActionMeta = (key, mode) => {
+  const list = actionsFor(mode);
+  return list.find((a) => a.key === key) || list[0];
+};
 
 // ── Drum générique pour le picker d'heure en modal ───────────────────────────
 // Placé ici (hors composant) pour éviter les re-renders : pas de conflit avec
@@ -266,8 +280,8 @@ export function SettingsScreen({ navigation, route }) {
   );
 
   // Résumé des directions pour l'en-tête du menu réduit
-  const makeSummary = (mappings) => DIRECTIONS.map((dir) => {
-    const action = getActionMeta(mappings?.[dir.key] ?? "none");
+  const makeSummary = (mappings, mode) => DIRECTIONS.map((dir) => {
+    const action = getActionMeta(mappings?.[dir.key] ?? "none", mode);
     return `${dir.emoji} ${action.emoji}`;
   }).join("  ");
 
@@ -333,7 +347,7 @@ export function SettingsScreen({ navigation, route }) {
           <View style={{ flex: 1 }}>
             <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>Personnaliser les directions</Text>
             {!menageExpanded && (
-              <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>{makeSummary(swipeMappingsMenage)}</Text>
+              <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>{makeSummary(swipeMappingsMenage, "menage")}</Text>
             )}
           </View>
           <Text style={{ color: C.textMuted, fontSize: 18, marginLeft: 8 }}>{menageExpanded ? "▲" : "▼"}</Text>
@@ -344,7 +358,7 @@ export function SettingsScreen({ navigation, route }) {
               Conserver, supprimer ou hésiter. Le coup de cœur ❤️ se fait uniquement avec le bouton cœur pendant le tri.
             </Text>
             {DIRECTIONS.map((dir) => {
-              const action = getActionMeta(swipeMappingsMenage?.[dir.key] ?? "none");
+              const action = getActionMeta(swipeMappingsMenage?.[dir.key] ?? "none", "menage");
               return (
                 <RowSetting
                   key={dir.key}
@@ -379,7 +393,7 @@ export function SettingsScreen({ navigation, route }) {
           <View style={{ flex: 1 }}>
             <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>Personnaliser les directions</Text>
             {!albumExpanded && (
-              <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>{makeSummary(swipeMappingsAlbum)}</Text>
+              <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>{makeSummary(swipeMappingsAlbum, "album")}</Text>
             )}
           </View>
           <Text style={{ color: C.textMuted, fontSize: 18, marginLeft: 8 }}>{albumExpanded ? "▲" : "▼"}</Text>
@@ -387,10 +401,10 @@ export function SettingsScreen({ navigation, route }) {
         {albumExpanded && (
           <>
             <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 10, lineHeight: 17 }}>
-              Par défaut : haut = ajouter à l'album, droite = garder sans album, bas = supprimer.
+              Par défaut : haut = envoyer dans l'album, droite/bas = ne pas envoyer (la photo pourra revenir pour un autre album). Tu peux aussi activer la suppression sur une direction pour faire le ménage en même temps.
             </Text>
             {DIRECTIONS.map((dir) => {
-              const action = getActionMeta(swipeMappingsAlbum?.[dir.key] ?? "none");
+              const action = getActionMeta(swipeMappingsAlbum?.[dir.key] ?? "none", "album");
               return (
                 <RowSetting
                   key={dir.key}
@@ -649,7 +663,7 @@ export function SettingsScreen({ navigation, route }) {
               Quelle action ce swipe déclenche-t-il ?
             </Text>
 
-            {SWIPE_ACTIONS.map((a) => {
+            {actionsFor(editingSwipe?.mode).map((a) => {
               const currentMappings = editingSwipe?.mode === "album" ? swipeMappingsAlbum : swipeMappingsMenage;
               const isSelected = currentMappings?.[editingSwipe?.direction] === a.key;
               return (

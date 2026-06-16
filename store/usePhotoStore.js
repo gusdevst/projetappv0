@@ -33,10 +33,12 @@ export const usePhotoStore = create(
       },
 
       // Mappings swipe pour le mode ALBUM (construire un album).
-      // up=mettre dans l'album, right=garder sans album, down=supprimer, left=hésiter
+      // Pas de suppression en mode album. Actions possibles : "album" | "skip" | "hesitate" | "none"
+      // up=envoyer dans l'album, down/right="skip"=ne pas envoyer (photo conservée, pourra
+      // revenir pour un prochain album), left=je déciderai plus tard.
       swipeMappingsAlbum: {
         up:    "album",
-        down:  "delete",
+        down:  "skip",
         left:  "hesitate",
         right: "skip",
       },
@@ -131,7 +133,7 @@ export const usePhotoStore = create(
       // Remet les mappings de swipe par défaut pour un mode donné (ou les deux).
       resetSwipeMappings: (mode) => {
         if (mode === "album") {
-          set({ swipeMappingsAlbum: { up: "album", down: "delete", left: "hesitate", right: "skip" } });
+          set({ swipeMappingsAlbum: { up: "album", down: "skip", left: "hesitate", right: "skip" } });
         } else if (mode === "menage") {
           // up = "skip" : conserver la photo (PAS coup de cœur — ça, c'est le bouton ❤️).
           set({ swipeMappingsMenage: { up: "skip", down: "delete", left: "hesitate", right: "skip" } });
@@ -139,7 +141,7 @@ export const usePhotoStore = create(
           // reset les deux
           set({
             swipeMappingsMenage: { up: "skip",  down: "delete", left: "hesitate", right: "skip" },
-            swipeMappingsAlbum:  { up: "album", down: "delete", left: "hesitate", right: "skip" },
+            swipeMappingsAlbum:  { up: "album", down: "skip",  left: "hesitate", right: "skip" },
           });
         }
       },
@@ -270,20 +272,19 @@ export const usePhotoStore = create(
     {
       name: "phototri-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      // v1 : "favorite" n'est plus une action de swipe (le coup de cœur se fait
-      // uniquement via le bouton ❤️). On remappe les anciens swipes "favorite"
-      // vers "skip" (= conserver la photo).
-      version: 1,
+      // v1 : "favorite" n'est plus une action de swipe (coup de cœur = bouton ❤️ seul) → "skip".
+      // v2 : pas de suppression en mode album → tout swipe "delete" de l'album devient "skip"
+      //      ("ne pas envoyer dans l'album", photo conservée).
+      version: 2,
       migrate: (persisted) => {
         if (!persisted) return persisted;
-        const fix = (m) =>
-          m
-            ? Object.fromEntries(
-                Object.entries(m).map(([dir, action]) => [dir, action === "favorite" ? "skip" : action])
-              )
-            : m;
-        if (persisted.swipeMappingsMenage) persisted.swipeMappingsMenage = fix(persisted.swipeMappingsMenage);
-        if (persisted.swipeMappingsAlbum)  persisted.swipeMappingsAlbum  = fix(persisted.swipeMappingsAlbum);
+        const mapVals = (m, fn) =>
+          m ? Object.fromEntries(Object.entries(m).map(([dir, action]) => [dir, fn(action)])) : m;
+        // favorite → skip (les deux modes)
+        persisted.swipeMappingsMenage = mapVals(persisted.swipeMappingsMenage, (a) => (a === "favorite" ? "skip" : a));
+        persisted.swipeMappingsAlbum  = mapVals(persisted.swipeMappingsAlbum,  (a) => (a === "favorite" ? "skip" : a));
+        // album : delete → skip
+        persisted.swipeMappingsAlbum  = mapVals(persisted.swipeMappingsAlbum,  (a) => (a === "delete" ? "skip" : a));
         return persisted;
       },
       // On persiste UNIQUEMENT le tri + les albums + le mapping swipe.

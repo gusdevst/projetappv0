@@ -457,6 +457,22 @@ export function SwipeScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* Mode ALBUM : ⏭️ ne pas envoyer dans l'album — photo conservée, pourra revenir */}
+        {isAlbum && keepDir && (
+          <View style={{ alignItems: "center", gap: 5 }}>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.8)", letterSpacing: 0.3 }}>{DIR_LABEL[keepDir]}</Text>
+            <TouchableOpacity
+              onPress={handleKeepPress}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 2, borderColor: "rgba(255,255,255,0.35)",
+                borderRadius: S.radiusFull, padding: 18,
+              }}
+            >
+              <Text style={{ fontSize: 20 }}>⏭️</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Mode ALBUM : ❤️ coup de cœur (appui direct) */}
         {isAlbum && (
           <View style={{ alignItems: "center", gap: 5 }}>
