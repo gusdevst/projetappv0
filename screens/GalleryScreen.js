@@ -17,8 +17,38 @@ import { C, S } from "../constants/theme";
 import { PhotoGrid } from "../components/PhotoGrid";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { usePhotoStore } from "../store/usePhotoStore";
+import * as Sharing from "expo-sharing";
 
 const { width: SW, height: SH } = Dimensions.get("window");
+
+// Icône de partage standard (3 points reliés, style Android) dessinée en Views,
+// faute de librairie d'icônes dans le projet.
+function ShareIcon({ color = "#fff", size = 20 }) {
+  const d = size * 0.3;
+  const dot  = { position: "absolute", width: d, height: d, borderRadius: d / 2, backgroundColor: color };
+  const L = { x: d / 2, y: size / 2 };
+  const T = { x: size - d / 2, y: d / 2 };
+  const B = { x: size - d / 2, y: size - d / 2 };
+  const seg = (a, b) => {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const ang = (Math.atan2(dy, dx) * 180) / Math.PI;
+    return {
+      position: "absolute", height: 2, borderRadius: 1, backgroundColor: color,
+      width: len, left: (a.x + b.x) / 2 - len / 2, top: (a.y + b.y) / 2 - 1,
+      transform: [{ rotate: `${ang}deg` }],
+    };
+  };
+  return (
+    <View style={{ width: size, height: size }}>
+      <View style={seg(L, T)} />
+      <View style={seg(L, B)} />
+      <View style={[dot, { left: L.x - d / 2, top: L.y - d / 2 }]} />
+      <View style={[dot, { left: T.x - d / 2, top: T.y - d / 2 }]} />
+      <View style={[dot, { left: B.x - d / 2, top: B.y - d / 2 }]} />
+    </View>
+  );
+}
 
 const SECTION_CONFIG = {
   kept:    { title: "Photos coup de cœur", accent: C.green,  storeKey: "kept",    showEmpty: false },
@@ -61,6 +91,20 @@ export function GalleryScreen({ navigation, route }) {
   const [assignPhoto, setAssignPhoto] = useState(null);
   // Nom saisi pour créer un album directement depuis la feuille d'affectation
   const [assignNewName, setAssignNewName] = useState("");
+
+  // ── Partage natif (WhatsApp, SMS, etc.) ──────────────────────────────────
+  const handleShare = async (photo) => {
+    try {
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        Alert.alert("Partage indisponible", "Cette fonctionnalité n'est pas disponible sur cet appareil.");
+        return;
+      }
+      await Sharing.shareAsync(photo.url);
+    } catch (e) {
+      Alert.alert("Erreur", "Impossible de partager cette photo.");
+    }
+  };
 
   // ── Masquer StatusBar + NavigationBar Android en plein écran ────────────
   const hideAndroidBars = () => {
@@ -394,12 +438,27 @@ export function GalleryScreen({ navigation, route }) {
                   </TouchableOpacity>
                 )}
                 {section === "kept" && (
-                  <TouchableOpacity
-                    onPress={() => handleRestore(selected.id)}
-                    style={{ flex: 1, backgroundColor: "rgba(255,255,255,.2)", borderRadius: S.radius, padding: 14, alignItems: "center" }}
-                  >
-                    <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>↩ Retirer des coups de cœur</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity
+                      onPress={() => handleShare(selected)}
+                      style={{
+                        backgroundColor: C.green,
+                        borderRadius: S.radius,
+                        padding: 14,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        minWidth: 52,
+                      }}
+                    >
+                      <ShareIcon color="#fff" size={20} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleRestore(selected.id)}
+                      style={{ flex: 1, backgroundColor: "rgba(255,255,255,.2)", borderRadius: S.radius, padding: 14, alignItems: "center" }}
+                    >
+                      <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>↩ Retirer des coups de cœur</Text>
+                    </TouchableOpacity>
+                  </>
                 )}
                 {section === "album" && activeAlbum && (
                   <TouchableOpacity

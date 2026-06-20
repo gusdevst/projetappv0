@@ -20,6 +20,7 @@ export function SummaryScreen({ navigation, route }) {
     sessionDeleted     = [],
     sessionHesitated   = [],
     sessionAlbumPhotos = [],
+    sessionConserved   = [],
   } = route.params || {};
 
   const isAlbum = mode === "album";
@@ -27,22 +28,26 @@ export function SummaryScreen({ navigation, route }) {
 
   // On garde le store uniquement pour les actions (reset) et la liste albums
   const albums            = usePhotoStore((state) => state.albums);
-  const resetSkipped      = usePhotoStore((state) => state.resetSkipped);
   const resetHesitated    = usePhotoStore((state) => state.resetHesitated);
   const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
 
   // Stats basées sur la SESSION uniquement
   const deletedSize = sessionDeleted.reduce((a, p) => a + (p.size || 0), 0);
+  // Total des photos passées en revue cette session (toutes décisions confondues)
+  const reviewedCount =
+    sessionConserved.length + sessionDeleted.length + sessionKept.length +
+    sessionHesitated.length + sessionAlbumPhotos.length;
 
   // Album créé pendant cette session (mode album uniquement)
   const createdAlbum = albumId ? albums.find((a) => a.id === albumId) : null;
 
-  // Tri terminé → on libère les photos "skipped" pour le prochain tri
-  // et on réinitialise les filtres combinés de la session album.
+  // En mode album, on réinitialise les filtres combinés de la session.
+  // ⚠️ On NE réinitialise PAS "skipped" : en ménage il contient les photos conservées
+  // (décision définitive) qui ne doivent jamais revenir. En album, "ne pas envoyer"
+  // n'enregistre rien, donc la photo revient naturellement au prochain album.
   useEffect(() => {
-    resetSkipped();
     if (isAlbum) clearAlbumFilters();
-  }, [resetSkipped, clearAlbumFilters, isAlbum]);
+  }, [clearAlbumFilters, isAlbum]);
 
   // Exporte les coups de cœur de la session dans un album natif "Phototri ❤️"
   // Relancer le tri uniquement sur les photos hésitées de cette session
@@ -70,10 +75,10 @@ export function SummaryScreen({ navigation, route }) {
         {!isAlbum && (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
           {[
-            { label: "Coups de cœur",    val: sessionKept.length,           color: C.green,  emoji: "❤️" },
-            { label: "Supprimées",      val: sessionDeleted.length,         color: C.red,    emoji: "🗑" },
-            { label: "À l'album",       val: sessionAlbumPhotos.length,     color: C.purple, emoji: "📁" },
-            { label: "Mo libérés",      val: deletedSize.toFixed(1),        color: C.yellow, emoji: "✨" },
+            { label: "Passées en revue", val: reviewedCount,         color: C.purple, emoji: "👀" },
+            { label: "Conservées",       val: sessionConserved.length, color: C.green,  emoji: "💚" },
+            { label: "Supprimées",       val: sessionDeleted.length,   color: C.red,    emoji: "🗑" },
+            { label: "Mo libérés",       val: deletedSize.toFixed(1),  color: C.yellow, emoji: "✨" },
           ].map((s) => (
             <View
               key={s.label}

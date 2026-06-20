@@ -11,7 +11,7 @@ export const usePhotoStore = create(
       kept:      [], // "Photos coup de cœur" — favoris
       deleted:   [], // Corbeille (décision destructrice prioritaire — vide les autres piles)
       printed:   [], // À imprimer / album souvenirs
-      skipped:   [], // Photos passées sans décision — exclues jusqu'à la fin du tri
+      skipped:   [], // MÉNAGE : photos "Conservées" — décision définitive, ne reviennent jamais
       hesitated: [], // "Je déciderai plus tard" — l'user hésite entre garder et supprimer
       // Albums créés par l'utilisateur dans "Album souvenirs".
       // Format : [{ id, name, photoIds: [] }]
@@ -92,7 +92,8 @@ export const usePhotoStore = create(
         };
       }),
 
-      // addSkipped = "j'ai vu, je garde sur le téléphone sans tag". Additif, neutre.
+      // addSkipped = "Conserver la photo" (ménage) : je garde sur le téléphone, décision
+      // définitive. Persisté et jamais réinitialisé → la photo ne revient plus en tri ménage.
       addSkipped: (photo) => set((state) =>
         state.skipped.some((p) => p.id === photo.id)
           ? state
@@ -113,8 +114,8 @@ export const usePhotoStore = create(
       // Réinitialise la pile hesitated (appelé quand l'user relance un tri sur ces photos)
       resetHesitated: () => set({ hesitated: [] }),
 
-      // Réinitialise la pile "skipped" — appelé automatiquement à la fin d'un tri complet
-      // (SummaryScreen). Permet aux photos passées de revenir dans la file la prochaine fois.
+      // Réinitialise la pile "skipped" (utilitaire). Non utilisé automatiquement :
+      // en ménage les photos conservées doivent rester décidées. restartTri() s'en charge.
       resetSkipped: () => set({ skipped: [] }),
 
       // Modifie le mapping d'une direction pour un mode donné ("menage" ou "album").

@@ -82,6 +82,7 @@ export function SwipeScreen({ navigation, route }) {
   const [sessionDeleted,       setSessionDeleted]        = useState([]);   // photos supprimées 🗑
   const [sessionHesitated,     setSessionHesitated]      = useState([]);   // photos hésitées 🤔
   const [sessionAlbumPhotos,   setSessionAlbumPhotos]    = useState([]);   // photos ajoutées à l'album 📁
+  const [sessionConserved,     setSessionConserved]      = useState([]);   // photos conservées (ménage) 💚
 
   const [aiPanel, setAiPanel]     = useState(false);
   const [aiMode, setAiMode]       = useState(null);
@@ -144,6 +145,7 @@ export function SwipeScreen({ navigation, route }) {
       sessionDeleted,
       sessionHesitated,
       sessionAlbumPhotos,
+      sessionConserved,
     });
   };
 
@@ -181,7 +183,12 @@ export function SwipeScreen({ navigation, route }) {
       addKept(photo);
       setSessionKept((p) => [...p, photo]);
     }
-    if (actionKey === "skip")     addSkipped(photo);
+    // "skip" a deux sens selon le mode :
+    //  - MÉNAGE : "Conserver la photo" → décision DÉFINITIVE. On l'ajoute à "skipped"
+    //    (pile persistée, jamais réinitialisée) pour qu'elle ne revienne jamais.
+    //  - ALBUM : "Ne pas envoyer dans l'album" → on n'enregistre RIEN : la photo reste
+    //    non triée et pourra revenir dans un prochain album.
+    if (actionKey === "skip" && isMenage) { addSkipped(photo); setSessionConserved((p) => [...p, photo]); }
     if (actionKey === "hesitate") { addHesitated(photo); setSessionHesitated((p) => [...p, photo]); }
 
     if (idx >= queue.length - 1) {
@@ -194,6 +201,7 @@ export function SwipeScreen({ navigation, route }) {
         sessionDeleted:     [...sessionDeleted,     ...(actionKey === "delete"   ? [photo] : [])],
         sessionHesitated:   [...sessionHesitated,   ...(actionKey === "hesitate" ? [photo] : [])],
         sessionAlbumPhotos: [...sessionAlbumPhotos, ...(actionKey === "album"    ? [photo] : [])],
+        sessionConserved:   [...sessionConserved,   ...(actionKey === "skip" && isMenage ? [photo] : [])],
       });
     } else {
       setIdx((i) => i + 1);

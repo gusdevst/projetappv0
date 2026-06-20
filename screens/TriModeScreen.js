@@ -81,6 +81,8 @@ export function TriModeScreen({ navigation, route }) {
   const createAlbum   = usePhotoStore((s) => s.createAlbum);
   const albums        = usePhotoStore((s) => s.albums);
 
+  // MÉNAGE : photos pas encore décidées en ménage (on exclut conservées, coups de
+  // cœur, corbeille et déjà placées en album — toutes "traitées").
   const triedIds = useMemo(() => new Set([
     ...kept.map((x) => x.id),
     ...deleted.map((x) => x.id),
@@ -88,17 +90,27 @@ export function TriModeScreen({ navigation, route }) {
     ...skipped.map((x) => x.id),
   ]), [kept, deleted, printed, skipped]);
 
-  // Si preQueue fourni (depuis MomentScreen etc.), on l'utilise tel quel
-  const remaining   = preQueue ?? libraryPhotos.filter((p) => !triedIds.has(p.id));
-  const monthGroups = useMemo(() => buildMonthGroups(remaining), [remaining]);
+  // ALBUM : c'est tout l'intérêt de l'app — on propose les photos conservées et les
+  // coups de cœur du ménage, plus celles pas encore triées. On exclut seulement la
+  // corbeille (deleted) et les photos déjà placées dans un album (printed).
+  const albumExcludedIds = useMemo(() => new Set([
+    ...deleted.map((x) => x.id),
+    ...printed.map((x) => x.id),
+  ]), [deleted, printed]);
+
+  // Si preQueue fourni (depuis MomentScreen etc.), on l'utilise tel quel.
+  const remaining = preQueue ?? libraryPhotos.filter((p) => !triedIds.has(p.id));        // file ménage
+  const albumPool = preQueue ?? libraryPhotos.filter((p) => !albumExcludedIds.has(p.id)); // file album
+
+  const monthGroups = useMemo(() => buildMonthGroups(albumPool), [albumPool]);
 
   const filteredPhotos = useMemo(() => {
-    if (selectedKeys.length === 0) return remaining;
+    if (selectedKeys.length === 0) return albumPool;
     const union = new Set(
       monthGroups.filter((g) => selectedKeys.includes(g.key)).flatMap((g) => [...g.ids])
     );
-    return remaining.filter((p) => union.has(p.id));
-  }, [remaining, selectedKeys, monthGroups]);
+    return albumPool.filter((p) => union.has(p.id));
+  }, [albumPool, selectedKeys, monthGroups]);
 
   const toggleKey = (key) => {
     setSelectedKeys((prev) =>
