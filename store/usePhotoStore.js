@@ -118,6 +118,9 @@ export const usePhotoStore = create(
       // en ménage les photos conservées doivent rester décidées. restartTri() s'en charge.
       resetSkipped: () => set({ skipped: [] }),
 
+      // Réinitialise les coups de cœur (kept). Utilisé depuis Paramètres.
+      resetKept: () => set({ kept: [] }),
+
       // Modifie le mapping d'une direction pour un mode donné ("menage" ou "album").
       setSwipeMapping: (mode, direction, action) => set((state) => {
         const key = mode === "album" ? "swipeMappingsAlbum" : "swipeMappingsMenage";
@@ -191,9 +194,17 @@ export const usePhotoStore = create(
         ],
       })),
 
-      deleteAlbum: (albumId) => set((state) => ({
-        albums: state.albums.filter((a) => a.id !== albumId),
-      })),
+      deleteAlbum: (albumId) => set((state) => {
+        // On supprime l'album…
+        const updatedAlbums = state.albums.filter((a) => a.id !== albumId);
+        // …puis on retire de "printed" les photos qui ne sont plus dans aucun autre album.
+        // Une photo dans plusieurs albums reste dans "printed" tant qu'elle a au moins un album.
+        const stillReferenced = new Set(updatedAlbums.flatMap((a) => a.photoIds));
+        return {
+          albums:  updatedAlbums,
+          printed: state.printed.filter((p) => stillReferenced.has(p.id)),
+        };
+      }),
 
       renameAlbum: (albumId, newName) => set((state) => ({
         albums: state.albums.map((a) =>

@@ -206,7 +206,7 @@ export function GalleryScreen({ navigation, route }) {
   const confirmDeleteAlbum = (album) => {
     Alert.alert(
       "Supprimer l'album",
-      `Supprimer "${album.name}" ? Les photos ne sont pas supprimées, elles restent dans "Album souvenirs".`,
+      `Supprimer "${album.name}" ? Les photos contenues dans cet album seront retirées du menu "Album souvenirs". Elles ne sont pas supprimées de ton téléphone.`,
       [
         { text: "Annuler", style: "cancel" },
         {

@@ -152,6 +152,8 @@ export function SettingsScreen({ navigation, route }) {
   // editingSwipe = { mode: "menage"|"album", direction: string } | null
   const [editingSwipe, setEditingSwipe]         = useState(null);
   const [notifLoading, setNotifLoading]         = useState(false);
+  // Picker fréquence notifications
+  const [showNotifPicker, setShowNotifPicker]   = useState(false);
   // Picker heure/minute
   const [showTimePicker, setShowTimePicker]     = useState(false);
   const [tempHour, setTempHour]                 = useState(0);
@@ -170,6 +172,7 @@ export function SettingsScreen({ navigation, route }) {
   const randomCount              = usePhotoStore((s) => s.randomCount);
   const setRandomCount           = usePhotoStore((s) => s.setRandomCount);
   const restartTri               = usePhotoStore((s) => s.restartTri);
+  const resetKept                = usePhotoStore((s) => s.resetKept);
   const libraryPhotos            = usePhotoStore((s) => s.libraryPhotos);
   const kept                     = usePhotoStore((s) => s.kept);
   const deleted                  = usePhotoStore((s) => s.deleted);
@@ -225,6 +228,24 @@ export function SettingsScreen({ navigation, route }) {
           onPress: () => {
             restartTri();
             Alert.alert("C'est reparti 🌸", "Tes photos sont prêtes à être triées à nouveau.");
+          },
+        },
+      ]
+    );
+  };
+
+  const confirmResetKept = () => {
+    Alert.alert(
+      "Réinitialiser les coups de cœur ?",
+      "Toutes tes photos ❤️ seront retirées de la liste des coups de cœur. Elles ne sont pas supprimées.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Réinitialiser",
+          style: "destructive",
+          onPress: () => {
+            resetKept();
+            Alert.alert("Fait 🌸", "Tes coups de cœur ont été remis à zéro.");
           },
         },
       ]
@@ -502,35 +523,34 @@ export function SettingsScreen({ navigation, route }) {
           {notificationFrequency === "every2days" ? " · heure approximative pour ce mode" : ""}
         </Text>
 
-        {/* Fréquence */}
-        {NOTIF_OPTIONS.map((opt) => {
-          const isSelected = notificationFrequency === opt.key;
+        {/* Fréquence — champ unique cliquable */}
+        {(() => {
+          const current = NOTIF_OPTIONS.find((o) => o.key === notificationFrequency) ?? NOTIF_OPTIONS[0];
           return (
             <TouchableOpacity
-              key={opt.key}
-              onPress={() => !notifLoading && handleSetFrequency(opt.key)}
+              onPress={() => !notifLoading && setShowNotifPicker(true)}
               style={{
                 flexDirection: "row", alignItems: "center", gap: 12, padding: 14,
-                backgroundColor: isSelected ? `${C.accent}15` : C.bgCard,
-                borderRadius: S.radius, borderWidth: 1,
-                borderColor: isSelected ? C.accent : C.border,
-                marginBottom: 8, opacity: notifLoading ? 0.5 : 1,
+                backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1.5,
+                borderColor: C.accent, marginBottom: 8, opacity: notifLoading ? 0.5 : 1,
               }}
             >
               <View style={{
-                width: 36, height: 36, backgroundColor: isSelected ? `${C.accent}25` : C.bgMuted,
+                width: 36, height: 36, backgroundColor: `${C.accent}20`,
                 borderRadius: S.radiusSm, alignItems: "center", justifyContent: "center",
               }}>
-                <Text style={{ fontSize: 18 }}>{opt.emoji}</Text>
+                <Text style={{ fontSize: 18 }}>{current.emoji}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>{opt.label}</Text>
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{opt.desc}</Text>
+                <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>{current.label}</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{current.desc}</Text>
               </View>
-              {isSelected && <Text style={{ color: C.accent, fontSize: 18, fontWeight: "900" }}>✓</Text>}
+              <View style={{ backgroundColor: `${C.accent}15`, borderRadius: S.radiusSm, paddingHorizontal: 10, paddingVertical: 5 }}>
+                <Text style={{ fontSize: 12, color: C.accent, fontWeight: "700" }}>Modifier</Text>
+              </View>
             </TouchableOpacity>
           );
-        })}
+        })()}
 
         {/* Aperçu de la notification */}
         {notificationFrequency !== "off" && (
@@ -560,11 +580,13 @@ export function SettingsScreen({ navigation, route }) {
 
         {/* ── Section Recommencer le tri ───────────────────────────────────── */}
         <Section title="🔄 Recommencer" />
+
+        {/* Option 1 : renvoyer toutes les photos dans la file */}
         <TouchableOpacity
           onPress={confirmRestartTri}
           style={{
             backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1.5,
-            borderColor: C.red, padding: 16,
+            borderColor: C.red, padding: 16, marginBottom: 10,
             flexDirection: "row", alignItems: "center", gap: 12,
           }}
         >
@@ -576,10 +598,35 @@ export function SettingsScreen({ navigation, route }) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ fontWeight: "800", fontSize: 14, color: C.red }}>
-              Remettre à 0 les photos à trier
+              Renvoyer toutes les photos dans la file
             </Text>
             <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 16 }}>
-              Renvoie toutes tes photos dans la file. Coups de cœur, albums et corbeille conservés.
+              Toutes les photos non supprimées reviennent à trier. Coups de cœur, albums et corbeille conservés.
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Option 2 : réinitialiser les coups de cœur */}
+        <TouchableOpacity
+          onPress={confirmResetKept}
+          style={{
+            backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1.5,
+            borderColor: C.red, padding: 16,
+            flexDirection: "row", alignItems: "center", gap: 12,
+          }}
+        >
+          <View style={{
+            width: 36, height: 36, backgroundColor: `${C.red}15`,
+            borderRadius: S.radiusSm, alignItems: "center", justifyContent: "center",
+          }}>
+            <Text style={{ fontSize: 18 }}>❤️</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: "800", fontSize: 14, color: C.red }}>
+              Réinitialiser les coups de cœur
+            </Text>
+            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 16 }}>
+              Retire toutes les photos ❤️ de ta liste. Elles ne sont pas supprimées.
             </Text>
           </View>
         </TouchableOpacity>
@@ -607,6 +654,63 @@ export function SettingsScreen({ navigation, route }) {
         </Text>
 
       </ScrollView>
+
+      {/* ── Modal fréquence notifications ───────────────────────────────── */}
+      <Modal visible={showNotifPicker} transparent animationType="slide" onRequestClose={() => setShowNotifPicker(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <View style={{
+            backgroundColor: C.bgCard,
+            borderTopLeftRadius: S.radiusLg, borderTopRightRadius: S.radiusLg,
+            padding: S.padLg, paddingBottom: 44,
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 4 }}>
+              Fréquence des rappels
+            </Text>
+            <Text style={{ fontSize: 13, color: C.textMuted, marginBottom: 16 }}>
+              À quelle fréquence veux-tu recevoir un rappel pour trier tes photos ?
+            </Text>
+
+            {NOTIF_OPTIONS.map((opt) => {
+              const isSelected = notificationFrequency === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  onPress={async () => {
+                    setShowNotifPicker(false);
+                    await handleSetFrequency(opt.key);
+                  }}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 12, padding: 14,
+                    backgroundColor: isSelected ? `${C.accent}15` : "transparent",
+                    borderRadius: S.radius, borderWidth: 1,
+                    borderColor: isSelected ? C.accent : C.border,
+                    marginBottom: 8,
+                  }}
+                >
+                  <View style={{
+                    width: 36, height: 36, backgroundColor: isSelected ? `${C.accent}25` : C.bgMuted,
+                    borderRadius: S.radiusSm, alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Text style={{ fontSize: 18 }}>{opt.emoji}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>{opt.label}</Text>
+                    <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{opt.desc}</Text>
+                  </View>
+                  {isSelected && <Text style={{ color: C.accent, fontSize: 18, fontWeight: "900" }}>✓</Text>}
+                </TouchableOpacity>
+              );
+            })}
+
+            <TouchableOpacity
+              onPress={() => setShowNotifPicker(false)}
+              style={{ marginTop: 8, alignItems: "center", paddingVertical: 10 }}
+            >
+              <Text style={{ color: C.textMuted, fontSize: 14 }}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Modal Premium ────────────────────────────────────────────────── */}
       <Modal visible={showPremium} transparent animationType="slide" onRequestClose={() => setShowPremium(false)}>

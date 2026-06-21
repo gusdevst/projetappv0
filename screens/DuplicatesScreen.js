@@ -38,6 +38,8 @@ function getEdgeGradient(edge, color) {
 export function DuplicatesScreen({ navigation }) {
   const libraryPhotos       = usePhotoStore((s) => s.libraryPhotos);
   const deleted             = usePhotoStore((s) => s.deleted);
+  const skipped             = usePhotoStore((s) => s.skipped);
+  const kept                = usePhotoStore((s) => s.kept);
   const addDeleted          = usePhotoStore((s) => s.addDeleted);
   const addSkipped          = usePhotoStore((s) => s.addSkipped);
   const addKept             = usePhotoStore((s) => s.addKept);
@@ -75,9 +77,15 @@ export function DuplicatesScreen({ navigation }) {
   }, [fullscreen]);
 
   const activePhotos = useMemo(() => {
-    const ids = new Set(deleted.map((p) => p.id));
-    return libraryPhotos.filter((p) => !ids.has(p.id));
-  }, [libraryPhotos, deleted]);
+    // On exclut : corbeille + conservées (ménage) + coups de cœur.
+    // Une photo déjà traitée ne doit plus réapparaître dans la liste des doublons.
+    const excludedIds = new Set([
+      ...deleted.map((p) => p.id),
+      ...skipped.map((p) => p.id),
+      ...kept.map((p) => p.id),
+    ]);
+    return libraryPhotos.filter((p) => !excludedIds.has(p.id));
+  }, [libraryPhotos, deleted, skipped, kept]);
 
   const groups = useMemo(() => findDuplicates(activePhotos), [activePhotos]);
   const totalDuplicates = groups.reduce((a, g) => a + g.photos.length, 0);

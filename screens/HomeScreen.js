@@ -209,9 +209,11 @@ export function HomeScreen({ navigation, route }) {
     ...skipped.map((x) => x.id),
   ]);
 
+  // En mode album, on exclut SEULEMENT la corbeille.
+  // Les photos conservées (skipped) doivent apparaître — elles sont de bonnes
+  // candidates pour un album. Une photo peut appartenir à plusieurs albums.
   const albumExcludedIds = new Set([
     ...deleted.map((x) => x.id),
-    ...skipped.map((x) => x.id),
   ]);
 
   const excludedIds = isMenage ? menageExcludedIds : albumExcludedIds;

@@ -90,13 +90,12 @@ export function TriModeScreen({ navigation, route }) {
     ...skipped.map((x) => x.id),
   ]), [kept, deleted, printed, skipped]);
 
-  // ALBUM : c'est tout l'intérêt de l'app — on propose les photos conservées et les
-  // coups de cœur du ménage, plus celles pas encore triées. On exclut seulement la
-  // corbeille (deleted) et les photos déjà placées dans un album (printed).
+  // ALBUM : on propose toutes les photos sauf la corbeille.
+  // Une photo peut appartenir à plusieurs albums (ex. "Vacances 2024" ET "Meilleurs souvenirs").
+  // On n'exclut donc plus "printed" : seul "deleted" est exclu.
   const albumExcludedIds = useMemo(() => new Set([
     ...deleted.map((x) => x.id),
-    ...printed.map((x) => x.id),
-  ]), [deleted, printed]);
+  ]), [deleted]);
 
   // Si preQueue fourni (depuis MomentScreen etc.), on l'utilise tel quel.
   const remaining = preQueue ?? libraryPhotos.filter((p) => !triedIds.has(p.id));        // file ménage
