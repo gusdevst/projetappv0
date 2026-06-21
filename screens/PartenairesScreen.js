@@ -48,10 +48,9 @@ const COMING_SOON = [
 ];
 
 export function PartenairesScreen({ navigation }) {
-  function openWebsite(url) {
-    Linking.openURL(`https://www.${url}`).catch(() =>
-      Alert.alert("Erreur", "Impossible d'ouvrir ce lien.")
-    );
+  // MVP : impression non disponible — on n'ouvre pas les sites partenaires.
+  function openWebsite() {
+    Alert.alert("Bientôt disponible", "L'impression de tes souvenirs arrive bientôt 🌸");
   }
 
   return (

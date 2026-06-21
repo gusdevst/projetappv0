@@ -259,7 +259,7 @@ export function HomeScreen({ navigation, route }) {
   const gridItems = [
     { emoji: "📅", label: "Par moment", desc: "Soirée, voyage…",    onPress: () => navigation.navigate("Moments", { mode: activeMode }) },
     { emoji: "🗺",  label: "Par lieu",   desc: "Carte interactive",  onPress: () => navigation.navigate("Map",     { mode: activeMode }) },
-    { emoji: "👤", label: "Par visage", desc: "Bientôt disponible", onPress: () => Alert.alert("Bientôt disponible", "La reconnaissance des visages arrive prochainement 🌸") },
+    { emoji: "👤", label: "Par visage", desc: "Bientôt disponible", disabled: true, onPress: () => Alert.alert("Bientôt disponible", "La reconnaissance des visages arrive prochainement 🌸") },
     isMenage
       ? { emoji: "🪞", label: "Doublons",      desc: "Photos similaires", onPress: () => navigation.navigate("Duplicates") }
       : { emoji: "❤️", label: "Coup de cœur",  desc: coeurActive ? "✓ Dans les filtres" : "Photos aimées", onPress: toggleCoeurFilter, active: coeurActive },
@@ -289,8 +289,8 @@ export function HomeScreen({ navigation, route }) {
       : {
           key: "partners",
           emoji: "🤝", label: "Partenaires", count: 3,
-          sub: "jusqu'à -15%", bg: "#fff3e0", color: "#f5a623",
-          nav: () => { setSelectedProduct(null); setPrintModalVisible(true); },
+          sub: "bientôt", bg: "#fff3e0", color: "#f5a623", disabled: true,
+          nav: () => Alert.alert("Bientôt disponible", "L'impression de tes souvenirs arrive bientôt 🌸"),
         },
   ];
 
@@ -480,6 +480,7 @@ export function HomeScreen({ navigation, route }) {
                   borderRadius: 16, padding: 12, alignItems: "center",
                   borderWidth: t.active ? 1.5 : 1,
                   borderColor: t.active ? modeColor : C.border,
+                  opacity: t.disabled ? 0.5 : 1,
                 }}
               >
                 <Text style={{ fontSize: 22, marginBottom: 4 }}>{t.emoji}</Text>
@@ -495,7 +496,7 @@ export function HomeScreen({ navigation, route }) {
           <>
             {/* Titre section */}
             <Text style={{ fontWeight: "800", fontSize: 12, color: C_ALBUM, marginBottom: 8, letterSpacing: 0.5 }}>
-              🎁 IMPRIMER TES SOUVENIRS
+              🎁 IMPRIMER TES SOUVENIRS · BIENTÔT
             </Text>
 
             {/* Scroll horizontal des produits */}
@@ -508,7 +509,7 @@ export function HomeScreen({ navigation, route }) {
               {PRODUCTS.map((prod) => (
                 <TouchableOpacity
                   key={prod.key}
-                  onPress={() => { setSelectedProduct(prod); setPrintModalVisible(true); }}
+                  onPress={() => Alert.alert("Bientôt disponible", "L'impression de tes souvenirs arrive bientôt 🌸")}
                   style={{
                     width: 108,
                     backgroundColor: prod.bg,
@@ -517,6 +518,7 @@ export function HomeScreen({ navigation, route }) {
                     alignItems: "center",
                     borderWidth: 1.5,
                     borderColor: prod.color + "40",
+                    opacity: 0.5,
                   }}
                 >
                   <Text style={{ fontSize: 28, marginBottom: 6 }}>{prod.emoji}</Text>
@@ -616,6 +618,7 @@ export function HomeScreen({ navigation, route }) {
               style={{
                 flex: 1, backgroundColor: C.bgCard, borderRadius: S.radius,
                 padding: 11, borderWidth: 1, borderColor: C.border, alignItems: "center",
+                opacity: s.disabled ? 0.5 : 1,
               }}
             >
               <View style={{ width: 40, height: 40, backgroundColor: s.bg, borderRadius: 12, alignItems: "center", justifyContent: "center", marginBottom: 6 }}>

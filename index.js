@@ -1,3 +1,6 @@
+// react-native-gesture-handler DOIT être importé en tout premier (règle officielle)
+// pour que les gestes (swipe, navigation) s'initialisent correctement, surtout sur Android.
+import 'react-native-gesture-handler';
 import { registerRootComponent } from 'expo';
 
 import App from './App';

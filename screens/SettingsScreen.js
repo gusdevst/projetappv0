@@ -316,6 +316,7 @@ export function SettingsScreen({ navigation, route }) {
             backgroundColor: C.accent, borderRadius: S.radius,
             padding: 18, marginTop: 8, marginBottom: 4,
             flexDirection: "row", alignItems: "center", gap: 14, elevation: 4,
+            opacity: 0.6,
           }}
         >
           <Text style={{ fontSize: 32 }}>⭐</Text>
@@ -329,7 +330,7 @@ export function SettingsScreen({ navigation, route }) {
             backgroundColor: "rgba(255,255,255,.25)", borderRadius: S.radiusFull,
             paddingHorizontal: 12, paddingVertical: 6,
           }}>
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>2,99 €/mois</Text>
+            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>Bientôt</Text>
           </View>
         </TouchableOpacity>
 
