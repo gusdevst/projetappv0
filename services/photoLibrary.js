@@ -5,9 +5,10 @@
 import * as MediaLibrary from "expo-media-library";
 import { Platform } from "react-native";
 
-// Plafond de sécurité : on charge au max 1500 photos pour éviter de figer l'app
-// chez les utilisateurs avec 50000+ photos. À ajuster post-MVP si besoin.
-export const MAX_PHOTOS = 1500;
+// Plafond de sécurité : on charge au max 2000 photos pour éviter de figer l'app
+// chez les utilisateurs avec 50000+ photos. Passer à 2500 est possible mais
+// allonge le chargement initial d'environ 30 % supplémentaires.
+export const MAX_PHOTOS = 2000;
 const BATCH_SIZE = 100;
 
 /**
