@@ -68,7 +68,7 @@ export async function scheduleReminder(frequency, stats = {}) {
   const body = buildNotifBody(remainingCount, randomCount);
 
   const content = {
-    title: "Phototri 📷",
+    title: "Pellicule 📷",
     body,
     // L'app lit ce champ au tap pour lancer une session ménage aléatoire
     data: { action: "start_menage_random" },

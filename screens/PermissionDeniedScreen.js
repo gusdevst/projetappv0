@@ -30,12 +30,12 @@ export function PermissionDeniedScreen() {
           Accès aux photos refusé
         </Text>
         <Text style={{ fontSize: 15, color: C.textMuted, textAlign: "center", lineHeight: 22, marginBottom: 8 }}>
-          Phototri a besoin d'accéder à ta photothèque pour fonctionner. Tu peux activer l'accès dans les réglages de ton téléphone.
+          Pellicule a besoin d'accéder à ta photothèque pour fonctionner. Tu peux activer l'accès dans les réglages de ton téléphone.
         </Text>
         <Text style={{ fontSize: 13, color: C.textMuted, textAlign: "center", marginTop: 12 }}>
           {Platform.OS === "ios"
-            ? "Réglages → Phototri → Photos → Toutes les photos"
-            : "Paramètres → Apps → Phototri → Autorisations → Photos"}
+            ? "Réglages → Pellicule → Photos → Toutes les photos"
+            : "Paramètres → Apps → Pellicule → Autorisations → Photos"}
         </Text>
       </View>
 

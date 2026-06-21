@@ -10,6 +10,7 @@ import { WebView } from "react-native-webview";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { loadPhotoLocation } from "../services/photoLibrary";
+import BackButton from "../components/BackButton";
 
 export function MapScreen({ navigation, route }) {
   const mode = route.params?.mode ?? "menage";
@@ -108,7 +109,7 @@ export function MapScreen({ navigation, route }) {
 
     function makeIcon(g,isSelected){
       var sz=g.count>1?38:30;
-      var bg=isSelected?'linear-gradient(135deg,#5cb87a,#3a9a5c)':'linear-gradient(135deg,#f4845f,#e8637a)';
+      var bg=isSelected?'linear-gradient(135deg,#2e7d52,#1e5e3a)':'linear-gradient(135deg,#2e4d7a,#4a6d9e)';
       var border=isSelected?'4px solid #fff':'3px solid #fff';
       var html='<div style="background:'+bg+';color:#fff;border-radius:50%;width:'+sz+'px;height:'+sz+'px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;border:'+border+';box-shadow:0 2px 8px rgba(0,0,0,.35);">'+(g.count>1?g.count:'📍')+'</div>';
       return L.divIcon({className:'',html:html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});
@@ -162,12 +163,7 @@ export function MapScreen({ navigation, route }) {
 
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}
-        >
-          <Text style={{ color: C.textMuted, fontSize: 16 }}>←</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: "800", fontSize: 18, color: C.text }}>Tri par lieu</Text>
           <Text style={{ fontSize: 11, color: C.textMuted }}>

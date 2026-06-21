@@ -16,9 +16,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { C, S } from "../constants/theme";
 import { PhotoGrid } from "../components/PhotoGrid";
 import { ZoomableImage } from "../components/ZoomableImage";
+import BackButton from "../components/BackButton";
 import { usePhotoStore } from "../store/usePhotoStore";
 import * as Sharing from "expo-sharing";
-import { addPhotoToPhototriAlbum } from "../services/photoLibrary";
+import { addPhotoToPelliculeAlbum } from "../services/photoLibrary";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 
@@ -179,7 +180,7 @@ export function GalleryScreen({ navigation, route }) {
             setDeleting(true);
             const ok = await emptyTrash();
             setDeleting(false);
-            if (!ok) Alert.alert("Erreur", "La suppression a échoué. Vérifie que tu as bien autorisé Phototri à supprimer des photos.");
+            if (!ok) Alert.alert("Erreur", "La suppression a échoué. Vérifie que tu as bien autorisé Pellicule à supprimer des photos.");
           },
         },
       ]
@@ -247,10 +248,10 @@ export function GalleryScreen({ navigation, route }) {
     setSyncLoading(true);
     setSyncDone(false);
     try {
-      // On appelle addPhotoToPhototriAlbum pour chaque photo.
+      // On appelle addPhotoToPelliculeAlbum pour chaque photo.
       // La fonction crée le dossier natif à la 1ère photo, puis y ajoute les suivantes.
       for (const photo of exportPhotos) {
-        await addPhotoToPhototriAlbum(photo.id, exportAlbumName);
+        await addPhotoToPelliculeAlbum(photo.id, exportAlbumName);
       }
       setSyncDone(true);
     } catch (err) {
@@ -291,15 +292,12 @@ export function GalleryScreen({ navigation, route }) {
 
       {/* ── Header ── */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <TouchableOpacity
+        <BackButton
           onPress={() => {
             if (activeAlbumId) { setActiveAlbumId(null); }
             else { navigation.goBack(); }
           }}
-          style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}
-        >
-          <Text style={{ color: C.textMuted, fontSize: 16 }}>←</Text>
-        </TouchableOpacity>
+        />
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: "800", fontSize: 20, color: C.text }}>
             {activeAlbum ? activeAlbum.name : activeAlbumId === "__sans_album__" ? "Sans album" : title}
@@ -495,7 +493,7 @@ export function GalleryScreen({ navigation, route }) {
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontWeight: "800", fontSize: 15, color: C.text }}>Copier dans ta galerie</Text>
                   <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2, lineHeight: 17 }}>
-                    Crée un album "{Platform.OS === "ios" ? `Phototri — ${exportAlbumName}` : `Phototri/${exportAlbumName}`}" dans ton app Photos.
+                    Crée un album "{Platform.OS === "ios" ? `Pellicule — ${exportAlbumName}` : `Pellicule/${exportAlbumName}`}" dans ton app Photos.
                     Pratique pour commander sur Cheerz, CEWE, etc.
                   </Text>
                 </View>

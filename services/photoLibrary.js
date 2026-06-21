@@ -92,29 +92,29 @@ export async function deletePhotos(assetIds) {
 /**
  * Construit le nom final de l'album selon la plateforme.
  *
- * Android : les albums sont de vrais dossiers. "Phototri/Mon Album" crée
- *   un sous-dossier "Mon Album" à l'intérieur du dossier "Phototri" dans la galerie.
+ * Android : les albums sont de vrais dossiers. "Pellicule/Mon Album" crée
+ *   un sous-dossier "Mon Album" à l'intérieur du dossier "Pellicule" dans la galerie.
  *
  * iOS : les albums sont plats, Apple interdit les sous-dossiers.
- *   On préfixe le nom avec "Phototri — " pour que tous les albums Phototri
+ *   On préfixe le nom avec "Pellicule — " pour que tous les albums Pellicule
  *   apparaissent groupés alphabétiquement dans l'app Photos.
  */
 function buildAlbumName(subName) {
   if (Platform.OS === "android") {
-    return `Phototri/${subName}`;
+    return `Pellicule/${subName}`;
   }
-  return `Phototri — ${subName}`;
+  return `Pellicule — ${subName}`;
 }
 
 /**
- * Ajoute UNE photo au dossier Phototri natif correspondant à subName.
+ * Ajoute UNE photo au dossier Pellicule natif correspondant à subName.
  * Si le dossier n'existe pas encore, il est créé avec cette première photo.
  * Appelée automatiquement à chaque coup de cœur ou ajout à un album.
  *
  * @param {string} assetId - ID de la photo (asset.id de la media library)
  * @param {string} subName - Nom du sous-dossier, ex: "❤️ Coups de cœur" ou "Vacances"
  */
-export async function addPhotoToPhototriAlbum(assetId, subName) {
+export async function addPhotoToPelliculeAlbum(assetId, subName) {
   if (!assetId || !subName) return;
 
   const albumName = buildAlbumName(subName);
@@ -132,7 +132,7 @@ export async function addPhotoToPhototriAlbum(assetId, subName) {
     }
   } catch (err) {
     // On ne bloque pas l'UX si la synchro galerie échoue (permission partielle, etc.)
-    console.warn("[Phototri] addPhotoToPhototriAlbum:", err.message);
+    console.warn("[Pellicule] addPhotoToPelliculeAlbum:", err.message);
   }
 }
 

@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { groupByMoment } from "../services/photoAnalysis";
+import BackButton from "../components/BackButton";
 
 const { width: SW } = Dimensions.get("window");
 
@@ -375,12 +376,7 @@ export function MomentScreen({ navigation, route }) {
 
       {/* En-tête */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}
-        >
-          <Text style={{ color: C.textMuted, fontSize: 16 }}>←</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View>
           <Text style={{ fontWeight: "800", fontSize: 18, color: C.text }}>Tri par moment</Text>
           <Text style={{ fontSize: 11, color: C.textMuted }}>

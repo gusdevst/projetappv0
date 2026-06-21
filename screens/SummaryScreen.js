@@ -57,7 +57,7 @@ export function SummaryScreen({ navigation, route }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Exporte les coups de cœur de la session dans un album natif "Phototri ❤️"
+  // Exporte les coups de cœur de la session dans un album natif "Pellicule ❤️"
   // Relancer le tri uniquement sur les photos hésitées de cette session
   const handleRetrierHesites = () => {
     if (sessionHesitated.length === 0) return;

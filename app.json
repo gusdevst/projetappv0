@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "phototri",
+    "name": "Pellicule",
     "slug": "phototri",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,14 +10,14 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#f4f5f7"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.phototri.app",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Phototri a besoin d'accéder à tes photos pour t'aider à les trier (garder, supprimer, imprimer).",
-        "NSPhotoLibraryAddUsageDescription": "Phototri a besoin d'enregistrer des photos améliorées dans ta photothèque."
+        "NSPhotoLibraryUsageDescription": "Pellicule a besoin d'accéder à tes photos pour t'aider à les trier (garder, supprimer, imprimer).",
+        "NSPhotoLibraryAddUsageDescription": "Pellicule a besoin d'enregistrer des photos améliorées dans ta photothèque."
       }
     },
     "android": {
@@ -42,21 +42,21 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Phototri a besoin d'accéder à tes photos pour t'aider à les trier.",
-          "savePhotosPermission": "Phototri a besoin d'enregistrer des photos dans ta photothèque.",
+          "photosPermission": "Pellicule a besoin d'accéder à tes photos pour t'aider à les trier.",
+          "savePhotosPermission": "Pellicule a besoin d'enregistrer des photos dans ta photothèque.",
           "isAccessMediaLocationEnabled": true
         }
       ],
       [
         "expo-tracking-transparency",
         {
-          "userTrackingPermission": "Phototri n'utilise pas le tracking publicitaire — cette autorisation reste désactivée par défaut."
+          "userTrackingPermission": "Pellicule n'utilise pas le tracking publicitaire — cette autorisation reste désactivée par défaut."
         }
       ],
       [
         "expo-notifications",
         {
-          "color": "#E8637A"
+          "color": "#2e4d7a"
         }
       ]
     ],

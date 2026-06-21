@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
+import BackButton from "../components/BackButton";
 
 const MOIS_FR = [
   "Janvier","Février","Mars","Avril","Mai","Juin",
@@ -205,7 +206,7 @@ export function TriModeScreen({ navigation, route }) {
           >
             <Text style={{ fontSize: 42, marginBottom: 10 }}>🧹</Text>
             <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", marginBottom: 6, textAlign: "center" }}>
-              Faire le ménage
+              Faire le tri
             </Text>
             <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 19, textAlign: "center" }}>
               Supprime les ratées et libère de l'espace sur ton téléphone.
@@ -248,12 +249,7 @@ export function TriModeScreen({ navigation, route }) {
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} {...panResponder.panHandlers}>
         <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 8 }}>
-          <TouchableOpacity
-            onPress={() => skipToAlbum ? navigation.goBack() : setStep(0)}
-            style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, padding: 8, borderWidth: 1, borderColor: C.border }}
-          >
-            <Text style={{ color: C.textMuted, fontSize: 16, paddingHorizontal: 4 }}>←</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => skipToAlbum ? navigation.goBack() : setStep(0)} />
           <Text style={{ fontWeight: "900", fontSize: 20, color: C.album }}>Album</Text>
         </View>
 
@@ -329,12 +325,7 @@ export function TriModeScreen({ navigation, route }) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 8 }}>
-          <TouchableOpacity
-            onPress={() => setStep(1)}
-            style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, padding: 8, borderWidth: 1, borderColor: C.border }}
-          >
-            <Text style={{ color: C.textMuted, fontSize: 16, paddingHorizontal: 4 }}>←</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => setStep(1)} />
           <Text style={{ fontWeight: "900", fontSize: 20, color: C.album }}>
             {albumSubStep === "new" ? "Nouvel album" : "Continuer un album"}
           </Text>

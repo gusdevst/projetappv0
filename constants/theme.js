@@ -1,32 +1,36 @@
 // constants/theme.js
 // Toutes les couleurs et valeurs de style de l'app
 // Modifier ici = modifier partout dans l'app
+//
+// Palette : Ardoise (slate blue)
+// Mode MÉNAGE  → accent  (#2e4d7a) — bleu ardoise
+// Mode ALBUM   → album   (#1e7268) — teal chaleureux, distinct du ménage
 
 export const C = {
   // Fonds
-  bg:      "#fdf6f0",
+  bg:      "#f4f5f7",
   bgCard:  "#ffffff",
-  bgMuted: "#fef0e8",
-  border:  "#f0ddd0",
+  bgMuted: "#eef0f4",
+  border:  "#c8d0de",
 
-  // Couleurs principales
-  accent:  "#f4845f",
-  accent2: "#e8637a",
-  accentGrad: ["#f4845f", "#e8637a"], // pour futur LinearGradient
+  // Mode MÉNAGE — Ardoise bleu
+  accent:      "#2e4d7a",
+  accent2:     "#4a6d9e",
+  accentGrad:  ["#2e4d7a", "#4a6d9e"],
 
-  // Couleur du mode "Créer un album" (violet) — partagée par tous les écrans album
-  album:   "#7c6fcd",
+  // Mode ALBUM — Teal chaleureux (visuellement distinct du ménage)
+  album:       "#1e7268",
 
   // Textes
-  text:     "#3a1f10",
-  textMid:  "#7a4a30",
-  textMuted:"#b08060",
+  text:     "#1a2840",
+  textMid:  "#3a5272",
+  textMuted:"#7a8ea8",
 
-  // États
-  green:  "#5cb87a",
-  red:    "#e8637a",
-  purple: "#b07ad8",
-  yellow: "#e8a840",
+  // États sémantiques
+  green:  "#2e7d52",
+  red:    "#b83232",
+  purple: "#6b48b8",
+  yellow: "#b87a14",
 };
 
 export const FILTERS = [

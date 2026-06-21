@@ -2,6 +2,7 @@
 import { View, Text, ScrollView, TouchableOpacity, StatusBar, Alert, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
+import BackButton from "../components/BackButton";
 
 const PARTNERS = [
   {
@@ -31,8 +32,8 @@ const PARTNERS = [
   {
     name: "Photobox",
     emoji: "🎁",
-    bg: "#f0e8ff",
-    color: "#7c6fcd",
+    bg: "#e6f4f2",
+    color: C.album,
     tagline: "Impressions & cadeaux personnalisés",
     description: "Large gamme de produits personnalisés : coussins, mugs, puzzles, toiles canvas. Parfait pour offrir ou décorer. Livraison rapide partout en France.",
     specialties: ["Impressions & canvas", "Cadeaux personnalisés", "Mugs & coussins", "Puzzles photo"],
@@ -59,15 +60,10 @@ export function PartenairesScreen({ navigation }) {
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.border }}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, padding: 8, borderWidth: 1, borderColor: C.border }}
-        >
-          <Text style={{ color: C.textMuted, fontSize: 16, paddingHorizontal: 4 }}>←</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: "900", fontSize: 20, color: C.text }}>Mes partenaires</Text>
-          <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>Codes exclusifs Phototri</Text>
+          <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>Codes exclusifs Pellicule</Text>
         </View>
         <View style={{ backgroundColor: `${C.accent}18`, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5 }}>
           <Text style={{ fontSize: 11, fontWeight: "800", color: C.accent }}>3 offres</Text>
@@ -178,7 +174,7 @@ export function PartenairesScreen({ navigation }) {
         {/* ── Note bas de page ─────────────────────────────────────────── */}
         <Text style={{ fontSize: 10, color: C.textMuted, textAlign: "center", lineHeight: 15 }}>
           Les codes sont valables jusqu'à épuisement des offres.{"\n"}
-          Phototri n'est pas responsable des conditions de vente des partenaires.
+          Pellicule n'est pas responsable des conditions de vente des partenaires.
         </Text>
 
       </ScrollView>

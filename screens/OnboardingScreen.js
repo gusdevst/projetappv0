@@ -3,15 +3,16 @@
 // Trois slides simples — pas de carousel complexe, juste un index local.
 
 import { useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 
 const SLIDES = [
   {
-    emoji: "🌸",
-    title: "Bienvenue sur Phototri",
+    // Première slide : le logo remplace l'emoji
+    logo: true,
+    title: "Bienvenue sur Pellicule",
     desc: "Tes souvenirs méritent mieux. On va t'aider à trier ta photothèque sans douleur.",
   },
   {
@@ -22,7 +23,7 @@ const SLIDES = [
   {
     emoji: "🔒",
     title: "Tes photos restent privées",
-    desc: "Tout se passe sur ton téléphone. Phototri n'envoie aucune photo sur un serveur.",
+    desc: "Tout se passe sur ton téléphone. Pellicule n'envoie aucune photo sur un serveur.",
   },
 ];
 
@@ -54,7 +55,14 @@ export function OnboardingScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
-        <Text style={{ fontSize: 88, marginBottom: 24 }}>{slide.emoji}</Text>
+        {slide.logo ? (
+          <Image
+            source={require("../assets/icon.png")}
+            style={{ width: 110, height: 110, borderRadius: 25, marginBottom: 24 }}
+          />
+        ) : (
+          <Text style={{ fontSize: 88, marginBottom: 24 }}>{slide.emoji}</Text>
+        )}
         <Text style={{ fontSize: 28, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 12 }}>
           {slide.title}
         </Text>
@@ -100,7 +108,7 @@ export function OnboardingScreen() {
         </TouchableOpacity>
         {isLast && (
           <Text style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginTop: 12 }}>
-            Phototri a besoin d'accéder à ta photothèque pour fonctionner.
+            Pellicule a besoin d'accéder à ta photothèque pour fonctionner.
           </Text>
         )}
       </View>

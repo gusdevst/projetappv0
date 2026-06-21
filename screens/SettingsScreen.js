@@ -6,6 +6,7 @@ import { View, Text, ScrollView, TouchableOpacity, Modal, StatusBar, Alert } fro
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { RowSetting } from "../components/RowSetting";
+import BackButton from "../components/BackButton";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { scheduleReminder, requestPermission } from "../services/notificationService";
 
@@ -13,8 +14,8 @@ import { scheduleReminder, requestPermission } from "../services/notificationSer
 
 const TUTORIAL_SLIDES = [
   {
-    emoji: "🌸",
-    title: "Bienvenue sur Phototri",
+    emoji: "🎞️",
+    title: "Bienvenue sur Pellicule",
     desc: "Tes souvenirs méritent mieux. On va t'aider à trier ta photothèque sans douleur — photo par photo.",
   },
   {
@@ -40,7 +41,7 @@ const TUTORIAL_SLIDES = [
   {
     emoji: "🔒",
     title: "Tes photos restent privées",
-    desc: "Tout se passe sur ton téléphone. Phototri n'envoie aucune photo sur un serveur.",
+    desc: "Tout se passe sur ton téléphone. Pellicule n'envoie aucune photo sur un serveur.",
   },
 ];
 
@@ -56,7 +57,7 @@ const SWIPE_ACTIONS_MENAGE = [
 const SWIPE_ACTIONS_ALBUM = [
   { key: "album",    label: "Envoyer dans l'album",        desc: "Ajouter cette photo à l'album",                       emoji: "📁" },
   { key: "skip",     label: "Ne pas envoyer dans l'album", desc: "Photo conservée, elle pourra revenir pour un autre album", emoji: "⏭️" },
-  { key: "delete",   label: "Supprimer",                   desc: "Envoyer dans la corbeille (ménage en même temps)",    emoji: "🗑" },
+  { key: "delete",   label: "Supprimer",                   desc: "Envoyer dans la corbeille (tri en même temps)",       emoji: "🗑" },
   { key: "hesitate", label: "Je déciderai plus tard",      desc: "Mettre de côté pour décider ensuite",                 emoji: "🤔" },
   { key: "none",     label: "Désactivée",                  desc: "Rien ne se passe, la photo rebondit",                 emoji: "🚫" },
 ];
@@ -194,7 +195,7 @@ export function SettingsScreen({ navigation, route }) {
   const sessionsLeft = remainingCount > 0 ? Math.ceil(remainingCount / randomCount) : 0;
 
   const comingSoon = (feature) =>
-    Alert.alert("Bientôt disponible", `${feature} arrive très vite 🌸`);
+    Alert.alert("Bientôt disponible", `${feature} arrive très vite !`);
 
   // ── Swipe settings ─────────────────────────────────────────────────────────
   const handlePickAction = (actionKey) => {
@@ -206,7 +207,7 @@ export function SettingsScreen({ navigation, route }) {
   const confirmReset = (swipeMode) => {
     Alert.alert(
       "Réinitialiser",
-      `Remettre les directions de swipe "${swipeMode === "menage" ? "Ménage" : "Album"}" par défaut ?`,
+      `Remettre les directions de swipe "${swipeMode === "menage" ? "Tri" : "Album"}" par défaut ?`,
       [
         { text: "Annuler", style: "cancel" },
         { text: "Réinitialiser", style: "destructive", onPress: () => resetSwipeMappings(swipeMode) },
@@ -227,7 +228,7 @@ export function SettingsScreen({ navigation, route }) {
           style: "destructive",
           onPress: () => {
             restartTri();
-            Alert.alert("C'est reparti 🌸", "Tes photos sont prêtes à être triées à nouveau.");
+            Alert.alert("C'est reparti !", "Tes photos sont prêtes à être triées à nouveau.");
           },
         },
       ]
@@ -245,7 +246,7 @@ export function SettingsScreen({ navigation, route }) {
           style: "destructive",
           onPress: () => {
             resetKept();
-            Alert.alert("Fait 🌸", "Tes coups de cœur ont été remis à zéro.");
+            Alert.alert("Fait !", "Tes coups de cœur ont été remis à zéro.");
           },
         },
       ]
@@ -272,7 +273,7 @@ export function SettingsScreen({ navigation, route }) {
       if (!granted) {
         Alert.alert(
           "Permission refusée",
-          "Pour recevoir des rappels, active les notifications pour Phototri dans tes Réglages.",
+          "Pour recevoir des rappels, active les notifications pour Pellicule dans tes Réglages.",
           [{ text: "OK" }]
         );
         return;
@@ -315,16 +316,7 @@ export function SettingsScreen({ navigation, route }) {
         flexDirection: "row", alignItems: "center", gap: 12,
         padding: S.pad, paddingBottom: 8,
       }}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{
-            backgroundColor: C.bgCard, borderRadius: S.radiusFull,
-            paddingHorizontal: 14, paddingVertical: 8,
-            borderWidth: 1, borderColor: C.border,
-          }}
-        >
-          <Text style={{ color: C.textMuted, fontSize: 16 }}>←</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <Text style={{ fontWeight: "900", fontSize: 22, color: C.text }}>Paramètres</Text>
       </View>
 
@@ -342,7 +334,7 @@ export function SettingsScreen({ navigation, route }) {
         >
           <Text style={{ fontSize: 32 }}>⭐</Text>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "900", fontSize: 16, color: "#fff" }}>Phototri Premium</Text>
+            <Text style={{ fontWeight: "900", fontSize: 16, color: "#fff" }}>Pellicule Premium</Text>
             <Text style={{ fontSize: 12, color: "rgba(255,255,255,.8)", marginTop: 2 }}>
               IA illimitée · Albums HD · Sans pub
             </Text>
@@ -355,8 +347,8 @@ export function SettingsScreen({ navigation, route }) {
           </View>
         </TouchableOpacity>
 
-        {/* ── Section Tri par swipe — Mode Ménage ──────────────────────────── */}
-        <Section title="🧹 Swipe — Mode Ménage" />
+        {/* ── Section Tri par swipe — Mode Tri ──────────────────────────── */}
+        <Section title="🧹 Swipe — Mode Tri" />
         <TouchableOpacity
           onPress={() => setMenageExpanded(!menageExpanded)}
           style={{
@@ -423,7 +415,7 @@ export function SettingsScreen({ navigation, route }) {
         {albumExpanded && (
           <>
             <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 10, lineHeight: 17 }}>
-              Par défaut : haut = envoyer dans l'album, droite/bas = ne pas envoyer (la photo pourra revenir pour un autre album). Tu peux aussi activer la suppression sur une direction pour faire le ménage en même temps.
+              Par défaut : haut = envoyer dans l'album, droite/bas = ne pas envoyer (la photo pourra revenir pour un autre album). Tu peux aussi activer la suppression sur une direction pour faire le tri en même temps.
             </Text>
             {DIRECTIONS.map((dir) => {
               const action = getActionMeta(swipeMappingsAlbum?.[dir.key] ?? "none", "album");
@@ -563,12 +555,12 @@ export function SettingsScreen({ navigation, route }) {
               Aperçu de la notification
             </Text>
             <Text style={{ fontSize: 13, fontWeight: "700", color: C.text, textAlign: "center", marginBottom: 4 }}>
-              Phototri 📷
+              Pellicule 📷
             </Text>
             <Text style={{ fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 19 }}>
               {sessionsLeft > 0
                 ? `Il te reste ${sessionsLeft} session${sessionsLeft > 1 ? "s" : ""} pour terminer le tri de tes photos 📸`
-                : "Ta galerie est au top 🌸 Bravo !"}
+                : "Ta galerie est au top ! Bravo !"}
             </Text>
             <Text style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginTop: 8 }}>
               {notificationFrequency === "every2days"
@@ -633,7 +625,7 @@ export function SettingsScreen({ navigation, route }) {
 
         {/* ── Section Aide ─────────────────────────────────────────────────── */}
         <Section title="Aide" />
-        <RowSetting emoji="🎓" label="Tutoriel" desc="Revoir comment fonctionne Phototri"
+        <RowSetting emoji="🎓" label="Tutoriel" desc="Revoir comment fonctionne Pellicule"
           onPress={() => { setTutorialIdx(0); setShowTutorial(true); }}
           right={<Text style={{ color: C.textMuted }}>›</Text>} />
 
@@ -650,7 +642,7 @@ export function SettingsScreen({ navigation, route }) {
           right={<Text style={{ color: C.textMuted }}>›</Text>} />
 
         <Text style={{ textAlign: "center", color: C.textMuted, fontSize: 11, marginTop: 24 }}>
-          Phototri v1.0.0 · Fait avec 🌸 en France
+          Pellicule v1.0.0 · Fait avec ❤️ en France
         </Text>
 
       </ScrollView>
@@ -718,7 +710,7 @@ export function SettingsScreen({ navigation, route }) {
           <View style={{ backgroundColor: C.bgCard, borderRadius: S.radiusLg, padding: S.padLg, paddingBottom: 44 }}>
             <Text style={{ fontSize: 28, textAlign: "center", marginBottom: 8 }}>⭐</Text>
             <Text style={{ fontSize: 22, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 4 }}>
-              Phototri Premium
+              Pellicule Premium
             </Text>
             <Text style={{ fontSize: 14, color: C.textMuted, textAlign: "center", marginBottom: 24 }}>
               Essai gratuit 7 jours, puis 2,99 €/mois
@@ -740,7 +732,7 @@ export function SettingsScreen({ navigation, route }) {
             <TouchableOpacity
               onPress={() => {
                 setShowPremium(false);
-                Alert.alert("Bientôt disponible", "Phototri Premium arrive bientôt 🌸 Merci de ton intérêt !");
+                Alert.alert("Bientôt disponible", "Pellicule Premium arrive bientôt ! Merci de ton intérêt !");
               }}
               style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 16, alignItems: "center", marginTop: 8, elevation: 4 }}
             >

@@ -1,7 +1,7 @@
 // screens/HomeScreen.js
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  ScrollView, StatusBar, View, Text,
+  ScrollView, StatusBar, View, Text, Image,
   TouchableOpacity, Alert, Modal, ActivityIndicator, Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,7 +11,8 @@ import { usePhotoStore } from "../store/usePhotoStore";
 import { getAlbums, getAlbumAssetIds } from "../services/photoLibrary";
 import { AlbumFiltersBar } from "../components/AlbumFiltersBar";
 
-const C_ALBUM = "#7c6fcd";
+// C_ALBUM utilise désormais la valeur centralisée dans theme.js
+const C_ALBUM = C.album;
 
 // ── Données statiques : produits et partenaires d'impression ─────────────────
 const PRODUCTS = [
@@ -21,7 +22,7 @@ const PRODUCTS = [
     label: "Livre photo",
     desc: "20 à 100 pages",
     longDesc: "Raconte une histoire avec tes plus belles photos. Parfait pour un voyage ou une année en famille.",
-    bg: "#f0e8ff",
+    bg: "#e6f4f2",
     color: C_ALBUM,
     partners: [
       { name: "Cheerz",   emoji: "🎨", desc: "Livre Lay Flat 20×20cm", price: "29,90€", best: false, url: "https://www.cheerz.com/fr/livres-photo" },
@@ -35,8 +36,8 @@ const PRODUCTS = [
     label: "Tirage photo",
     desc: "Papier brillant ou mat",
     longDesc: "Des tirages de qualité professionnelle. À encadrer, offrir ou décorer ton intérieur.",
-    bg: "#fff0f0",
-    color: "#e8637a",
+    bg: "#e8edf4",
+    color: C.accent,
     partners: [
       { name: "Cheerz",   emoji: "🎨", desc: "Tirage 10×15cm (lot 50)", price: "12,90€", best: true,  url: "https://www.cheerz.com/fr/tirages-photo" },
       { name: "CEWE",     emoji: "📚", desc: "Tirage 10×15cm (lot 50)", price: "14,50€", best: false, url: "https://www.cewe.fr/tirages-photo.html" },
@@ -253,7 +254,7 @@ export function HomeScreen({ navigation, route }) {
   const ctaLabel = () => {
     if (libraryLoading || albumFiltering) return "Chargement de tes photos…";
     if (queue.length === 0) return isMenage ? "🎉 Tout est trié !" : "Aucune photo disponible";
-    if (isMenage) return `🔀 Faire le ménage · ${queue.length} photos`;
+    if (isMenage) return `🔀 Faire le tri · ${queue.length} photos`;
     return `📚 Créer un album · ${queue.length} photos`;
   };
 
@@ -269,29 +270,36 @@ export function HomeScreen({ navigation, route }) {
 
   // ── Cartes du bas : 3e carte selon le mode ───────────────────────────────
   const bottomCards = [
-    {
-      key: "deleted",
-      emoji: "🗑",  label: "Corbeille",  count: deleted.length,
-      sub: `${deletedSize.toFixed(0)} Mo`, bg: "#ffe8e8", color: "#e8637a",
-      nav: () => navigation.navigate("Gallery", { section: "deleted" }),
-    },
+    isMenage
+      ? {
+          key: "deleted",
+          emoji: "🗑",  label: "Corbeille",  count: deleted.length,
+          sub: `${deletedSize.toFixed(0)} Mo`, bg: "#f5e8e8", color: C.red,
+          nav: () => navigation.navigate("Gallery", { section: "deleted" }),
+        }
+      : {
+          key: "kept",
+          emoji: "❤️", label: "Coups de cœur", count: kept.length,
+          sub: `${kept.length} photo${kept.length > 1 ? "s" : ""}`, bg: "#e6f0ea", color: C.green,
+          nav: () => navigation.navigate("Gallery", { section: "kept" }),
+        },
     {
       key: "album",
       emoji: "🗂️", label: "Mes albums", count: albums.length,
-      sub: `album${albums.length > 1 ? "s" : ""}`, bg: "#f0e8ff", color: C_ALBUM,
+      sub: `album${albums.length > 1 ? "s" : ""}`, bg: "#e6f4f2", color: C_ALBUM,
       nav: () => navigation.navigate("Gallery", { section: "album" }),
     },
     isMenage
       ? {
           key: "kept",
           emoji: "❤️", label: "Coup de ❤️", count: kept.length,
-          sub: `${kept.length} photo${kept.length > 1 ? "s" : ""}`, bg: "#e8f8ee", color: "#5cb87a",
+          sub: `${kept.length} photo${kept.length > 1 ? "s" : ""}`, bg: "#e6f0ea", color: C.green,
           nav: () => navigation.navigate("Gallery", { section: "kept" }),
         }
       : {
           key: "partners",
           emoji: "🤝", label: "Partenaires", count: 3,
-          sub: "bientôt", bg: "#fff3e0", color: "#f5a623", disabled: true,
+          sub: "bientôt", bg: "#eef0f4", color: C.textMuted, disabled: true,
           nav: () => Alert.alert("Bientôt disponible", "L'impression de tes souvenirs arrive bientôt 🌸"),
         },
   ];
@@ -308,7 +316,10 @@ export function HomeScreen({ navigation, route }) {
         {/* ── Header ──────────────────────────────────────────────────── */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <View>
-            <Text style={{ fontSize: 29, fontWeight: "900", color: C.accent }}>Phototri 🌸</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={{ fontSize: 31, fontWeight: "900", color: C.accent }}>Pellicule</Text>
+              <Image source={require("../assets/icon.png")} style={{ width: 33, height: 33, borderRadius: 8 }} />
+            </View>
             <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>Tes souvenirs méritent mieux</Text>
           </View>
           <TouchableOpacity
@@ -331,7 +342,7 @@ export function HomeScreen({ navigation, route }) {
           gap: 4,
         }}>
           {[
-            { key: "menage", label: "🔀 Ménage",         color: C.accent },
+            { key: "menage", label: "🔀 Tri",            color: C.accent },
             { key: "album",  label: "📔 Créer un album",  color: C_ALBUM },
           ].map((m) => {
             const active = activeMode === m.key;
@@ -387,6 +398,13 @@ export function HomeScreen({ navigation, route }) {
 
         {/* ── Filtres : compacts et centrés sous le CTA (2 lignes max) ──── */}
         <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginBottom: 12, alignItems: "center" }}>
+          {/* En mode album, les chips ci-dessous sont des filtres : on l'indique avec un entonnoir */}
+          {!isMenage && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingRight: 2 }}>
+              <Text style={{ fontSize: 13, color: C_ALBUM }}>🔻</Text>
+              <Text style={{ fontSize: 12, fontWeight: "800", color: C_ALBUM }}>Filtres</Text>
+            </View>
+          )}
           {dateFilters.map((f) => (
             <TouchableOpacity
               key={f}
@@ -493,7 +511,7 @@ export function HomeScreen({ navigation, route }) {
           ))}
         </View>
 
-        {/* ── Mode ALBUM : produits d'impression + coups de cœur ─────── */}
+        {/* ── Mode ALBUM : produits d'impression ─────────────────────── */}
         {!isMenage && (
           <>
             {/* Titre section */}
@@ -529,32 +547,6 @@ export function HomeScreen({ navigation, route }) {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-
-            {/* Bande coups de cœur */}
-            <TouchableOpacity
-              onPress={() => navigation.navigate("Gallery", { section: "kept" })}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: "#fff0f5",
-                borderRadius: 14,
-                padding: 12,
-                borderWidth: 1.5,
-                borderColor: "#f4a5c0",
-                marginBottom: 10,
-              }}
-            >
-              <Text style={{ fontSize: 26, marginRight: 10 }}>❤️</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: "800", fontSize: 13, color: "#e8637a" }}>
-                  Coups de cœur · {kept.length} photos
-                </Text>
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-                  Tes meilleures photos, parfaites pour imprimer
-                </Text>
-              </View>
-              <Text style={{ fontSize: 14, color: "#e8637a", fontWeight: "800" }}>→</Text>
-            </TouchableOpacity>
           </>
         )}
 

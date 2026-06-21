@@ -11,6 +11,7 @@ import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { findDuplicates } from "../services/photoAnalysis";
 import { ZoomableImage } from "../components/ZoomableImage";
+import BackButton from "../components/BackButton";
 
 let NavigationBar = null;
 try { NavigationBar = require("expo-navigation-bar"); } catch (e) {}
@@ -186,12 +187,7 @@ export function DuplicatesScreen({ navigation }) {
 
       {/* ── Header ── */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.border }}
-        >
-          <Text style={{ color: C.textMuted, fontSize: 16 }}>←</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} />
         <View>
           <Text style={{ fontWeight: "800", fontSize: 18, color: C.text }}>Doublons probables</Text>
           <Text style={{ fontSize: 11, color: C.textMuted }}>
@@ -305,6 +301,26 @@ export function DuplicatesScreen({ navigation }) {
             />
           )}
 
+          {/* Flèches latérales semi-transparentes : indiquent qu'on peut balayer
+              de gauche à droite pour voir les autres copies du doublon */}
+          {fullscreen && groupSize > 1 && (
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute", top: 0, bottom: 0, left: 0, right: 0, zIndex: 8,
+                flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                paddingHorizontal: 14,
+              }}
+            >
+              <Text style={{ fontSize: 46, fontWeight: "300", color: "rgba(255,255,255,0.4)" }}>
+                {fullscreen.idx > 0 ? "‹" : ""}
+              </Text>
+              <Text style={{ fontSize: 46, fontWeight: "300", color: "rgba(255,255,255,0.4)" }}>
+                {fullscreen.idx < groupSize - 1 ? "›" : ""}
+              </Text>
+            </View>
+          )}
+
           {/* ── Top bar — compteur seulement, 🚪 déplacé en bas à gauche ── */}
           {fullscreen && (
             <View style={{
@@ -391,9 +407,9 @@ export function DuplicatesScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
 
-                {/* ✅ Conserver (addSkipped) */}
+                {/* ✅ Garder (addSkipped) — swipe vers le haut */}
                 <View style={{ alignItems: "center", gap: 5 }}>
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>conserver</Text>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>↑ garder</Text>
                   <TouchableOpacity
                     onPress={handleConserverPress}
                     style={{ backgroundColor: "rgba(92,184,122,0.2)", borderWidth: 2, borderColor: "rgba(92,184,122,.5)", borderRadius: S.radiusFull, padding: 18 }}
