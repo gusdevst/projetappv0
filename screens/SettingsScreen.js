@@ -34,6 +34,11 @@ const TUTORIAL_SLIDES = [
     desc: "Choisis le mode Album pour sélectionner des photos et les regrouper dans un album souvenir.",
   },
   {
+    emoji: "🖼️",
+    title: "Imprime tes souvenirs",
+    desc: "Une photo imprimée prend vie : accrochée chez toi, offerte ou glissée dans un album, elle se regarde vraiment. Pellicule t'aidera bientôt à transformer tes plus belles photos en tirages, albums et cadres.",
+  },
+  {
     emoji: "🗑",
     title: "Vider la corbeille",
     desc: "Les photos supprimées vont dans la Corbeille. Tu confirmes la suppression définitive depuis le menu principal.",
@@ -440,7 +445,7 @@ export function SettingsScreen({ navigation, route }) {
         )}
 
         {/* ── Section Session aléatoire (compacte) ─────────────────────────── */}
-        <Section title="🎲 Photos par session" />
+        <Section title="🎲 Photos par session aléatoire" />
         <View style={{
           backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1,
           borderColor: C.border, paddingVertical: 10, paddingHorizontal: 16,

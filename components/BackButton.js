@@ -31,8 +31,10 @@ export default function BackButton({ onPress, color = C.textMuted, style }) {
           fontSize: 19,
           fontWeight: "700",
           lineHeight: 19,
-          // léger recentrage optique de la flèche dans le cercle
-          marginLeft: -1,
+          textAlign: "center",
+          textAlignVertical: "center",
+          // supprime le padding vertical ajouté par Android qui décentre le glyphe
+          includeFontPadding: false,
         }}
       >
         ←

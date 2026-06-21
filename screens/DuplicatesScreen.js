@@ -88,7 +88,15 @@ export function DuplicatesScreen({ navigation }) {
     return libraryPhotos.filter((p) => !excludedIds.has(p.id));
   }, [libraryPhotos, deleted, skipped, kept]);
 
-  const groups = useMemo(() => findDuplicates(activePhotos), [activePhotos]);
+  // Affichage du plus récent au plus ancien (le tri interne de findDuplicates reste
+  // croissant car il sert à la détection séquentielle des rafales).
+  const groups = useMemo(
+    () =>
+      findDuplicates(activePhotos).sort(
+        (a, b) => b.photos[0].creationTime - a.photos[0].creationTime
+      ),
+    [activePhotos]
+  );
   const totalDuplicates = groups.reduce((a, g) => a + g.photos.length, 0);
 
   // ── Halo de feedback (identique à SwipeScreen) ─────────────────────────────
