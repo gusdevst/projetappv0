@@ -137,6 +137,14 @@ export function SwipeScreen({ navigation, route }) {
 
   // ── Fin de tri anticipée ─────────────────────────────────────────────────
   const handleFinDeTri = () => {
+    // Mode ménage sans aucun swipe → rien à montrer, on retourne directement à l'accueil
+    const totalSession =
+      sessionKept.length + sessionDeleted.length +
+      sessionHesitated.length + sessionConserved.length + sessionAlbumPhotos.length;
+    if (isMenage && totalSession === 0) {
+      navigation.popToTop();
+      return;
+    }
     navigation.navigate("Summary", {
       albumId,
       albumName,
@@ -167,9 +175,10 @@ export function SwipeScreen({ navigation, route }) {
       },
     ]);
 
-    if (actionKey === "delete")   flashFeedback("rgba(232,99,122,0.7)",  animDir);
-    if (actionKey === "skip")     flashFeedback("rgba(92,184,122,0.7)",  animDir);
-    if (actionKey === "hesitate") flashFeedback("rgba(255,165,0,0.65)",  animDir);
+    if (actionKey === "delete")            flashFeedback("rgba(232,99,122,0.7)",  animDir);
+    // "skip" en album = "ne pas envoyer" → pas de halo (feedback serait trompeur)
+    if (actionKey === "skip" && isMenage) flashFeedback("rgba(92,184,122,0.7)",  animDir);
+    if (actionKey === "hesitate")         flashFeedback("rgba(255,165,0,0.65)",  animDir);
     if (actionKey === "album")    flashFeedback("rgba(176,122,216,0.7)", animDir);
     if (actionKey === "favorite") flashFeedback("rgba(92,184,122,0.7)", animDir);
 
@@ -481,23 +490,8 @@ export function SwipeScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Mode ALBUM : ❤️ coup de cœur (appui direct) */}
-        {isAlbum && (
-          <View style={{ alignItems: "center", gap: 5 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>appui</Text>
-            <TouchableOpacity
-              onPress={handleHeartPress}
-              style={{
-                backgroundColor: heartedThisPhoto ? "rgba(92,184,122,0.85)" : "rgba(92,184,122,0.2)",
-                borderWidth: 2,
-                borderColor: heartedThisPhoto ? "#5cb87a" : "rgba(92,184,122,.5)",
-                borderRadius: S.radiusFull, padding: 18,
-              }}
-            >
-              <Text style={{ fontSize: 20 }}>{heartedThisPhoto ? "❤️✓" : "❤️"}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* ❤️ coup de cœur retiré du mode album : en mode album l'objectif
+            est de choisir les photos à mettre dans l'album, pas de créer des favoris. */}
 
       </View>
 

@@ -174,6 +174,11 @@ export function DuplicatesScreen({ navigation }) {
     if (!currentPhoto) return;
     advanceAfterAction(currentPhoto, addKept, "up");
   }
+  // ✅ = Conserver (addSkipped), identique au swipe "conserver" du mode ménage
+  function handleConserverPress() {
+    if (!currentPhoto) return;
+    advanceAfterAction(currentPhoto, addSkipped, "up");
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
@@ -300,28 +305,20 @@ export function DuplicatesScreen({ navigation }) {
             />
           )}
 
-          {/* ── Top bar ── */}
-          <View style={{
-            position: "absolute", top: Platform.OS === "android" ? 16 : 52,
-            left: 0, right: 0, zIndex: 10,
-            flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-            paddingHorizontal: 16,
-          }}>
-            <TouchableOpacity
-              onPress={() => setFullscreen(null)}
-              style={{ backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" }}
-            >
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>← Retour</Text>
-            </TouchableOpacity>
-
-            {fullscreen && (
+          {/* ── Top bar — compteur seulement, 🚪 déplacé en bas à gauche ── */}
+          {fullscreen && (
+            <View style={{
+              position: "absolute", top: Platform.OS === "android" ? 16 : 52,
+              left: 0, right: 0, zIndex: 10,
+              alignItems: "center",
+            }}>
               <View style={{ backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
                 <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
                   {fullscreen.idx + 1} / {groupSize}
                 </Text>
               </View>
-            )}
-          </View>
+            </View>
+          )}
 
           {/* Indication navigation swipe */}
           <View style={{ position: "absolute", left: 0, right: 0, bottom: 155, alignItems: "center", zIndex: 10, pointerEvents: "none" }}>
@@ -362,7 +359,7 @@ export function DuplicatesScreen({ navigation }) {
                 }}
               />
 
-              {/* ── Boutons action (identiques à SwipeScreen ménage) ── */}
+              {/* ── Boutons action ── */}
               <View style={{ paddingHorizontal: 16, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 14 }}>
 
                 {/* 🗑 Supprimer */}
@@ -394,7 +391,18 @@ export function DuplicatesScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
 
-                {/* ❤️ Garder */}
+                {/* ✅ Conserver (addSkipped) */}
+                <View style={{ alignItems: "center", gap: 5 }}>
+                  <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>conserver</Text>
+                  <TouchableOpacity
+                    onPress={handleConserverPress}
+                    style={{ backgroundColor: "rgba(92,184,122,0.2)", borderWidth: 2, borderColor: "rgba(92,184,122,.5)", borderRadius: S.radiusFull, padding: 18 }}
+                  >
+                    <Text style={{ fontSize: 22 }}>✅</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* ❤️ Coup de cœur */}
                 <View style={{ alignItems: "center", gap: 5 }}>
                   <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>coup de cœur</Text>
                   <TouchableOpacity
@@ -405,6 +413,20 @@ export function DuplicatesScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
 
+              </View>
+
+              {/* 🚪 Fermer le plein écran — bas gauche */}
+              <View style={{ paddingHorizontal: 16, paddingTop: 10, alignItems: "flex-start" }}>
+                <TouchableOpacity
+                  onPress={() => { showAndroidBars(); setFullscreen(null); }}
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.12)",
+                    borderRadius: S.radiusFull, padding: 10,
+                    borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+                  }}
+                >
+                  <Text style={{ fontSize: 22 }}>🚪</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}

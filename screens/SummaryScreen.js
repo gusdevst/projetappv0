@@ -30,6 +30,7 @@ export function SummaryScreen({ navigation, route }) {
   const albums            = usePhotoStore((state) => state.albums);
   const resetHesitated    = usePhotoStore((state) => state.resetHesitated);
   const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
+  const deleteAlbum       = usePhotoStore((state) => state.deleteAlbum);
 
   // Stats basées sur la SESSION uniquement
   const deletedSize = sessionDeleted.reduce((a, p) => a + (p.size || 0), 0);
@@ -46,8 +47,15 @@ export function SummaryScreen({ navigation, route }) {
   // (décision définitive) qui ne doivent jamais revenir. En album, "ne pas envoyer"
   // n'enregistre rien, donc la photo revient naturellement au prochain album.
   useEffect(() => {
-    if (isAlbum) clearAlbumFilters();
-  }, [clearAlbumFilters, isAlbum]);
+    if (isAlbum) {
+      clearAlbumFilters();
+      // Nettoie l'album s'il est vide (l'user a lancé une session sans swiper une seule photo dedans).
+      // Sans ça, un album fantôme resterait dans le store et ferait afficher "1 album" sur l'accueil.
+      if (albumId && createdAlbum && createdAlbum.photoIds.length === 0) {
+        deleteAlbum(albumId);
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Exporte les coups de cœur de la session dans un album natif "Phototri ❤️"
   // Relancer le tri uniquement sur les photos hésitées de cette session

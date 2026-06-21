@@ -18,6 +18,7 @@ import { PhotoGrid } from "../components/PhotoGrid";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { usePhotoStore } from "../store/usePhotoStore";
 import * as Sharing from "expo-sharing";
+import { addPhotoToPhototriAlbum } from "../services/photoLibrary";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 
@@ -84,7 +85,14 @@ export function GalleryScreen({ navigation, route }) {
   const selected = selectedGroup ? selectedGroup[selectedIndex] : null;
 
 
-  const [deleting, setDeleting]     = useState(false);
+  const [deleting, setDeleting]         = useState(false);
+  // ── Sélection multiple (appui long → mode sélection) ────────────────────────
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds,   setSelectedIds]   = useState(new Set());
+  // ── Export ──────────────────────────────────────────────────────────────────
+  const [showExport, setShowExport]     = useState(false);
+  const [syncLoading, setSyncLoading]   = useState(false);
+  const [syncDone, setSyncDone]         = useState(false);
   const [newAlbumModal, setNewAlbumModal] = useState(false);
   const [newAlbumName, setNewAlbumName]   = useState("");
   // Affectation d'une photo "sans album" : la photo à ranger (null = feuille fermée)
@@ -125,6 +133,29 @@ export function GalleryScreen({ navigation, route }) {
     if (selected) hideAndroidBars();
     else showAndroidBars();
   }, [selected]);
+
+  // ── Gestion de la sélection multiple ───────────────────────────────────────
+  const enterSelectionMode = (photo) => {
+    setSelectionMode(true);
+    setSelectedIds(new Set([photo.id]));
+  };
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+  const toggleSelection = (photo) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(photo.id)) next.delete(photo.id);
+      else next.add(photo.id);
+      return next;
+    });
+  };
+  // Handler unifié : en mode sélection → toggle, sinon → plein écran
+  const handlePhotoPress = (photo, group) => {
+    if (selectionMode) { toggleSelection(photo); return; }
+    openPhoto(group, photo);
+  };
 
   // ─── Plein écran ────────────────────────────────────────────────────────
   const openPhoto = (group, photo) => {
@@ -203,6 +234,32 @@ export function GalleryScreen({ navigation, route }) {
     closeAssign();
   };
 
+  // ── Export : synchroniser vers la galerie native ─────────────────────────
+  // En mode sélection, on n'exporte que les photos sélectionnées ; sinon toutes.
+  const allExportPhotos  = section === "kept" ? photos : activeAlbumPhotos;
+  const exportPhotos     = selectionMode && selectedIds.size > 0
+    ? allExportPhotos.filter((p) => selectedIds.has(p.id))
+    : allExportPhotos;
+  const exportAlbumName  = section === "kept" ? "❤️ Coups de cœur" : (activeAlbum?.name ?? "Album");
+
+  const handleSyncToGallery = async () => {
+    if (exportPhotos.length === 0) return;
+    setSyncLoading(true);
+    setSyncDone(false);
+    try {
+      // On appelle addPhotoToPhototriAlbum pour chaque photo.
+      // La fonction crée le dossier natif à la 1ère photo, puis y ajoute les suivantes.
+      for (const photo of exportPhotos) {
+        await addPhotoToPhototriAlbum(photo.id, exportAlbumName);
+      }
+      setSyncDone(true);
+    } catch (err) {
+      Alert.alert("Erreur", "La synchronisation a échoué. Vérifie les permissions de l'app.");
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   const confirmDeleteAlbum = (album) => {
     Alert.alert(
       "Supprimer l'album",
@@ -254,12 +311,34 @@ export function GalleryScreen({ navigation, route }) {
           )}
         </View>
         {!activeAlbumId && (
-          <Text style={{ fontSize: 13, color: accent, fontWeight: "800" }}>{photos.length} photos</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {/* Bouton export visible dans la section "Coups de cœur" */}
+            {section === "kept" && photos.length > 0 && (
+              <TouchableOpacity
+                onPress={() => { setSyncDone(false); setShowExport(true); }}
+                style={{ backgroundColor: `${accent}15`, borderRadius: S.radiusFull, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: accent }}
+              >
+                <Text style={{ fontSize: 13, color: accent, fontWeight: "800" }}>📤 Exporter</Text>
+              </TouchableOpacity>
+            )}
+            <Text style={{ fontSize: 13, color: accent, fontWeight: "800" }}>{photos.length} photos</Text>
+          </View>
         )}
         {activeAlbum && (
-          <TouchableOpacity onPress={() => confirmDeleteAlbum(activeAlbum)}>
-            <Text style={{ fontSize: 20 }}>🗑</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            {/* Bouton export de l'album ouvert */}
+            {activeAlbumPhotos.length > 0 && (
+              <TouchableOpacity
+                onPress={() => { setSyncDone(false); setShowExport(true); }}
+                style={{ backgroundColor: `${accent}15`, borderRadius: S.radiusFull, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: accent }}
+              >
+                <Text style={{ fontSize: 13, color: accent, fontWeight: "800" }}>📤 Exporter</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={() => confirmDeleteAlbum(activeAlbum)}>
+              <Text style={{ fontSize: 20 }}>🗑</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -353,12 +432,22 @@ export function GalleryScreen({ navigation, route }) {
               Cet album est vide.
             </Text>
           ) : (
-            <PhotoGrid photos={activeAlbumPhotos} onPress={(p) => openPhoto(activeAlbumPhotos, p)} />
+            <PhotoGrid
+            photos={activeAlbumPhotos}
+            onPress={(p) => handlePhotoPress(p, activeAlbumPhotos)}
+            onLongPress={enterSelectionMode}
+            selectedIds={selectionMode ? selectedIds : undefined}
+          />
           )
 
         ) : (
           // ── Vue grille par défaut (kept / deleted) ────────────────────────
-          <PhotoGrid photos={photos} onPress={(p) => openPhoto(photos, p)} />
+          <PhotoGrid
+            photos={photos}
+            onPress={(p) => handlePhotoPress(p, photos)}
+            onLongPress={section !== "deleted" ? enterSelectionMode : undefined}
+            selectedIds={selectionMode && section !== "deleted" ? selectedIds : undefined}
+          />
         )}
 
         {/* Vider la corbeille */}
@@ -374,6 +463,99 @@ export function GalleryScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      {/* ── Modal export ── */}
+      <Modal
+        visible={showExport}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowExport(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: 44, maxHeight: SH * 0.85 }}>
+
+            {/* En-tête */}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }}>Exporter les photos</Text>
+              <TouchableOpacity onPress={() => setShowExport(false)}>
+                <Text style={{ fontSize: 22, color: C.textMuted }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 20 }}>
+              {exportPhotos.length} photo{exportPhotos.length > 1 ? "s" : ""} · {exportAlbumName}
+            </Text>
+
+            {/* ── Option 1 : galerie native ─────────────────────────────────── */}
+            <View style={{
+              backgroundColor: C.bg, borderRadius: 16, padding: 16, marginBottom: 14,
+              borderWidth: 1.5, borderColor: syncDone ? C.green : C.border,
+            }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <Text style={{ fontSize: 28 }}>📲</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "800", fontSize: 15, color: C.text }}>Copier dans ta galerie</Text>
+                  <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2, lineHeight: 17 }}>
+                    Crée un album "{Platform.OS === "ios" ? `Phototri — ${exportAlbumName}` : `Phototri/${exportAlbumName}`}" dans ton app Photos.
+                    Pratique pour commander sur Cheerz, CEWE, etc.
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={handleSyncToGallery}
+                disabled={syncLoading || syncDone}
+                style={{
+                  backgroundColor: syncDone ? `${C.green}20` : `${accent}15`,
+                  borderRadius: 12, padding: 12, alignItems: "center",
+                  borderWidth: 1, borderColor: syncDone ? C.green : accent,
+                  opacity: syncLoading ? 0.6 : 1,
+                }}
+              >
+                <Text style={{ fontWeight: "800", fontSize: 14, color: syncDone ? C.green : accent }}>
+                  {syncLoading ? "Synchronisation…" : syncDone ? "✓ Album créé dans ta galerie !" : `Syncer ${exportPhotos.length} photo${exportPhotos.length > 1 ? "s" : ""} →`}
+                </Text>
+              </TouchableOpacity>
+              {syncDone && (
+                <Text style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginTop: 8 }}>
+                  Ouvre ton app Photos → Albums pour retrouver les photos.
+                </Text>
+              )}
+            </View>
+
+            {/* ── Option 2 : partager photo par photo ───────────────────────── */}
+            <View style={{ backgroundColor: C.bg, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                <Text style={{ fontSize: 28 }}>📤</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: "800", fontSize: 15, color: C.text }}>Partager une photo</Text>
+                  <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                    Appuie sur une photo pour l'envoyer via WhatsApp, email, etc.
+                  </Text>
+                </View>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {exportPhotos.map((p) => (
+                    <TouchableOpacity
+                      key={p.id}
+                      onPress={() => handleShare(p)}
+                      style={{ borderRadius: 12, overflow: "hidden", position: "relative" }}
+                    >
+                      <Image source={{ uri: p.url }} style={{ width: 80, height: 80 }} resizeMode="cover" />
+                      <View style={{
+                        position: "absolute", bottom: 0, left: 0, right: 0,
+                        backgroundColor: "rgba(0,0,0,0.35)", paddingVertical: 4, alignItems: "center",
+                      }}>
+                        <Text style={{ color: "#fff", fontSize: 9, fontWeight: "700" }}>Partager</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Modal plein écran ── */}
       <Modal
@@ -571,6 +753,44 @@ export function GalleryScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* ── Barre de sélection multiple ── */}
+      {selectionMode && (
+        <View style={{
+          position: "absolute", bottom: 0, left: 0, right: 0,
+          backgroundColor: C.bg,
+          borderTopWidth: 1, borderTopColor: C.border,
+          paddingHorizontal: 16, paddingTop: 12, paddingBottom: 28,
+          flexDirection: "row", gap: 10, alignItems: "center",
+        }}>
+          {/* Bouton annuler la sélection */}
+          <TouchableOpacity
+            onPress={exitSelectionMode}
+            style={{
+              paddingHorizontal: 14, paddingVertical: 12,
+              borderRadius: S.radiusFull,
+              backgroundColor: C.bgCard,
+              borderWidth: 1, borderColor: C.border,
+            }}
+          >
+            <Text style={{ color: C.textMuted, fontSize: 14, fontWeight: "700" }}>✕</Text>
+          </TouchableOpacity>
+          {/* Bouton exporter la sélection */}
+          <TouchableOpacity
+            onPress={() => { setSyncDone(false); setShowExport(true); }}
+            disabled={selectedIds.size === 0}
+            style={{
+              flex: 1, backgroundColor: selectedIds.size > 0 ? accent : C.bgCard,
+              borderRadius: S.radius, padding: 14, alignItems: "center",
+              opacity: selectedIds.size > 0 ? 1 : 0.5,
+            }}
+          >
+            <Text style={{ color: selectedIds.size > 0 ? "#fff" : C.textMuted, fontWeight: "800", fontSize: 14 }}>
+              📤 Exporter {selectedIds.size > 0 ? `${selectedIds.size} photo${selectedIds.size > 1 ? "s" : ""}` : ""}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ── Modal "Nouvel album" ── */}
       <Modal
