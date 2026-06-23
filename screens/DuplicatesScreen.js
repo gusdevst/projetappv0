@@ -51,6 +51,7 @@ export function DuplicatesScreen({ navigation }) {
   const [fullscreen, setFullscreen]             = useState(null);
   // Historique pour le undo (snapshots du store avant chaque action)
   const [history, setHistory]                   = useState([]);
+  const [nextGroupToast, setNextGroupToast]     = useState(false);
 
   const flatListRef     = useRef(null);
   const feedbackOpacity = useRef(new Animated.Value(0)).current;
@@ -109,9 +110,9 @@ export function DuplicatesScreen({ navigation }) {
     ]).start();
   }
 
-  function openFullscreen(group, photoIdx) {
+  function openFullscreen(group, photoIdx, groupIdx) {
     setHistory([]); // reset undo à chaque groupe
-    setFullscreen({ photos: [...group.photos], idx: photoIdx });
+    setFullscreen({ photos: [...group.photos], idx: photoIdx, groupIdx });
   }
 
   function goToPhoto(idx) {
@@ -140,11 +141,34 @@ export function DuplicatesScreen({ navigation }) {
     storeAction(processedPhoto);
     const remaining = fullscreen.photos.filter((p) => p.id !== processedPhoto.id);
     if (remaining.length === 0) {
-      setFullscreen(null);
-      setSelectedGroupIdx(null);
+      // Recalcule les groupes depuis le store mis à jour pour trouver le suivant
+      const storeState = usePhotoStore.getState();
+      const newExcludedIds = new Set([
+        ...storeState.deleted.map((p) => p.id),
+        ...storeState.skipped.map((p) => p.id),
+        ...storeState.kept.map((p) => p.id),
+      ]);
+      const newActivePhotos = storeState.libraryPhotos.filter((p) => !newExcludedIds.has(p.id));
+      const newGroups = findDuplicates(newActivePhotos).sort(
+        (a, b) => b.photos[0].creationTime - a.photos[0].creationTime
+      );
+      // Le groupe courant a disparu, le même index pointe maintenant sur le suivant
+      const nextGroup = newGroups[fullscreen.groupIdx];
+      if (nextGroup) {
+        setNextGroupToast(true);
+        setTimeout(() => setNextGroupToast(false), 1200);
+        setHistory([]);
+        setFullscreen({ photos: [...nextGroup.photos], idx: 0, groupIdx: fullscreen.groupIdx });
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({ index: 0, animated: false, viewPosition: 0.5 });
+        }, 50);
+      } else {
+        setFullscreen(null);
+        setSelectedGroupIdx(null);
+      }
     } else {
       const newIdx = Math.min(fullscreen.idx, remaining.length - 1);
-      setFullscreen({ photos: remaining, idx: newIdx });
+      setFullscreen({ ...fullscreen, photos: remaining, idx: newIdx });
       setTimeout(() => {
         flatListRef.current?.scrollToIndex({ index: newIdx, animated: true, viewPosition: 0.5 });
       }, 50);
@@ -257,7 +281,7 @@ export function DuplicatesScreen({ navigation }) {
                     {g.photos.map((p, pIdx) => (
                       <TouchableOpacity
                         key={p.id}
-                        onPress={() => openFullscreen(g, pIdx)}
+                        onPress={() => openFullscreen(g, pIdx, idx)}
                         activeOpacity={0.85}
                         style={{ borderRadius: 12, overflow: "hidden", borderWidth: 2, borderColor: C.border }}
                       >
@@ -339,6 +363,25 @@ export function DuplicatesScreen({ navigation }) {
               <View style={{ backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
                 <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
                   {fullscreen.idx + 1} / {groupSize}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Toast groupe suivant */}
+          {nextGroupToast && (
+            <View style={{
+              position: "absolute", top: "45%", left: 0, right: 0,
+              alignItems: "center", zIndex: 30, pointerEvents: "none",
+            }}>
+              <View style={{
+                backgroundColor: "rgba(255,255,255,0.92)",
+                borderRadius: 20, paddingHorizontal: 22, paddingVertical: 12,
+                shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.25, shadowRadius: 10, elevation: 10,
+              }}>
+                <Text style={{ fontSize: 15, fontWeight: "800", color: "#111" }}>
+                  Groupe suivant →
                 </Text>
               </View>
             </View>

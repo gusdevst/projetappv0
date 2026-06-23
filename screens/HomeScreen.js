@@ -348,8 +348,8 @@ export function HomeScreen({ navigation, route }) {
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ fontSize: 31, fontWeight: "900", color: C.accent }}>Pellicule</Text>
-              <Image source={require("../assets/icon.png")} style={{ width: 33, height: 33, borderRadius: 8 }} />
+              <Text style={{ fontSize: 33, fontWeight: "900", color: C.accent }}>Pellicule</Text>
+              <Image source={require("../assets/icon.png")} style={{ width: 36, height: 36, borderRadius: 8 }} />
             </View>
             <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>Tes souvenirs méritent mieux</Text>
           </View>
