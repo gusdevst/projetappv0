@@ -55,6 +55,12 @@ export const usePhotoStore = create(
       notificationMinute: 0,
       setNotificationMinute: (m) => set({ notificationMinute: m }),
 
+      // A-t-on déjà proposé d'activer les rappels au 1er usage du mode aléatoire ?
+      // Persisté → l'Alert ne s'affiche qu'une seule fois. (Le bilan reste un filet
+      // de secours tant que les notifs sont sur "off".)
+      notifPromptSeen: false,
+      setNotifPromptSeen: (v) => set({ notifPromptSeen: v }),
+
       // ─── État de la photothèque (NON persisté — rechargé à chaque ouverture) ─
       permission:      "undetermined", // "undetermined" | "granted" | "denied"
       libraryPhotos:     [],
@@ -313,6 +319,7 @@ export const usePhotoStore = create(
         notificationFrequency:   state.notificationFrequency,
         notificationHour:        state.notificationHour,
         notificationMinute:      state.notificationMinute,
+        notifPromptSeen:         state.notifPromptSeen,
         randomCount:             state.randomCount,
       }),
     }

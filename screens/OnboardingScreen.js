@@ -21,6 +21,21 @@ const SLIDES = [
     desc: "Glisse à droite pour garder, à gauche pour supprimer, vers le haut pour imprimer. Comme Tinder, mais pour tes photos.",
   },
   {
+    emoji: "❤️",
+    title: "Coup de cœur",
+    desc: "Appuie sur le bouton ❤️ pendant le tri pour ajouter une photo à tes coups de cœur. Retrouve-les dans le menu principal.",
+  },
+  {
+    emoji: "🗂️",
+    title: "Créer un album",
+    desc: "Choisis le mode Album pour sélectionner des photos et les regrouper dans un album souvenir.",
+  },
+  {
+    emoji: "🔔",
+    title: "Garde le rythme",
+    desc: "Active un rappel quotidien (9h par défaut, heure modifiable) pour penser à trier tes photos. Tu pourras le régler dans les Réglages.",
+  },
+  {
     emoji: "🔒",
     title: "Tes photos restent privées",
     desc: "Tout se passe sur ton téléphone. Pellicule n'envoie aucune photo sur un serveur.",

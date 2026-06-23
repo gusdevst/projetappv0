@@ -10,6 +10,7 @@ import { C, S, FILTERS } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { getAlbums, getAlbumAssetIds } from "../services/photoLibrary";
 import { AlbumFiltersBar } from "../components/AlbumFiltersBar";
+import { useNotificationReminder } from "../hooks/useNotificationReminder";
 
 // C_ALBUM utilise désormais la valeur centralisée dans theme.js
 const C_ALBUM = C.album;
@@ -148,6 +149,35 @@ export function HomeScreen({ navigation, route }) {
   const [randomFiftyActive, setRandomFiftyActive] = useState(false);
   const [randomQueue,       setRandomQueue]       = useState([]);
 
+  // Rappels push : proposés une seule fois au 1er usage du mode aléatoire.
+  const { notificationsEnabled, notifPromptSeen, markPromptSeen, enableReminders } =
+    useNotificationReminder();
+
+  // Demande à l'utilisateur s'il veut activer les rappels (1re activation aléatoire).
+  function maybePromptNotifications() {
+    if (notificationsEnabled || notifPromptSeen) return;
+    markPromptSeen(); // on ne reposera plus la question
+    Alert.alert(
+      "Activer les rappels ? 🔔",
+      "On t'enverra un rappel chaque jour à 9h pour penser à trier tes photos. Tu pourras changer l'heure (et la fréquence) à tout moment dans les Réglages.",
+      [
+        { text: "Non merci", style: "cancel" },
+        {
+          text: "Activer",
+          onPress: async () => {
+            const result = await enableReminders(); // quotidien à 9h par défaut
+            if (!result.success && result.reason === "permission_denied") {
+              Alert.alert(
+                "Permission refusée",
+                "Pour recevoir des rappels, active les notifications pour Pellicule dans tes Réglages."
+              );
+            }
+          },
+        },
+      ]
+    );
+  }
+
   // ── Modal impression partenaires ─────────────────────────────────────────
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [selectedProduct,   setSelectedProduct]   = useState(null);
@@ -196,6 +226,7 @@ export function HomeScreen({ navigation, route }) {
       const shuffled = [...filteredPool].sort(() => Math.random() - 0.5).slice(0, randomCount);
       setRandomQueue(shuffled);
       setRandomFiftyActive(true);
+      maybePromptNotifications(); // 1er usage : propose d'activer les rappels
     }
   }
 

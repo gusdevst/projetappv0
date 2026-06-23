@@ -3,10 +3,11 @@
 // screens/SummaryScreen.js
 // ─────────────────────────────────────────────
 import { useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
+import { useNotificationReminder } from "../hooks/useNotificationReminder";
 
 const { width: SW } = Dimensions.get("window");
 
@@ -31,6 +32,21 @@ export function SummaryScreen({ navigation, route }) {
   const resetHesitated    = usePhotoStore((state) => state.resetHesitated);
   const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
   const deleteAlbum       = usePhotoStore((state) => state.deleteAlbum);
+
+  // Rappels push : filet de secours si les notifs sont encore désactivées.
+  const { notificationsEnabled, enableReminders } = useNotificationReminder();
+
+  const handleEnableReminders = async () => {
+    const result = await enableReminders(); // quotidien à 9h par défaut
+    if (result.success) {
+      Alert.alert("C'est activé ! 🔔", "Tu recevras un rappel chaque jour à 9h. Tu peux changer l'heure dans les Réglages.");
+    } else if (result.reason === "permission_denied") {
+      Alert.alert(
+        "Permission refusée",
+        "Pour recevoir des rappels, active les notifications pour Pellicule dans tes Réglages."
+      );
+    }
+  };
 
   // Stats basées sur la SESSION uniquement
   const deletedSize = sessionDeleted.reduce((a, p) => a + (p.size || 0), 0);
@@ -241,6 +257,35 @@ export function SummaryScreen({ navigation, route }) {
           </View>
           <Text style={{ fontSize: 16, color: C.album, fontWeight: "800" }}>→</Text>
         </TouchableOpacity>
+        )}
+
+        {/* ── Rappel d'activation des notifications (si encore désactivées) ── */}
+        {!notificationsEnabled && (
+          <TouchableOpacity
+            onPress={handleEnableReminders}
+            style={{
+              backgroundColor: C.bgCard,
+              borderRadius: S.radius,
+              padding: 18,
+              borderWidth: 1.5,
+              borderColor: `${C.accent}50`,
+              marginBottom: 16,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 14,
+            }}
+          >
+            <Text style={{ fontSize: 30 }}>🔔</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: "900", fontSize: 15, color: C.text, marginBottom: 3 }}>
+                Ne perds plus le rythme
+              </Text>
+              <Text style={{ fontSize: 12, color: C.textMuted, lineHeight: 17 }}>
+                Active un rappel quotidien (9h par défaut, heure modifiable) pour penser à trier tes photos.
+              </Text>
+            </View>
+            <Text style={{ fontSize: 13, color: C.accent, fontWeight: "800" }}>Activer</Text>
+          </TouchableOpacity>
         )}
 
         {/* ── Retour accueil ───────────────────────────────────────────── */}

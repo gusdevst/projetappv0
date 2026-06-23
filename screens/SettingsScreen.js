@@ -44,6 +44,11 @@ const TUTORIAL_SLIDES = [
     desc: "Les photos supprimées vont dans la Corbeille. Tu confirmes la suppression définitive depuis le menu principal.",
   },
   {
+    emoji: "🔔",
+    title: "Garde le rythme",
+    desc: "Active un rappel automatique pour penser à trier tes photos chaque jour. Choisis la fréquence et l'heure dans les Réglages, et reçois une petite notification au bon moment.",
+  },
+  {
     emoji: "🔒",
     title: "Tes photos restent privées",
     desc: "Tout se passe sur ton téléphone. Pellicule n'envoie aucune photo sur un serveur.",
