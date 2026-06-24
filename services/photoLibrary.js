@@ -5,11 +5,10 @@
 import * as MediaLibrary from "expo-media-library";
 import { Platform } from "react-native";
 
-// Plafond de sécurité : on charge au max 2000 photos pour éviter de figer l'app
-// chez les utilisateurs avec 50000+ photos. Passer à 2500 est possible mais
-// allonge le chargement initial d'environ 30 % supplémentaires.
-export const MAX_PHOTOS = 2000;
-const BATCH_SIZE = 100;
+// Pas de plafond — on charge toute la bibliothèque pour les tests.
+// À remettre en place avant la prod si les perfs deviennent un problème.
+export const MAX_PHOTOS = Infinity;
+const BATCH_SIZE = 500;
 
 /**
  * Retourne le statut actuel de la permission photo sans la demander.
@@ -31,9 +30,8 @@ export async function requestPermission() {
 }
 
 /**
- * Charge les photos de la photothèque (paginée par batch de 100, max MAX_PHOTOS total).
- * Retourne { photos, totalInLibrary } — photos est limité à MAX_PHOTOS,
- * totalInLibrary est le nombre TOTAL de photos sur le téléphone.
+ * Charge toutes les photos de la photothèque sans limite.
+ * Retourne { photos, totalInLibrary }.
  */
 export async function loadPhotos() {
   const allAssets = [];
@@ -41,7 +39,7 @@ export async function loadPhotos() {
   let hasMore = true;
   let totalInLibrary = 0;
 
-  while (hasMore && allAssets.length < MAX_PHOTOS) {
+  while (hasMore) {
     const result = await MediaLibrary.getAssetsAsync({
       first: BATCH_SIZE,
       after,
@@ -55,7 +53,7 @@ export async function loadPhotos() {
   }
 
   return {
-    photos: allAssets.slice(0, MAX_PHOTOS).map(mapAssetToPhoto),
+    photos: allAssets.map(mapAssetToPhoto),
     totalInLibrary,
   };
 }

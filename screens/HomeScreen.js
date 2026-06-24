@@ -1,8 +1,8 @@
 // screens/HomeScreen.js
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   ScrollView, StatusBar, View, Text, Image,
-  TouchableOpacity, Alert, Modal, ActivityIndicator, Linking,
+  TouchableOpacity, Alert, Modal, ActivityIndicator, Linking, PanResponder,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -136,6 +136,19 @@ export function HomeScreen({ navigation, route }) {
     const allowed = key === "menage" ? MENAGE_DATE_FILTERS : ALBUM_DATE_FILTERS;
     setActiveFilter((f) => (allowed.includes(f) ? f : "Toutes"));
   }
+
+  const screenPan = useRef(
+    PanResponder.create({
+      // S'active uniquement sur les gestes franchement horizontaux pour ne pas
+      // interférer avec le scroll vertical de la ScrollView
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > 40 && Math.abs(g.dx) > Math.abs(g.dy) * 3,
+      onPanResponderRelease: (_, g) => {
+        if (g.dx > 60)  switchMode("album");
+        if (g.dx < -60) switchMode("menage");
+      },
+    })
+  ).current;
 
   // Ouverture directe sur le mode album (ex. CTA depuis le bilan de tri).
   useEffect(() => {
@@ -336,7 +349,7 @@ export function HomeScreen({ navigation, route }) {
   ];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} {...screenPan.panHandlers}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
 
       <ScrollView
