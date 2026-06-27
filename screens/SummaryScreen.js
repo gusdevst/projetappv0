@@ -79,7 +79,12 @@ export function SummaryScreen({ navigation, route }) {
     if (sessionHesitated.length === 0) return;
     const queue = sessionHesitated.map((p) => ({ ...p }));
     resetHesitated(); // on vide la pile du store avant de relancer
-    navigation.navigate("Swipe", { queue });
+    if (isAlbum && albumId) {
+      // On reste dans le même mode album pour que les photos atterrissent dans le bon album
+      navigation.navigate("Swipe", { queue, mode: "album", albumId, albumName });
+    } else {
+      navigation.navigate("Swipe", { queue });
+    }
   };
 
   return (
@@ -103,24 +108,41 @@ export function SummaryScreen({ navigation, route }) {
             { label: "Conservées",       val: sessionConserved.length, color: C.green,  emoji: "💚" },
             { label: "Supprimées",       val: sessionDeleted.length,   color: C.red,    emoji: "🗑" },
             { label: "Mo libérés",       val: deletedSize.toFixed(1),  color: C.yellow, emoji: "✨" },
-          ].map((s) => (
-            <View
-              key={s.label}
-              style={{
-                width: (SW - 60) / 2,
-                backgroundColor: C.bgCard,
-                borderRadius: S.radius,
-                padding: 20,
-                alignItems: "center",
-                borderWidth: 1,
-                borderColor: C.border,
-              }}
-            >
-              <Text style={{ fontSize: 24, marginBottom: 6 }}>{s.emoji}</Text>
-              <Text style={{ fontSize: 28, fontWeight: "900", color: s.color }}>{s.val}</Text>
-              <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>{s.label}</Text>
-            </View>
-          ))}
+          ].map((s) => {
+            const isTrash = s.emoji === "🗑";
+            const cardContent = (
+              <View
+                style={{
+                  width: (SW - 60) / 2,
+                  backgroundColor: C.bgCard,
+                  borderRadius: S.radius,
+                  padding: 20,
+                  alignItems: "center",
+                  borderWidth: isTrash ? 1.5 : 1,
+                  borderColor: isTrash ? `${C.red}50` : C.border,
+                }}
+              >
+                <Text style={{ fontSize: 24, marginBottom: 6 }}>{s.emoji}</Text>
+                <Text style={{ fontSize: 28, fontWeight: "900", color: s.color }}>{s.val}</Text>
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>{s.label}</Text>
+                {isTrash && s.val > 0 && (
+                  <Text style={{ fontSize: 10, color: C.red, fontWeight: "700", marginTop: 4 }}>Voir →</Text>
+                )}
+              </View>
+            );
+            if (isTrash && s.val > 0) {
+              return (
+                <TouchableOpacity
+                  key={s.label}
+                  onPress={() => navigation.navigate("Gallery", { section: "deleted" })}
+                  activeOpacity={0.7}
+                >
+                  {cardContent}
+                </TouchableOpacity>
+              );
+            }
+            return <View key={s.label}>{cardContent}</View>;
+          })}
         </View>
         )}
 

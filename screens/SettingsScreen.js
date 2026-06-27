@@ -179,6 +179,8 @@ export function SettingsScreen({ navigation, route }) {
   const setNotificationHour      = usePhotoStore((s) => s.setNotificationHour);
   const notificationMinute       = usePhotoStore((s) => s.notificationMinute);
   const setNotificationMinute    = usePhotoStore((s) => s.setNotificationMinute);
+  const notificationHour2        = usePhotoStore((s) => s.notificationHour2);
+  const notificationMinute2      = usePhotoStore((s) => s.notificationMinute2);
   const randomCount              = usePhotoStore((s) => s.randomCount);
   const setRandomCount           = usePhotoStore((s) => s.setRandomCount);
   const restartTri               = usePhotoStore((s) => s.restartTri);
@@ -268,7 +270,7 @@ export function SettingsScreen({ navigation, route }) {
     setNotificationHour(hour);
     setNotificationMinute(minute);
     if (notificationFrequency !== "off") {
-      await scheduleReminder(notificationFrequency, { remainingCount, randomCount, notificationHour: hour, notificationMinute: minute });
+      await scheduleReminder(notificationFrequency, { remainingCount, randomCount, notificationHour: hour, notificationMinute: minute, notificationHour2, notificationMinute2 });
     }
   };
 
@@ -291,7 +293,7 @@ export function SettingsScreen({ navigation, route }) {
 
     // Enregistre dans le store (persisté) et programme le rappel avec les stats actuelles
     setNotificationFrequency(freq);
-    const result = await scheduleReminder(freq, { remainingCount, randomCount, notificationHour, notificationMinute });
+    const result = await scheduleReminder(freq, { remainingCount, randomCount, notificationHour, notificationMinute, notificationHour2, notificationMinute2 });
 
     if (freq !== "off" && !result.success) {
       Alert.alert("Erreur", "Impossible de programmer le rappel. Réessaie dans un moment.");

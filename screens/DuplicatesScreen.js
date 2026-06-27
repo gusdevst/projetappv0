@@ -1,8 +1,8 @@
 // screens/DuplicatesScreen.js
 import { useMemo, useState, useRef, useEffect } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  Image, StatusBar, Dimensions, Modal, FlatList, Platform, Animated,
+  View, Text, TouchableOpacity,
+  Image, StatusBar, Dimensions, Modal, FlatList, Platform, Animated, ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -47,6 +47,7 @@ export function DuplicatesScreen({ navigation }) {
   const undoLast            = usePhotoStore((s) => s.undoLast);
   const swipeMappingsMenage = usePhotoStore((s) => s.swipeMappingsMenage);
 
+  const [groups, setGroups]                     = useState(null); // null = calcul en cours
   const [selectedGroupIdx, setSelectedGroupIdx] = useState(null);
   const [fullscreen, setFullscreen]             = useState(null);
   // Historique pour le undo (snapshots du store avant chaque action)
@@ -89,16 +90,19 @@ export function DuplicatesScreen({ navigation }) {
     return libraryPhotos.filter((p) => !excludedIds.has(p.id));
   }, [libraryPhotos, deleted, skipped, kept]);
 
-  // Affichage du plus récent au plus ancien (le tri interne de findDuplicates reste
-  // croissant car il sert à la détection séquentielle des rafales).
-  const groups = useMemo(
-    () =>
-      findDuplicates(activePhotos).sort(
+  // Détection différée : l'écran s'affiche d'abord, le calcul suit au tick suivant.
+  useEffect(() => {
+    setGroups(null);
+    const id = setTimeout(() => {
+      const result = findDuplicates(activePhotos).sort(
         (a, b) => b.photos[0].creationTime - a.photos[0].creationTime
-      ),
-    [activePhotos]
-  );
-  const totalDuplicates = groups.reduce((a, g) => a + g.photos.length, 0);
+      );
+      setGroups(result);
+    }, 0);
+    return () => clearTimeout(id);
+  }, [activePhotos]);
+
+  const totalDuplicates = groups ? groups.reduce((a, g) => a + g.photos.length, 0) : 0;
 
   // ── Halo de feedback (identique à SwipeScreen) ─────────────────────────────
   function flashFeedback(color, edge) {
@@ -223,15 +227,24 @@ export function DuplicatesScreen({ navigation }) {
         <View>
           <Text style={{ fontWeight: "800", fontSize: 18, color: C.text }}>Doublons probables</Text>
           <Text style={{ fontSize: 11, color: C.textMuted }}>
-            {groups.length === 0
+            {groups === null
+              ? "Analyse en cours…"
+              : groups.length === 0
               ? "Aucun doublon détecté"
               : `${groups.length} groupe(s) · ${totalDuplicates} photos`}
           </Text>
         </View>
       </View>
 
-      {/* ── État vide ── */}
-      {groups.length === 0 ? (
+      {/* ── Calcul en cours ── */}
+      {groups === null ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator color={C.accent} />
+          <Text style={{ color: C.textMuted, marginTop: 12 }}>Détection des doublons…</Text>
+        </View>
+
+      /* ── État vide ── */
+      ) : groups.length === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 40 }}>
           <Text style={{ fontSize: 56, marginBottom: 12 }}>🪞</Text>
           <Text style={{ fontSize: 16, fontWeight: "700", color: C.text, textAlign: "center" }}>
@@ -241,9 +254,17 @@ export function DuplicatesScreen({ navigation }) {
             On détecte les photos prises à moins de 2 secondes d'écart avec les mêmes dimensions (mode rafale, double appui…).
           </Text>
         </View>
+
+      /* ── Liste des groupes (virtualisée) ── */
       ) : (
-        <ScrollView style={{ flex: 1, paddingHorizontal: S.pad }}>
-          {groups.map((g, idx) => {
+        <FlatList
+          data={groups}
+          keyExtractor={(_, idx) => String(idx)}
+          contentContainerStyle={{ paddingHorizontal: S.pad, paddingBottom: 24 }}
+          initialNumToRender={12}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          renderItem={({ item: g, index: idx }) => {
             const isSelected = idx === selectedGroupIdx;
             const first      = g.photos[0];
             const dateStr    = new Date(first.creationTime).toLocaleDateString("fr-FR", {
@@ -251,7 +272,6 @@ export function DuplicatesScreen({ navigation }) {
             });
             return (
               <TouchableOpacity
-                key={idx}
                 onPress={() => setSelectedGroupIdx(isSelected ? null : idx)}
                 activeOpacity={isSelected ? 1 : 0.75}
                 style={{
@@ -295,8 +315,8 @@ export function DuplicatesScreen({ navigation }) {
                 )}
               </TouchableOpacity>
             );
-          })}
-        </ScrollView>
+          }}
+        />
       )}
 
       {/* ── Modal plein écran ── */}

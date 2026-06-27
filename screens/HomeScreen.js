@@ -112,8 +112,9 @@ export function HomeScreen({ navigation, route }) {
   const libraryPhotos     = usePhotoStore((state) => state.libraryPhotos);
   const libraryTotalCount = usePhotoStore((state) => state.libraryTotalCount);
   const libraryLoading    = usePhotoStore((state) => state.libraryLoading);
-  const randomCount       = usePhotoStore((state) => state.randomCount);
-  const albums            = usePhotoStore((state) => state.albums);
+  const randomCount            = usePhotoStore((state) => state.randomCount);
+  const albums                 = usePhotoStore((state) => state.albums);
+  const notificationFrequency  = usePhotoStore((state) => state.notificationFrequency);
   const albumFilters      = usePhotoStore((state) => state.albumFilters);
   const removeAlbumFilter = usePhotoStore((state) => state.removeAlbumFilter);
   const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
@@ -327,12 +328,19 @@ export function HomeScreen({ navigation, route }) {
           sub: `${kept.length} photo${kept.length > 1 ? "s" : ""}`, bg: "#e6f0ea", color: C.green,
           nav: () => navigation.navigate("Gallery", { section: "kept" }),
         },
-    {
-      key: "album",
-      emoji: "🗂️", label: "Mes albums", count: albums.length,
-      sub: `album${albums.length > 1 ? "s" : ""}`, bg: "#e6f4f2", color: C_ALBUM,
-      nav: () => navigation.navigate("Gallery", { section: "album" }),
-    },
+    isMenage
+      ? {
+          key: "rappels",
+          emoji: "🔔", label: "Rappels", count: null,
+          sub: notificationFrequency !== "off" ? "actif" : "inactif", bg: "#f0f0ff", color: C.accent,
+          nav: () => navigation.navigate("Rappels"),
+        }
+      : {
+          key: "album",
+          emoji: "🗂️", label: "Mes albums", count: albums.length,
+          sub: `album${albums.length > 1 ? "s" : ""}`, bg: "#e6f4f2", color: C_ALBUM,
+          nav: () => navigation.navigate("Gallery", { section: "album" }),
+        },
     isMenage
       ? {
           key: "kept",

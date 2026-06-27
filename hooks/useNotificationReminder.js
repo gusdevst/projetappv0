@@ -18,6 +18,8 @@ export function useNotificationReminder() {
   const setNotificationFrequency = usePhotoStore((s) => s.setNotificationFrequency);
   const notificationHour         = usePhotoStore((s) => s.notificationHour);
   const notificationMinute       = usePhotoStore((s) => s.notificationMinute);
+  const notificationHour2        = usePhotoStore((s) => s.notificationHour2);
+  const notificationMinute2      = usePhotoStore((s) => s.notificationMinute2);
   const notifPromptSeen          = usePhotoStore((s) => s.notifPromptSeen);
   const setNotifPromptSeen       = usePhotoStore((s) => s.setNotifPromptSeen);
 
@@ -49,6 +51,8 @@ export function useNotificationReminder() {
       randomCount,
       notificationHour,
       notificationMinute,
+      notificationHour2,
+      notificationMinute2,
     });
     if (result.success) {
       setNotificationFrequency(freq);

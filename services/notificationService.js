@@ -6,16 +6,17 @@
 //   scheduleReminder(frequency, stats?)      → programme le rappel selon la fréquence choisie
 //   cancelReminders()                        → annule tous les rappels en cours
 //
-// stats (optionnel) : { remainingCount, randomCount, notificationHour, notificationMinute }
+// stats (optionnel) : { remainingCount, randomCount, notificationHour, notificationMinute, notificationHour2, notificationMinute2 }
 //   remainingCount + randomCount → message personnalisé avec nb de sessions restantes
-//   notificationHour (0-23), notificationMinute (0-59) → heure précise pour DAILY et WEEKLY
+//   notificationHour/2 (0-23), notificationMinute/2 (0-59) → heures précises
 //   data.action = "start_menage_random" → l'app lance une session au tap
 //
 // Fréquences supportées :
-//   "off"        → aucun rappel
-//   "daily"      → trigger DAILY  — heure exacte = notificationHour
-//   "every2days" → trigger TIME_INTERVAL 48h — heure approximative (48h depuis activation)
-//   "weekly"     → trigger WEEKLY — heure exacte, jour = jour courant de la semaine
+//   "off"          → aucun rappel
+//   "twice_daily"  → deux triggers DAILY : heure exacte + heure+12h
+//   "daily"        → trigger DAILY  — heure exacte = notificationHour
+//   "every2days"   → trigger TIME_INTERVAL 48h — heure approximative (48h depuis activation)
+//   "weekly"       → trigger WEEKLY — heure exacte, jour = jour courant de la semaine
 
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
@@ -64,7 +65,7 @@ export async function scheduleReminder(frequency, stats = {}) {
   const granted = await requestPermission();
   if (!granted) return { success: false, reason: "permission_denied" };
 
-  const { remainingCount = null, randomCount = 50, notificationHour = 9, notificationMinute = 0 } = stats;
+  const { remainingCount = null, randomCount = 30, notificationHour = 9, notificationMinute = 0, notificationHour2 = 21, notificationMinute2 = 0 } = stats;
   const body = buildNotifBody(remainingCount, randomCount);
 
   const content = {
@@ -81,33 +82,43 @@ export async function scheduleReminder(frequency, stats = {}) {
   try {
     const TT = Notifications.SchedulableTriggerInputTypes;
 
-    let trigger;
-    if (frequency === "daily") {
-      // Heure exacte chaque jour
-      trigger = { type: TT.DAILY, hour: notificationHour, minute: notificationMinute };
+    if (frequency === "twice_daily") {
+      await Notifications.scheduleNotificationAsync({
+        content, trigger: { type: TT.DAILY, hour: notificationHour, minute: notificationMinute },
+      });
+      await Notifications.scheduleNotificationAsync({
+        content: { ...content, body: buildNotifBody(remainingCount, randomCount) },
+        trigger: { type: TT.DAILY, hour: notificationHour2, minute: notificationMinute2 },
+      });
+    } else if (frequency === "daily") {
+      await Notifications.scheduleNotificationAsync({
+        content, trigger: { type: TT.DAILY, hour: notificationHour, minute: notificationMinute },
+      });
     } else if (frequency === "weekly") {
-      // Heure exacte, même jour de la semaine que l'activation
-      trigger = { type: TT.WEEKLY, weekday: expoWeekday, hour: notificationHour, minute: notificationMinute };
+      await Notifications.scheduleNotificationAsync({
+        content, trigger: { type: TT.WEEKLY, weekday: expoWeekday, hour: notificationHour, minute: notificationMinute },
+      });
     } else {
-      // every2days : TIME_INTERVAL 48h (pas de trigger "toutes les N heures à HH:MM" natif)
-      trigger = { type: TT.TIME_INTERVAL, seconds: 2 * 24 * 60 * 60, repeats: true };
+      // every2days
+      await Notifications.scheduleNotificationAsync({
+        content, trigger: { type: TT.TIME_INTERVAL, seconds: 2 * 24 * 60 * 60, repeats: true },
+      });
     }
-
-    await Notifications.scheduleNotificationAsync({ content, trigger });
     return { success: true };
 
   } catch (err) {
     // Fallback pour les versions d'expo-notifications sans SchedulableTriggerInputTypes
     try {
-      let trigger;
-      if (frequency === "daily") {
-        trigger = { hour: notificationHour, minute: notificationMinute, repeats: true };
+      if (frequency === "twice_daily") {
+        await Notifications.scheduleNotificationAsync({ content, trigger: { hour: notificationHour, minute: notificationMinute, repeats: true } });
+        await Notifications.scheduleNotificationAsync({ content: { ...content, body: buildNotifBody(remainingCount, randomCount) }, trigger: { hour: notificationHour2, minute: notificationMinute2, repeats: true } });
+      } else if (frequency === "daily") {
+        await Notifications.scheduleNotificationAsync({ content, trigger: { hour: notificationHour, minute: notificationMinute, repeats: true } });
       } else if (frequency === "weekly") {
-        trigger = { weekday: expoWeekday, hour: notificationHour, minute: notificationMinute, repeats: true };
+        await Notifications.scheduleNotificationAsync({ content, trigger: { weekday: expoWeekday, hour: notificationHour, minute: notificationMinute, repeats: true } });
       } else {
-        trigger = { seconds: 2 * 24 * 60 * 60, repeats: true };
+        await Notifications.scheduleNotificationAsync({ content, trigger: { seconds: 2 * 24 * 60 * 60, repeats: true } });
       }
-      await Notifications.scheduleNotificationAsync({ content, trigger });
       return { success: true };
     } catch (err2) {
       console.warn("scheduleReminder failed:", err2);

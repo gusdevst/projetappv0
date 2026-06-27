@@ -340,6 +340,34 @@ export function GalleryScreen({ navigation, route }) {
         )}
       </View>
 
+      {/* ── Bannière "vider la corbeille" en haut (section deleted) ── */}
+      {showEmpty && photos.length > 0 && (
+        <TouchableOpacity
+          onPress={confirmEmptyTrash}
+          disabled={deleting}
+          style={{
+            marginHorizontal: S.pad,
+            marginBottom: 10,
+            backgroundColor: `${C.red}12`,
+            borderRadius: S.radius,
+            padding: 12,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderWidth: 1.5,
+            borderColor: `${C.red}40`,
+            opacity: deleting ? 0.6 : 1,
+          }}
+        >
+          <Text style={{ color: C.red, fontWeight: "700", fontSize: 13 }}>
+            🗑 {deleting ? "Suppression…" : "Vider la corbeille"}
+          </Text>
+          <Text style={{ color: C.red, fontSize: 12 }}>
+            {photos.reduce((a, p) => a + p.size, 0).toFixed(1)} Mo · {photos.length} photo{photos.length > 1 ? "s" : ""}
+          </Text>
+        </TouchableOpacity>
+      )}
+
       {/* ── Contenu ── */}
       <ScrollView contentContainerStyle={{ padding: 14 }}>
         {photos.length === 0 ? (

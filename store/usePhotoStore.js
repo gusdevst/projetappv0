@@ -55,6 +55,12 @@ export const usePhotoStore = create(
       notificationMinute: 0,
       setNotificationMinute: (m) => set({ notificationMinute: m }),
 
+      // 2e créneau pour le mode "twice_daily"
+      notificationHour2: 21,
+      setNotificationHour2: (h) => set({ notificationHour2: h }),
+      notificationMinute2: 0,
+      setNotificationMinute2: (m) => set({ notificationMinute2: m }),
+
       // A-t-on déjà proposé d'activer les rappels au 1er usage du mode aléatoire ?
       // Persisté → l'Alert ne s'affiche qu'une seule fois. (Le bilan reste un filet
       // de secours tant que les notifs sont sur "off".)
@@ -136,9 +142,16 @@ export const usePhotoStore = create(
       // Modifie la fréquence des rappels (utilisé par Settings).
       setNotificationFrequency: (freq) => set({ notificationFrequency: freq }),
 
-      // Taille de la session aléatoire (par défaut 50, ajustable par 10).
-      randomCount: 50,
+      // Taille de la session aléatoire (par défaut 30, ajustable).
+      randomCount: 30,
       setRandomCount: (n) => set({ randomCount: n }),
+
+      // Priorité de tri pour les sessions déclenchées par la notification.
+      // type: "random" | "native_album" | "month"
+      // nativeAlbumId / nativeAlbumTitle : dossier natif sélectionné
+      // monthKeys : tableau de clés "YYYY-MM" si type = "month"
+      sortPriority: { type: "random", nativeAlbumId: null, nativeAlbumTitle: null, monthKeys: [] },
+      setSortPriority: (p) => set({ sortPriority: p }),
 
       // Remet les mappings de swipe par défaut pour un mode donné (ou les deux).
       resetSwipeMappings: (mode) => {
@@ -319,8 +332,11 @@ export const usePhotoStore = create(
         notificationFrequency:   state.notificationFrequency,
         notificationHour:        state.notificationHour,
         notificationMinute:      state.notificationMinute,
+        notificationHour2:       state.notificationHour2,
+        notificationMinute2:     state.notificationMinute2,
         notifPromptSeen:         state.notifPromptSeen,
         randomCount:             state.randomCount,
+        sortPriority:            state.sortPriority,
       }),
     }
   )

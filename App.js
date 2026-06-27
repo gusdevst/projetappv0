@@ -44,12 +44,12 @@ async function hideAndroidNavBar() {
 export const navigationRef = createNavigationContainerRef();
 
 // ── Session ménage aléatoire depuis une notification ──────────────────────────
-// Choisit randomCount photos au hasard parmi les photos non encore triées
-// et lance directement l'écran de swipe en mode ménage.
+// Choisit randomCount photos parmi les photos non encore triées,
+// en respectant la priorité configurée (sortPriority).
 // Retourne true si la navigation a été déclenchée, false si la bibliothèque
 // n'est pas encore chargée (on réessaiera après loadLibrary).
 function launchRandomMenage() {
-  const { libraryPhotos, kept, deleted, printed, skipped, randomCount } =
+  const { libraryPhotos, kept, deleted, printed, skipped, randomCount, sortPriority } =
     usePhotoStore.getState();
 
   if (libraryPhotos.length === 0) return false;
@@ -61,17 +61,32 @@ function launchRandomMenage() {
     ...skipped.map((p) => p.id),
   ]);
 
-  const remaining = libraryPhotos.filter((p) => !triedIds.has(p.id));
-  if (remaining.length === 0) return true; // Tout trié, rien à faire
+  let pool = libraryPhotos.filter((p) => !triedIds.has(p.id));
+  if (pool.length === 0) return true; // Tout trié, rien à faire
+
+  // Applique le filtre de priorité si configuré
+  const priority = sortPriority || { type: "random" };
+  if (priority.type === "month" && priority.monthKeys?.length > 0) {
+    const monthSet = new Set(priority.monthKeys);
+    const filtered = pool.filter((p) => {
+      const d = new Date(p.creationTime);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      return monthSet.has(key);
+    });
+    // Si le filtre donne des résultats, on l'utilise ; sinon on prend tout le pool
+    if (filtered.length > 0) pool = filtered;
+  }
+  // Pour native_album, le filtrage nécessite un appel async (getAlbumAssetIds)
+  // qui ne peut pas se faire ici de façon synchrone — on tombe en mode aléatoire.
 
   // Mélange aléatoire (Fisher-Yates)
-  const shuffled = [...remaining];
+  const shuffled = [...pool];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
 
-  const count = Math.min(randomCount || 50, shuffled.length);
+  const count = Math.min(randomCount || 30, shuffled.length);
   const queue = shuffled.slice(0, count);
 
   if (navigationRef.isReady()) {
