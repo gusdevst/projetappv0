@@ -222,6 +222,14 @@ export function RappelsScreen({ navigation }) {
   const timeLabel  = `${String(notificationHour).padStart(2, "0")}h${String(notificationMinute).padStart(2, "0")}`;
   const time2Label = `${String(notificationHour2).padStart(2, "0")}h${String(notificationMinute2).padStart(2, "0")}`;
 
+  const cycleSessionCount = () => {
+    const idx = SESSION_PROFILES.findIndex((p) => p.count === randomCount);
+    const next = SESSION_PROFILES[(idx + 1) % SESSION_PROFILES.length];
+    setRandomCount(next.count);
+  };
+
+  const currentProfile = SESSION_PROFILES.find((p) => p.count === randomCount) ?? SESSION_PROFILES[1];
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
@@ -274,10 +282,31 @@ export function RappelsScreen({ navigation }) {
                   <Text style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 2 }}>sessions restantes</Text>
                 </View>
                 <View style={{ width: 1, backgroundColor: C.border }} />
-                <View style={{ flex: 1, alignItems: "center" }}>
+                <TouchableOpacity
+                  onPress={cycleSessionCount}
+                  style={{ flex: 1, alignItems: "center" }}
+                >
                   <Text style={{ fontSize: 36, fontWeight: "900", color: C.accent }}>{randomCount}</Text>
                   <Text style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 2 }}>photos / session</Text>
-                </View>
+                  <View style={{
+                    marginTop: 6,
+                    flexDirection: "row",
+                    gap: 4,
+                  }}>
+                    {SESSION_PROFILES.map((p) => (
+                      <View
+                        key={p.count}
+                        style={{
+                          width: 6, height: 6, borderRadius: 3,
+                          backgroundColor: p.count === randomCount ? C.accent : `${C.accent}30`,
+                        }}
+                      />
+                    ))}
+                  </View>
+                  <Text style={{ fontSize: 10, color: C.accent, fontWeight: "700", marginTop: 3 }}>
+                    {currentProfile.label} · {currentProfile.desc}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </>
           ) : (
@@ -385,34 +414,6 @@ export function RappelsScreen({ navigation }) {
             )}
           </>
         )}
-
-        {/* ── Quantité par session ───────────────────────────────────── */}
-        <Text style={styles.sectionLabel}>Photos par session</Text>
-        <View style={{ flexDirection: "row", gap: 10, marginBottom: 24 }}>
-          {SESSION_PROFILES.map((p) => {
-            const active = randomCount === p.count;
-            return (
-              <TouchableOpacity
-                key={p.count}
-                onPress={() => setRandomCount(p.count)}
-                style={{
-                  flex: 1,
-                  backgroundColor: active ? `${C.accent}12` : C.bgCard,
-                  borderRadius: S.radius,
-                  padding: 14,
-                  alignItems: "center",
-                  borderWidth: 1.5,
-                  borderColor: active ? C.accent : C.border,
-                }}
-              >
-                <Text style={{ fontSize: 22, marginBottom: 4 }}>{p.emoji}</Text>
-                <Text style={{ fontSize: 14, fontWeight: "900", color: active ? C.accent : C.text }}>{p.label}</Text>
-                <Text style={{ fontSize: 20, fontWeight: "900", color: active ? C.accent : C.textMuted, marginTop: 4 }}>{p.count}</Text>
-                <Text style={{ fontSize: 11, color: C.textMuted }}>{p.desc}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
 
         {/* ── Priorité de tri ────────────────────────────────────────── */}
         <Text style={styles.sectionLabel}>Ce que tu veux trier en priorité</Text>

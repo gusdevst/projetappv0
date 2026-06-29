@@ -239,13 +239,23 @@ export const usePhotoStore = create(
         ),
       })),
 
-      removePhotoFromAlbum: (albumId, photoId) => set((state) => ({
-        albums: state.albums.map((a) =>
+      removePhotoFromAlbum: (albumId, photoId) => set((state) => {
+        const updatedAlbums = state.albums.map((a) =>
           a.id === albumId
             ? { ...a, photoIds: a.photoIds.filter((id) => id !== photoId) }
             : a
-        ),
-      })),
+        );
+        // Si la photo n'appartient plus à aucun album, la sortir de printed
+        // et la mettre dans skipped (= déjà triée, invisible dans le menu album).
+        const stillInAlbum = updatedAlbums.some((a) => a.photoIds.includes(photoId));
+        if (stillInAlbum) return { albums: updatedAlbums };
+        const photo = state.printed.find((p) => p.id === photoId);
+        return {
+          albums:  updatedAlbums,
+          printed: state.printed.filter((p) => p.id !== photoId),
+          skipped: photo ? [...state.skipped, photo] : state.skipped,
+        };
+      }),
 
       // ─── Vider la corbeille (vraie suppression via MediaLibrary) ────────
       // Retourne true si la suppression a réussi, false sinon.

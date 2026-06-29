@@ -323,16 +323,25 @@ export function HomeScreen({ navigation, route }) {
           nav: () => navigation.navigate("Gallery", { section: "deleted" }),
         }
       : {
-          key: "kept",
-          emoji: "❤️", label: "Coups de cœur", count: kept.length,
-          sub: `${kept.length} photo${kept.length > 1 ? "s" : ""}`, bg: "#e6f0ea", color: C.green,
-          nav: () => navigation.navigate("Gallery", { section: "kept" }),
+          key: "partners",
+          emoji: "🤝", label: "Partenaires", count: 3,
+          sub: "bientôt", bg: "#eef0f4", color: C.textMuted, disabled: true,
+          nav: () => Alert.alert("Bientôt disponible", "L'impression de tes souvenirs arrive bientôt 🌸"),
         },
     isMenage
       ? {
           key: "rappels",
-          emoji: "🔔", label: "Rappels", count: null,
-          sub: notificationFrequency !== "off" ? "actif" : "inactif", bg: "#f0f0ff", color: C.accent,
+          emoji: "🔔", label: "Rappels",
+          count: notificationFrequency !== "off" ? "ACTIF" : "INACTIF",
+          sub: {
+            off:         "désactivé",
+            daily:       "quotidien",
+            twice_daily: "2 fois / jour",
+            every2days:  "tous les 2 jours",
+            weekly:      "hebdomadaire",
+          }[notificationFrequency] ?? "désactivé",
+          bg: "#f0f0ff",
+          color: notificationFrequency !== "off" ? C.accent : C.textMuted,
           nav: () => navigation.navigate("Rappels"),
         }
       : {
@@ -349,10 +358,10 @@ export function HomeScreen({ navigation, route }) {
           nav: () => navigation.navigate("Gallery", { section: "kept" }),
         }
       : {
-          key: "partners",
-          emoji: "🤝", label: "Partenaires", count: 3,
-          sub: "bientôt", bg: "#eef0f4", color: C.textMuted, disabled: true,
-          nav: () => Alert.alert("Bientôt disponible", "L'impression de tes souvenirs arrive bientôt 🌸"),
+          key: "kept",
+          emoji: "❤️", label: "Coups de cœur", count: kept.length,
+          sub: `${kept.length} photo${kept.length > 1 ? "s" : ""}`, bg: "#e6f0ea", color: C.green,
+          nav: () => navigation.navigate("Gallery", { section: "kept" }),
         },
   ];
 
@@ -672,7 +681,7 @@ export function HomeScreen({ navigation, route }) {
               </View>
               <Text style={{ fontSize: 19, fontWeight: "900", color: s.color }}>{s.count}</Text>
               <Text style={{ fontSize: 11, fontWeight: "700", color: C.text, marginTop: 2 }}>{s.label}</Text>
-              <Text style={{ fontSize: 9, color: C.textMuted, marginTop: 1 }}>{s.sub}</Text>
+              <Text style={{ fontSize: 9, color: C.textMuted, marginTop: 1, textAlign: "center" }}>{s.sub}</Text>
             </TouchableOpacity>
           ))}
         </View>

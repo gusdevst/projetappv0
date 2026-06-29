@@ -32,8 +32,8 @@ const SLIDES = [
   },
   {
     emoji: "🔔",
-    title: "Garde le rythme",
-    desc: "Active un rappel quotidien (9h par défaut, heure modifiable) pour penser à trier tes photos. Tu pourras le régler dans les Réglages.",
+    title: "Des rappels pour avancer",
+    desc: "Configure la fréquence (quotidien, 2x/jour, hebdo…) et l'heure de tes rappels. Choisis ton rythme de session — Rapide (10 photos), Normal (30) ou Sérieux (50) — et Pellicule t'indique combien de sessions il reste pour tout trier.",
   },
   {
     emoji: "🔒",
