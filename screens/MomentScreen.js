@@ -376,7 +376,7 @@ export function MomentScreen({ navigation, route }) {
 
       {/* En-tête */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton mode={mode} onPress={() => navigation.goBack()} />
         <View>
           <Text style={{ fontWeight: "800", fontSize: 18, color: C.text }}>Tri par moment</Text>
           <Text style={{ fontSize: 11, color: C.textMuted }}>

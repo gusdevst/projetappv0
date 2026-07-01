@@ -43,16 +43,29 @@ async function hideAndroidNavBar() {
 // (ex : depuis le handler de notification).
 export const navigationRef = createNavigationContainerRef();
 
-// ── Session ménage aléatoire depuis une notification ──────────────────────────
-// Choisit randomCount photos parmi les photos non encore triées,
-// en respectant la priorité configurée (sortPriority).
+// ── Session quotidienne depuis une notification ────────────────────────────
+// Lance la session configurée par sortPriority : une sélection aléatoire,
+// ou un batch de groupes de doublons à trier.
 // Retourne true si la navigation a été déclenchée, false si la bibliothèque
 // n'est pas encore chargée (on réessaiera après loadLibrary).
-function launchRandomMenage() {
+const DUPLICATES_BATCH_GROUPS = 5;
+
+function launchDailySession() {
   const { libraryPhotos, kept, deleted, printed, skipped, randomCount, sortPriority } =
     usePhotoStore.getState();
 
   if (libraryPhotos.length === 0) return false;
+
+  const priority = sortPriority || { type: "random" };
+
+  // Le tri des doublons a sa propre écran (regroupement + comparaison) :
+  // on y navigue directement avec une limite de groupes pour la session du jour.
+  if (priority.type === "duplicates") {
+    if (navigationRef.isReady()) {
+      navigationRef.navigate("Duplicates", { maxGroups: DUPLICATES_BATCH_GROUPS });
+    }
+    return true;
+  }
 
   const triedIds = new Set([
     ...kept.map((p) => p.id),
@@ -64,18 +77,6 @@ function launchRandomMenage() {
   let pool = libraryPhotos.filter((p) => !triedIds.has(p.id));
   if (pool.length === 0) return true; // Tout trié, rien à faire
 
-  // Applique le filtre de priorité si configuré
-  const priority = sortPriority || { type: "random" };
-  if (priority.type === "month" && priority.monthKeys?.length > 0) {
-    const monthSet = new Set(priority.monthKeys);
-    const filtered = pool.filter((p) => {
-      const d = new Date(p.creationTime);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      return monthSet.has(key);
-    });
-    // Si le filtre donne des résultats, on l'utilise ; sinon on prend tout le pool
-    if (filtered.length > 0) pool = filtered;
-  }
   // Pour native_album, le filtrage nécessite un appel async (getAlbumAssetIds)
   // qui ne peut pas se faire ici de façon synchrone — on tombe en mode aléatoire.
 
@@ -123,7 +124,7 @@ export default function App() {
           "start_menage_random"
         ) {
           // Si la bibliothèque n'est pas encore chargée, on marque comme en attente.
-          if (!launchRandomMenage()) {
+          if (!launchDailySession()) {
             pendingNotifTap.current = true;
           }
         }
@@ -138,7 +139,7 @@ export default function App() {
         // Bibliothèque chargée : traiter le tap de notification différé si nécessaire
         if (pendingNotifTap.current) {
           pendingNotifTap.current = false;
-          launchRandomMenage();
+          launchDailySession();
         }
       }
     })();

@@ -36,7 +36,16 @@ function getEdgeGradient(edge, color) {
   return { colors: ["transparent", "transparent"] };
 }
 
-export function DuplicatesScreen({ navigation }) {
+// Limite une liste de groupes à un nombre de regroupements donné.
+function capGroups(groups, maxGroups) {
+  if (!maxGroups) return groups;
+  return groups.slice(0, maxGroups);
+}
+
+export function DuplicatesScreen({ navigation, route }) {
+  // maxGroups : limite optionnelle (ex: batch de 5 regroupements depuis la notification quotidienne).
+  // Absent quand l'écran est ouvert depuis le menu → tous les doublons sont affichés.
+  const maxGroups           = route?.params?.maxGroups ?? null;
   const libraryPhotos       = usePhotoStore((s) => s.libraryPhotos);
   const deleted             = usePhotoStore((s) => s.deleted);
   const skipped             = usePhotoStore((s) => s.skipped);
@@ -45,7 +54,6 @@ export function DuplicatesScreen({ navigation }) {
   const addSkipped          = usePhotoStore((s) => s.addSkipped);
   const addKept             = usePhotoStore((s) => s.addKept);
   const undoLast            = usePhotoStore((s) => s.undoLast);
-  const swipeMappingsMenage = usePhotoStore((s) => s.swipeMappingsMenage);
 
   const [groups, setGroups]                     = useState(null); // null = calcul en cours
   const [selectedGroupIdx, setSelectedGroupIdx] = useState(null);
@@ -97,10 +105,10 @@ export function DuplicatesScreen({ navigation }) {
       const result = findDuplicates(activePhotos).sort(
         (a, b) => b.photos[0].creationTime - a.photos[0].creationTime
       );
-      setGroups(result);
+      setGroups(capGroups(result, maxGroups));
     }, 0);
     return () => clearTimeout(id);
-  }, [activePhotos]);
+  }, [activePhotos, maxGroups]);
 
   const totalDuplicates = groups ? groups.reduce((a, g) => a + g.photos.length, 0) : 0;
 
@@ -153,8 +161,9 @@ export function DuplicatesScreen({ navigation }) {
         ...storeState.kept.map((p) => p.id),
       ]);
       const newActivePhotos = storeState.libraryPhotos.filter((p) => !newExcludedIds.has(p.id));
-      const newGroups = findDuplicates(newActivePhotos).sort(
-        (a, b) => b.photos[0].creationTime - a.photos[0].creationTime
+      const newGroups = capGroups(
+        findDuplicates(newActivePhotos).sort((a, b) => b.photos[0].creationTime - a.photos[0].creationTime),
+        maxGroups
       );
       // Le groupe courant a disparu, le même index pointe maintenant sur le suivant
       const nextGroup = newGroups[fullscreen.groupIdx];
@@ -188,14 +197,13 @@ export function DuplicatesScreen({ navigation }) {
     setHistory((h) => h.slice(0, -1));
   }
 
-  // Mappe la direction swipe config ménage → action dans les doublons
+  // Directions fixes (indépendantes du mapping swipe personnalisé du mode ménage) :
+  // elles doivent toujours correspondre aux boutons "↓ bas = supprimer" et
+  // "↑ garder" affichés en bas de l'écran.
   function getSwipeHandler(direction) {
     if (!currentPhoto) return undefined;
-    const action = swipeMappingsMenage[direction];
-    if (action === "delete")
-      return () => advanceAfterAction(currentPhoto, addDeleted, direction);
-    if (["favorite", "skip", "hesitate"].includes(action))
-      return () => advanceAfterAction(currentPhoto, addSkipped, direction);
+    if (direction === "down") return () => advanceAfterAction(currentPhoto, addDeleted, "down");
+    if (direction === "up")   return () => advanceAfterAction(currentPhoto, addSkipped, "up");
     return undefined;
   }
 
@@ -223,9 +231,11 @@ export function DuplicatesScreen({ navigation }) {
 
       {/* ── Header ── */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton mode="menage" onPress={() => navigation.goBack()} />
         <View>
-          <Text style={{ fontWeight: "800", fontSize: 18, color: C.text }}>Doublons probables</Text>
+          <Text style={{ fontWeight: "800", fontSize: 18, color: C.text }}>
+            {maxGroups ? "Doublons du jour" : "Doublons probables"}
+          </Text>
           <Text style={{ fontSize: 11, color: C.textMuted }}>
             {groups === null
               ? "Analyse en cours…"

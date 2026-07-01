@@ -249,7 +249,7 @@ export function TriModeScreen({ navigation, route }) {
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} {...panResponder.panHandlers}>
         <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 8 }}>
-          <BackButton onPress={() => skipToAlbum ? navigation.goBack() : setStep(0)} />
+          <BackButton mode="album" onPress={() => skipToAlbum ? navigation.goBack() : setStep(0)} />
           <Text style={{ fontWeight: "900", fontSize: 20, color: C.album }}>Album</Text>
         </View>
 
@@ -325,7 +325,7 @@ export function TriModeScreen({ navigation, route }) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 8 }}>
-          <BackButton onPress={() => setStep(1)} />
+          <BackButton mode="album" onPress={() => setStep(1)} />
           <Text style={{ fontWeight: "900", fontSize: 20, color: C.album }}>
             {albumSubStep === "new" ? "Nouvel album" : "Continuer un album"}
           </Text>

@@ -262,7 +262,7 @@ export function MapScreen({ navigation, route }) {
 
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton mode={mode} onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: "800", fontSize: 18, color: C.text }}>Tri par lieu</Text>
           <Text style={{ fontSize: 11, color: C.textMuted }}>

@@ -147,10 +147,9 @@ export const usePhotoStore = create(
       setRandomCount: (n) => set({ randomCount: n }),
 
       // Priorité de tri pour les sessions déclenchées par la notification.
-      // type: "random" | "native_album" | "month"
+      // type: "random" | "native_album" | "duplicates"
       // nativeAlbumId / nativeAlbumTitle : dossier natif sélectionné
-      // monthKeys : tableau de clés "YYYY-MM" si type = "month"
-      sortPriority: { type: "random", nativeAlbumId: null, nativeAlbumTitle: null, monthKeys: [] },
+      sortPriority: { type: "random", nativeAlbumId: null, nativeAlbumTitle: null },
       setSortPriority: (p) => set({ sortPriority: p }),
 
       // Remet les mappings de swipe par défaut pour un mode donné (ou les deux).

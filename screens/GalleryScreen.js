@@ -293,6 +293,7 @@ export function GalleryScreen({ navigation, route }) {
       {/* ── Header ── */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
         <BackButton
+          accentColor={section === "album" ? C.album : config.accent}
           onPress={() => {
             if (activeAlbumId) { setActiveAlbumId(null); }
             else { navigation.goBack(); }

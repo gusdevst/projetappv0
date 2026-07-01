@@ -191,7 +191,7 @@ export function SettingsScreen({ navigation, route }) {
         flexDirection: "row", alignItems: "center", gap: 12,
         padding: S.pad, paddingBottom: 8,
       }}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton accentColor={C.accent} onPress={() => navigation.goBack()} />
         <Text style={{ fontWeight: "900", fontSize: 22, color: C.text }}>Paramètres</Text>
       </View>
 

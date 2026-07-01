@@ -64,24 +64,6 @@ const SESSION_PROFILES = [
   { label: "Sérieux", count: 50, desc: "~5 min",  emoji: "💪" },
 ];
 
-const MOIS_FR = [
-  "Janvier","Février","Mars","Avril","Mai","Juin",
-  "Juillet","Août","Septembre","Octobre","Novembre","Décembre",
-];
-
-function buildMonthGroups(photos) {
-  const map = {};
-  photos.forEach((p) => {
-    const d   = new Date(p.creationTime);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    if (!map[key]) {
-      map[key] = { key, label: `${MOIS_FR[d.getMonth()]} ${d.getFullYear()}`, count: 0 };
-    }
-    map[key].count++;
-  });
-  return Object.values(map).sort((a, b) => b.key.localeCompare(a.key));
-}
-
 export function RappelsScreen({ navigation }) {
   const notificationFrequency    = usePhotoStore((s) => s.notificationFrequency);
   const setNotificationFrequency = usePhotoStore((s) => s.setNotificationFrequency);
@@ -116,8 +98,6 @@ export function RappelsScreen({ navigation }) {
   }, [libraryPhotos, kept, deleted, printed, skipped]);
 
   const sessionsLeft = randomCount > 0 ? Math.ceil(remainingCount / randomCount) : 0;
-
-  const monthGroups = useMemo(() => buildMonthGroups(libraryPhotos), [libraryPhotos]);
 
   // Albums natifs du téléphone
   const [nativeAlbums, setNativeAlbums]   = useState([]);
@@ -207,16 +187,8 @@ export function RappelsScreen({ navigation }) {
   };
 
   const handleSelectNativeAlbum = (album) => {
-    setSortPriority({ type: "native_album", nativeAlbumId: album.id, nativeAlbumTitle: album.title, monthKeys: [] });
+    setSortPriority({ type: "native_album", nativeAlbumId: album.id, nativeAlbumTitle: album.title });
     setShowAlbumPicker(false);
-  };
-
-  const handleToggleMonth = (key) => {
-    const current = sortPriority.monthKeys ?? [];
-    const next = current.includes(key)
-      ? current.filter((k) => k !== key)
-      : [...current, key];
-    setSortPriority({ ...sortPriority, type: "month", monthKeys: next, nativeAlbumId: null, nativeAlbumTitle: null });
   };
 
   const timeLabel  = `${String(notificationHour).padStart(2, "0")}h${String(notificationMinute).padStart(2, "0")}`;
@@ -236,7 +208,7 @@ export function RappelsScreen({ navigation }) {
 
       {/* ── Header ── */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <BackButton onPress={() => navigation.goBack()} />
+        <BackButton mode="menage" onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: "800", fontSize: 20, color: C.text }}>Rappels quotidiens</Text>
           <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>Configure ton rythme de tri</Text>
@@ -420,7 +392,7 @@ export function RappelsScreen({ navigation }) {
 
         {/* Option : Aléatoire */}
         <TouchableOpacity
-          onPress={() => setSortPriority({ type: "random", nativeAlbumId: null, nativeAlbumTitle: null, monthKeys: [] })}
+          onPress={() => setSortPriority({ type: "random", nativeAlbumId: null, nativeAlbumTitle: null })}
           style={[styles.priorityCard, sortPriority?.type === "random" && styles.priorityCardActive]}
         >
           <Text style={{ fontSize: 22 }}>🎲</Text>
@@ -429,6 +401,19 @@ export function RappelsScreen({ navigation }) {
             <Text style={styles.priorityDesc}>Pellicule choisit les photos pour toi</Text>
           </View>
           {sortPriority?.type === "random" && <CheckMark />}
+        </TouchableOpacity>
+
+        {/* Option : Doublons */}
+        <TouchableOpacity
+          onPress={() => setSortPriority({ type: "duplicates", nativeAlbumId: null, nativeAlbumTitle: null })}
+          style={[styles.priorityCard, sortPriority?.type === "duplicates" && styles.priorityCardActive]}
+        >
+          <Text style={{ fontSize: 22 }}>🪞</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.priorityTitle, sortPriority?.type === "duplicates" && { color: C.accent }]}>Doublons</Text>
+            <Text style={styles.priorityDesc}>Trie un batch de 5 regroupements de doublons détectés automatiquement</Text>
+          </View>
+          {sortPriority?.type === "duplicates" && <CheckMark />}
         </TouchableOpacity>
 
         {/* Option : Dossier natif */}
@@ -450,39 +435,6 @@ export function RappelsScreen({ navigation }) {
           </View>
           {sortPriority?.type === "native_album" && <CheckMark />}
         </TouchableOpacity>
-
-        {/* Option : Par période (chips mois) */}
-        <View style={[styles.priorityCard, sortPriority?.type === "month" && styles.priorityCardActive, { flexDirection: "column", alignItems: "flex-start", gap: 10 }]}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, width: "100%" }}>
-            <Text style={{ fontSize: 22 }}>📅</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.priorityTitle, sortPriority?.type === "month" && { color: C.accent }]}>Une période</Text>
-              <Text style={styles.priorityDesc}>Sélectionne un ou plusieurs mois</Text>
-            </View>
-            {sortPriority?.type === "month" && sortPriority.monthKeys?.length > 0 && <CheckMark />}
-          </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-            {monthGroups.map((g) => {
-              const on = sortPriority?.type === "month" && (sortPriority.monthKeys ?? []).includes(g.key);
-              return (
-                <TouchableOpacity
-                  key={g.key}
-                  onPress={() => handleToggleMonth(g.key)}
-                  style={{
-                    paddingHorizontal: 12, paddingVertical: 6,
-                    borderRadius: S.radiusFull, borderWidth: 1.5,
-                    borderColor: on ? C.accent : C.border,
-                    backgroundColor: on ? `${C.accent}15` : C.bg,
-                  }}
-                >
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: on ? C.accent : C.textMuted }}>
-                    {g.label}{"  "}<Text style={{ fontWeight: "500", fontSize: 11 }}>{g.count}</Text>
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
 
       </ScrollView>
 
