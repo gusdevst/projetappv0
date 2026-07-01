@@ -16,7 +16,8 @@
 // L'app racine doit être wrappée dans <GestureHandlerRootView> (cf. App.js).
 
 import { forwardRef, useEffect, useImperativeHandle } from "react";
-import { Image, Dimensions } from "react-native";
+import { Dimensions } from "react-native";
+import { Image } from "expo-image";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

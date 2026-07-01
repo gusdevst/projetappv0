@@ -10,7 +10,8 @@
 //   4. Sauvegarde du cache enrichi en fin de scan
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { C, S } from "../constants/theme";

@@ -2,8 +2,9 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import {
   View, Text, TouchableOpacity,
-  Image, StatusBar, Dimensions, Modal, FlatList, Platform, Animated, ActivityIndicator,
+  StatusBar, Dimensions, Modal, FlatList, Platform, Animated, ActivityIndicator,
 } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LinearGradient } from "expo-linear-gradient";

@@ -20,9 +20,7 @@ try {
 } catch (e) {}
 
 import { LinearGradient } from "expo-linear-gradient";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { C, S } from "../constants/theme";
-import { getPhotoAdvice, enhancePhoto } from "../services/aiService";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { ZoomableImage } from "../components/ZoomableImage";
 
@@ -83,12 +81,6 @@ export function SwipeScreen({ navigation, route }) {
   const [sessionHesitated,     setSessionHesitated]      = useState([]);   // photos hésitées 🤔
   const [sessionAlbumPhotos,   setSessionAlbumPhotos]    = useState([]);   // photos ajoutées à l'album 📁
   const [sessionConserved,     setSessionConserved]      = useState([]);   // photos conservées (ménage) 💚
-
-  const [aiPanel, setAiPanel]     = useState(false);
-  const [aiMode, setAiMode]       = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [advice, setAdvice]       = useState(null);
-  const [enhanced, setEnhanced]   = useState(null);
 
   const [showAlbumPicker, setShowAlbumPicker] = useState(false);
   const [newAlbumName, setNewAlbumName]       = useState("");
@@ -160,7 +152,6 @@ export function SwipeScreen({ navigation, route }) {
   // ── Actions de tri ────────────────────────────────────────────────────────
   const performAction = (actionKey, animDir) => {
     if (!photo) return;
-    setAiPanel(false); setAdvice(null); setEnhanced(null); setAiMode(null);
     if (actionKey === "none") return;
 
     const stateNow = usePhotoStore.getState();

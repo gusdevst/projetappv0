@@ -5,9 +5,10 @@
 
 import { useState, useEffect } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity, Image, Modal,
+  View, Text, ScrollView, TouchableOpacity, Modal,
   Dimensions, StatusBar, Alert, TextInput, Platform,
 } from "react-native";
+import { Image } from "expo-image";
 
 let NavigationBar = null;
 try { NavigationBar = require("expo-navigation-bar"); } catch (e) {}

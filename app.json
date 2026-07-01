@@ -48,12 +48,6 @@
         }
       ],
       [
-        "expo-tracking-transparency",
-        {
-          "userTrackingPermission": "Pellicule n'utilise pas le tracking publicitaire — cette autorisation reste désactivée par défaut."
-        }
-      ],
-      [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",

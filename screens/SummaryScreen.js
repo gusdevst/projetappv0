@@ -3,7 +3,8 @@
 // screens/SummaryScreen.js
 // ─────────────────────────────────────────────
 import { useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, Dimensions, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StatusBar, Dimensions, Alert } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";

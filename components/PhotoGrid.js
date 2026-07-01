@@ -9,7 +9,8 @@
 //   onLongPress      — appelé quand l'user appuie longuement sur une photo (active la sélection multiple)
 //   selectedIds      — Set<string> des IDs sélectionnés ; si fourni, affiche le mode sélection
 
-import { View, TouchableOpacity, Image, Text, useWindowDimensions } from "react-native";
+import { View, TouchableOpacity, Text, useWindowDimensions } from "react-native";
+import { Image } from "expo-image";
 
 export function PhotoGrid({
   photos,
