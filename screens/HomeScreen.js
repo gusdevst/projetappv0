@@ -580,9 +580,10 @@ export function HomeScreen({ navigation, route }) {
               🎁 IMPRIMER TES SOUVENIRS · BIENTÔT
             </Text>
 
-            {/* Scroll horizontal des produits */}
+            {/* Produits — une seule ligne, scroll désactivé pour ne pas bloquer le swipe de mode */}
             <ScrollView
               horizontal
+              scrollEnabled={false}
               showsHorizontalScrollIndicator={false}
               style={{ marginHorizontal: -14, marginBottom: 12 }}
               contentContainerStyle={{ paddingHorizontal: 14, gap: 10 }}

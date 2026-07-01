@@ -251,7 +251,7 @@ export function DuplicatesScreen({ navigation }) {
             Pas de doublons détectés
           </Text>
           <Text style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 8, lineHeight: 18 }}>
-            On détecte les photos prises à moins de 2 secondes d'écart avec les mêmes dimensions (mode rafale, double appui…).
+            On détecte les photos prises à moins de 5 secondes d'écart avec les mêmes dimensions (mode rafale, double appui…).
           </Text>
         </View>
 

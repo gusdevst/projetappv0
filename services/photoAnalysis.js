@@ -4,12 +4,12 @@
 
 // ─── Doublons ─────────────────────────────────────────────────────────────
 // Heuristique : 2 photos sont des "doublons probables" si elles ont été prises
-// à moins de 2 secondes d'écart ET ont les mêmes dimensions.
+// à moins de 5 secondes d'écart ET ont les mêmes dimensions.
 // Ça couvre ~80% des cas réels : mode rafale, double appui sur le bouton, etc.
 // Limites : ne détecte pas les photos quasi-identiques prises plus tard (selfies),
 // ni les recadrages. Pour ça il faudrait du perceptual hashing → Phase 4.
 
-const DUPLICATE_TIME_WINDOW_MS = 2000;
+const DUPLICATE_TIME_WINDOW_MS = 5000;
 
 /**
  * Trouve les groupes de doublons dans une liste de photos.
