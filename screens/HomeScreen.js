@@ -471,7 +471,7 @@ export function HomeScreen({ navigation, route }) {
               key={f}
               onPress={() => setActiveFilter(f)}
               style={{
-                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
+                paddingHorizontal: 9, paddingVertical: 6, borderRadius: 99,
                 borderWidth: 1.5,
                 borderColor: activeFilter === f ? modeColor : C.border,
                 backgroundColor: activeFilter === f ? modeColor : C.bgCard,
@@ -487,7 +487,7 @@ export function HomeScreen({ navigation, route }) {
             onPress={openAlbumPicker}
             style={{
               flexDirection: "row", alignItems: "center", gap: 5,
-              paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
+              paddingHorizontal: 9, paddingVertical: 6, borderRadius: 99,
               borderWidth: 1.5,
               borderColor: selectedAlbum ? modeColor : C.border,
               backgroundColor: selectedAlbum ? `${modeColor}18` : C.bgCard,
@@ -507,7 +507,7 @@ export function HomeScreen({ navigation, route }) {
               onPress={() => toggleRandomFifty(filteredPool)}
               style={{
                 flexDirection: "row", alignItems: "center", gap: 5,
-                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
+                paddingHorizontal: 9, paddingVertical: 6, borderRadius: 99,
                 borderWidth: 1.5,
                 borderColor: randomFiftyActive ? C.accent : C.border,
                 backgroundColor: randomFiftyActive ? C.accent : C.bgCard,
@@ -524,7 +524,7 @@ export function HomeScreen({ navigation, route }) {
               onPress={() => setActiveFilter(activeFilter === "Screenshots" ? "Toutes" : "Screenshots")}
               style={{
                 flexDirection: "row", alignItems: "center", gap: 5,
-                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99,
+                paddingHorizontal: 9, paddingVertical: 6, borderRadius: 99,
                 borderWidth: 1.5,
                 borderColor: activeFilter === "Screenshots" ? modeColor : C.border,
                 backgroundColor: activeFilter === "Screenshots" ? modeColor : C.bgCard,
