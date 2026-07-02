@@ -5,9 +5,10 @@
 //
 // Chargement GPS :
 //   1. Lecture instantanée du cache (AsyncStorage) → carte affichée immédiatement
-//   2. Scan en arrière-plan des photos non-cachées par batches de 50
+//   2. Scan en arrière-plan UNIQUEMENT des photos jamais scannées (cache négatif :
+//      une photo sans GPS est mémorisée avec la valeur null, donc jamais rescannée)
 //   3. Mise à jour progressive de la carte au fil du scan
-//   4. Sauvegarde du cache enrichi en fin de scan
+//   4. Sauvegarde du cache enrichi (GPS trouvés + null) en fin de scan
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator } from "react-native";
@@ -57,16 +58,21 @@ export function MapScreen({ navigation, route }) {
 
       if (cancelled) return;
 
-      // Construire la liste des photos déjà connues avec GPS
+      // Construire known (GPS déjà connu) / toScan (jamais scannée) à partir du cache.
+      // Une clé présente avec valeur null = déjà scannée, sans GPS → on ne la rescanne pas.
       const known = [];
       const toScan = [];
       activePhotos.forEach((p) => {
-        if (cache[p.id]) {
-          known.push({ ...p, lat: cache[p.id].lat, lng: cache[p.id].lng });
+        if (Object.prototype.hasOwnProperty.call(cache, p.id)) {
+          const entry = cache[p.id];
+          if (entry) known.push({ ...p, lat: entry.lat, lng: entry.lng });
+          // entry === null → déjà scannée sans GPS, on l'ignore (ni known, ni toScan)
         } else {
           toScan.push(p);
         }
       });
+
+      console.log(`[MapScreen] GPS cache : ${known.length} connue(s) avec GPS, ${toScan.length} à scanner (sur ${activePhotos.length} au total)`);
 
       setPhotosWithGeo(known);
       setLoading(false);
@@ -83,11 +89,10 @@ export function MapScreen({ navigation, route }) {
         const enriched = await Promise.all(
           chunk.map(async (p) => {
             const loc = await loadPhotoLocation(p.id);
-            if (loc) {
-              cache[p.id] = { lat: loc.lat, lng: loc.lng };
-              return { ...p, lat: loc.lat, lng: loc.lng };
-            }
-            return null;
+            // On mémorise le résultat dans tous les cas, y compris null (cache négatif)
+            // pour ne plus jamais rescanner cette photo.
+            cache[p.id] = loc ? { lat: loc.lat, lng: loc.lng } : null;
+            return loc ? { ...p, lat: loc.lat, lng: loc.lng } : null;
           })
         );
 
@@ -106,9 +111,10 @@ export function MapScreen({ navigation, route }) {
 
       if (!cancelled) {
         setScanProgress(null);
-        if (newlyFound > 0) {
-          await saveGpsCache(cache);
-        }
+        // On sauvegarde toujours (même sans nouveau GPS trouvé) : le cache doit
+        // mémoriser les null pour ne plus jamais rescanner ces photos.
+        await saveGpsCache(cache);
+        console.log(`[MapScreen] Scan terminé : ${newlyFound} photo(s) géolocalisée(s) trouvée(s) sur ${toScan.length} scannée(s)`);
       }
     })();
 
