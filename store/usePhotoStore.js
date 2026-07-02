@@ -1,11 +1,16 @@
 // store/usePhotoStore.js
 import { create } from "zustand";
 import { subscribeWithSelector, persist, createJSONStorage } from "zustand/middleware";
+import { InteractionManager } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as PhotoLibrary from "../services/photoLibrary";
 import { loadGpsCache, saveGpsCache } from "../services/gpsCache";
 
 const GEO_SCAN_BATCH = 50;
+
+// Flag pour désactiver facilement le pré-chargement GPS en arrière-plan
+// (étape 3) sans toucher au scan déclenché manuellement depuis MapScreen.
+const ENABLE_BACKGROUND_GEO_PRELOAD = true;
 
 // Verrou anti double-exécution de scanGeo(). Variable de module (pas dans le
 // store) : c'est un détail d'implémentation interne, pas un état à observer.
@@ -319,6 +324,22 @@ export const usePhotoStore = create(
             libraryTotalCount: totalInLibrary,
             libraryLoading:    false,
           });
+
+          // Étape 3 : pré-chargement GPS en arrière-plan. Fire-and-forget —
+          // ne bloque jamais loadLibrary, et une erreur ici ne doit JAMAIS
+          // impacter le reste de l'app (d'où le try/catch dédié, en plus de
+          // celui déjà présent dans scanGeo lui-même).
+          if (ENABLE_BACKGROUND_GEO_PRELOAD) {
+            InteractionManager.runAfterInteractions(() => {
+              try {
+                get().scanGeo().catch((err) => {
+                  console.warn("scanGeo (préchargement arrière-plan) failed:", err);
+                });
+              } catch (err) {
+                console.warn("scanGeo (préchargement arrière-plan) failed:", err);
+              }
+            });
+          }
         } catch (err) {
           console.warn("loadLibrary failed:", err);
           set({ libraryError: String(err), libraryLoading: false });
@@ -379,6 +400,11 @@ export const usePhotoStore = create(
               set((state) => ({ geoPhotos: [...state.geoPhotos, ...found] }));
             }
             set({ geoScanProgress: { scanned: Math.min(i + GEO_SCAN_BATCH, toScan.length), total: toScan.length } });
+
+            // Micro-pause : rend la main au thread JS entre deux batches, pour
+            // que l'UI (navigation, animations) reste fluide pendant un scan
+            // de plusieurs milliers de photos, notamment en arrière-plan (étape 3).
+            await new Promise((resolve) => setTimeout(resolve, 0));
           }
 
           await saveGpsCache(cache);

@@ -3,7 +3,7 @@
 // et gérer le tap sur une notification de rappel (→ session ménage aléatoire).
 
 import { useEffect, useRef } from "react";
-import { View, Platform } from "react-native";
+import { View, Platform, AppState } from "react-native";
 import { NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
@@ -144,6 +144,22 @@ export default function App() {
       }
     })();
 
+    return () => sub.remove();
+  }, []);
+
+  // Rafraîchit la photothèque quand l'app revient au premier plan, pour que
+  // les photos prises pendant que l'app était en arrière-plan (ou fermée sans
+  // relancer le process) apparaissent sans avoir à redémarrer l'app.
+  // loadLibrary() déclenche lui-même le scan GPS en arrière-plan (étape 3),
+  // donc les nouvelles photos sont aussi géolocalisées automatiquement.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") return;
+      const { permission, libraryLoading } = usePhotoStore.getState();
+      if (permission === "granted" && !libraryLoading) {
+        usePhotoStore.getState().loadLibrary();
+      }
+    });
     return () => sub.remove();
   }, []);
 
