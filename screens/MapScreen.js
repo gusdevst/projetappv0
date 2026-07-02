@@ -4,11 +4,14 @@
 // Le CTA "Trier" lance le tri sur l'union de toutes les photos sélectionnées.
 //
 // Chargement GPS :
-//   1. Lecture instantanée du cache (AsyncStorage) → carte affichée immédiatement
-//   2. Scan en arrière-plan UNIQUEMENT des photos jamais scannées (cache négatif :
-//      une photo sans GPS est mémorisée avec la valeur null, donc jamais rescannée)
-//   3. Mise à jour progressive de la carte au fil du scan
-//   4. Sauvegarde du cache enrichi (GPS trouvés + null) en fin de scan
+//   L'état du scan (geoPhotos, geoScanStatus, geoScanProgress) vit dans le
+//   store (voir store/usePhotoStore.js → scanGeo), pas dans ce composant.
+//   Ça permet de quitter puis revenir sur cet écran sans tout recharger :
+//   au retour, les données sont déjà en mémoire.
+//   1. Ce composant déclenche scanGeo() seulement si le scan n'a jamais démarré.
+//   2. scanGeo() lit le cache (services/gpsCache.js), ne scanne que les photos
+//      jamais vues (cache négatif), et met à jour geoPhotos par batches.
+//   3. Ce composant se contente d'afficher geoPhotos, filtré des photos supprimées.
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator } from "react-native";
@@ -17,11 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
-import { loadPhotoLocation } from "../services/photoLibrary";
-import { loadGpsCache, saveGpsCache } from "../services/gpsCache";
 import BackButton from "../components/BackButton";
-
-const SCAN_BATCH = 50;
 
 export function MapScreen({ navigation, route }) {
   const mode = route.params?.mode ?? "menage";
@@ -29,97 +28,52 @@ export function MapScreen({ navigation, route }) {
   const libraryPhotos  = usePhotoStore((s) => s.libraryPhotos);
   const deleted        = usePhotoStore((s) => s.deleted);
   const addAlbumFilter = usePhotoStore((s) => s.addAlbumFilter);
+  const geoPhotos       = usePhotoStore((s) => s.geoPhotos);
+  const geoScanStatus   = usePhotoStore((s) => s.geoScanStatus);
+  const geoScanProgress = usePhotoStore((s) => s.geoScanProgress);
+  const scanGeo         = usePhotoStore((s) => s.scanGeo);
 
-  const [photosWithGeo, setPhotosWithGeo] = useState([]);
-  const [loading, setLoading]             = useState(true);
-  // null = scan terminé ; {scanned, total} = scan en cours
-  const [scanProgress, setScanProgress]   = useState(null);
-  const [selectedKeys, setSelectedKeys]   = useState(new Set());
+  const [selectedKeys, setSelectedKeys] = useState(new Set());
   const webviewRef = useRef(null);
-  // Référence partagée avec la boucle de scan pour injecter les nouveaux marqueurs
+  // File d'attente des marqueurs à injecter dans la WebView sans tout recharger
   const pendingMarkersRef = useRef([]);
+  // Longueur de geoPhotos au moment du montage : tout ce qui dépasse cette
+  // longueur est "nouveau depuis qu'on regarde cet écran" (à injecter en JS).
+  // Ce qui était déjà là au montage est directement inclus dans le HTML initial.
+  const baselineGeoLengthRef = useRef(geoPhotos.length);
 
   const activePhotos = useMemo(() => {
     const ids = new Set(deleted.map((p) => p.id));
     return libraryPhotos.filter((p) => !ids.has(p.id));
   }, [libraryPhotos, deleted]);
 
-  // ─── Chargement + scan en arrière-plan ──────────────────────────────────
+  // Photos géolocalisées encore actives (exclut celles supprimées depuis le scan)
+  const photosWithGeo = useMemo(() => {
+    const activeIds = new Set(activePhotos.map((p) => p.id));
+    return geoPhotos.filter((p) => activeIds.has(p.id));
+  }, [geoPhotos, activePhotos]);
+
+  // Chargement "plein écran" seulement tant qu'aucune donnée n'est encore disponible
+  const loading = geoScanStatus === "idle" || (geoScanStatus === "scanning" && geoPhotos.length === 0 && !geoScanProgress);
+
+  // ─── Déclenchement du scan (une seule fois, si jamais lancé) ────────────
   useEffect(() => {
-    let cancelled = false;
-    setSelectedKeys(new Set());
-    setLoading(true);
-    setScanProgress(null);
-    pendingMarkersRef.current = [];
+    if (geoScanStatus === "idle") {
+      scanGeo();
+    }
+    // Ne dépend volontairement que du montage : on ne relance jamais
+    // automatiquement un scan déjà démarré ou terminé en revenant sur l'écran.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    (async () => {
-      // Étape 1 : lecture instantanée du cache
-      const cache = await loadGpsCache();
-
-      if (cancelled) return;
-
-      // Construire known (GPS déjà connu) / toScan (jamais scannée) à partir du cache.
-      // Une clé présente avec valeur null = déjà scannée, sans GPS → on ne la rescanne pas.
-      const known = [];
-      const toScan = [];
-      activePhotos.forEach((p) => {
-        if (Object.prototype.hasOwnProperty.call(cache, p.id)) {
-          const entry = cache[p.id];
-          if (entry) known.push({ ...p, lat: entry.lat, lng: entry.lng });
-          // entry === null → déjà scannée sans GPS, on l'ignore (ni known, ni toScan)
-        } else {
-          toScan.push(p);
-        }
-      });
-
-      console.log(`[MapScreen] GPS cache : ${known.length} connue(s) avec GPS, ${toScan.length} à scanner (sur ${activePhotos.length} au total)`);
-
-      setPhotosWithGeo(known);
-      setLoading(false);
-
-      if (toScan.length === 0) return; // tout est en cache
-
-      // Étape 2 : scan arrière-plan des photos non-cachées
-      setScanProgress({ scanned: 0, total: toScan.length });
-
-      let newlyFound = 0;
-      for (let i = 0; i < toScan.length; i += SCAN_BATCH) {
-        if (cancelled) break;
-        const chunk = toScan.slice(i, i + SCAN_BATCH);
-        const enriched = await Promise.all(
-          chunk.map(async (p) => {
-            const loc = await loadPhotoLocation(p.id);
-            // On mémorise le résultat dans tous les cas, y compris null (cache négatif)
-            // pour ne plus jamais rescanner cette photo.
-            cache[p.id] = loc ? { lat: loc.lat, lng: loc.lng } : null;
-            return loc ? { ...p, lat: loc.lat, lng: loc.lng } : null;
-          })
-        );
-
-        if (cancelled) break;
-
-        const found = enriched.filter((p) => p !== null);
-        if (found.length > 0) {
-          newlyFound += found.length;
-          setPhotosWithGeo((prev) => [...prev, ...found]);
-          // Mémoriser pour injection JS une fois la WebView prête
-          pendingMarkersRef.current.push(...found);
-        }
-
-        setScanProgress({ scanned: Math.min(i + SCAN_BATCH, toScan.length), total: toScan.length });
-      }
-
-      if (!cancelled) {
-        setScanProgress(null);
-        // On sauvegarde toujours (même sans nouveau GPS trouvé) : le cache doit
-        // mémoriser les null pour ne plus jamais rescanner ces photos.
-        await saveGpsCache(cache);
-        console.log(`[MapScreen] Scan terminé : ${newlyFound} photo(s) géolocalisée(s) trouvée(s) sur ${toScan.length} scannée(s)`);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [activePhotos]);
+  // ─── File d'injection : ce qui arrive dans geoPhotos après le montage ───
+  useEffect(() => {
+    const prevLen = baselineGeoLengthRef.current;
+    if (geoPhotos.length > prevLen) {
+      pendingMarkersRef.current.push(...geoPhotos.slice(prevLen));
+    }
+    baselineGeoLengthRef.current = geoPhotos.length;
+  }, [geoPhotos]);
 
   // ─── Clusters ────────────────────────────────────────────────────────────
   const clusters = useMemo(() => {
@@ -291,19 +245,19 @@ export function MapScreen({ navigation, route }) {
       </View>
 
       {/* Bandeau de progression du scan arrière-plan */}
-      {scanProgress && (
+      {geoScanProgress && (
         <View style={{ marginHorizontal: S.pad, marginBottom: 8, backgroundColor: C.bgCard, borderRadius: S.radius, padding: 10, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.border }}>
           <ActivityIndicator size="small" color={accent} />
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 12, color: C.text, fontWeight: "600" }}>
-              Analyse GPS en cours… {scanProgress.scanned}/{scanProgress.total}
+              Analyse GPS en cours… {geoScanProgress.scanned}/{geoScanProgress.total}
             </Text>
             <View style={{ height: 3, backgroundColor: C.border, borderRadius: 2, marginTop: 4 }}>
-              <View style={{ height: 3, backgroundColor: accent, borderRadius: 2, width: `${Math.round(scanProgress.scanned / scanProgress.total * 100)}%` }} />
+              <View style={{ height: 3, backgroundColor: accent, borderRadius: 2, width: `${Math.round(geoScanProgress.scanned / geoScanProgress.total * 100)}%` }} />
             </View>
           </View>
           <Text style={{ fontSize: 11, color: C.textMuted }}>
-            {Math.round(scanProgress.scanned / scanProgress.total * 100)}%
+            {Math.round(geoScanProgress.scanned / geoScanProgress.total * 100)}%
           </Text>
         </View>
       )}
@@ -313,7 +267,7 @@ export function MapScreen({ navigation, route }) {
           <ActivityIndicator color={accent} />
           <Text style={{ color: C.textMuted, marginTop: 12 }}>Chargement du cache GPS…</Text>
         </View>
-      ) : photosWithGeo.length === 0 && !scanProgress ? (
+      ) : photosWithGeo.length === 0 && !geoScanProgress ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
           <Text style={{ fontSize: 56, marginBottom: 12 }}>🗺</Text>
           <Text style={{ fontSize: 16, fontWeight: "700", color: C.text, textAlign: "center" }}>

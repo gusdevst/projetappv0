@@ -3,6 +3,13 @@ import { create } from "zustand";
 import { subscribeWithSelector, persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as PhotoLibrary from "../services/photoLibrary";
+import { loadGpsCache, saveGpsCache } from "../services/gpsCache";
+
+const GEO_SCAN_BATCH = 50;
+
+// Verrou anti double-exécution de scanGeo(). Variable de module (pas dans le
+// store) : c'est un détail d'implémentation interne, pas un état à observer.
+let geoScanRunning = false;
 
 export const usePhotoStore = create(
   persist(
@@ -73,6 +80,15 @@ export const usePhotoStore = create(
       libraryTotalCount: 0,            // total réel sur le téléphone (peut dépasser MAX_PHOTOS)
       libraryLoading:    false,
       libraryError:      null,
+
+      // ─── Tri par lieu (GPS) — état de session (NON persisté) ────────────
+      // Reconstruit depuis le cache disque (services/gpsCache.js) via scanGeo(),
+      // jamais depuis le store persisté (voir partialize plus bas) : la
+      // photothèque elle-même n'est pas persistée, cet état ne doit pas l'être
+      // non plus sous peine d'incohérence.
+      geoPhotos:       [],     // photos avec {lat,lng} trouvées jusqu'ici (peut inclure des photos depuis supprimées, filtrées à l'affichage)
+      geoScanStatus:   "idle", // "idle" | "scanning" | "done"
+      geoScanProgress: null,   // {scanned, total} pendant le scan des photos non-cachées, sinon null
 
       // ─── Actions de tri (idempotentes — pas de doublon si déjà présent) ──
       // addKept = "coup de cœur" : additif. Retire juste de deleted si présente
@@ -306,6 +322,72 @@ export const usePhotoStore = create(
         } catch (err) {
           console.warn("loadLibrary failed:", err);
           set({ libraryError: String(err), libraryLoading: false });
+        }
+      },
+
+      // ─── Scan GPS (Tri par lieu) ─────────────────────────────────────────
+      // Lit le cache négatif, ne scanne que les photos jamais vues, met à jour
+      // geoPhotos par batches. Peut être appelée plusieurs fois sans risque :
+      // le verrou empêche toute exécution concurrente, et le cache (étape 1)
+      // garantit qu'une photo déjà scannée n'est jamais retraitée.
+      scanGeo: async () => {
+        if (geoScanRunning) return;
+        geoScanRunning = true;
+        set({ geoScanStatus: "scanning" });
+
+        try {
+          const { libraryPhotos, deleted } = get();
+          const deletedIds = new Set(deleted.map((p) => p.id));
+          const activePhotos = libraryPhotos.filter((p) => !deletedIds.has(p.id));
+
+          const cache = await loadGpsCache();
+
+          // known / toScan : cf. règle du cache négatif dans services/gpsCache.js
+          const known = [];
+          const toScan = [];
+          activePhotos.forEach((p) => {
+            if (Object.prototype.hasOwnProperty.call(cache, p.id)) {
+              const entry = cache[p.id];
+              if (entry) known.push({ ...p, lat: entry.lat, lng: entry.lng });
+            } else {
+              toScan.push(p);
+            }
+          });
+
+          set({ geoPhotos: known });
+
+          if (toScan.length === 0) {
+            set({ geoScanStatus: "done", geoScanProgress: null });
+            return;
+          }
+
+          set({ geoScanProgress: { scanned: 0, total: toScan.length } });
+
+          for (let i = 0; i < toScan.length; i += GEO_SCAN_BATCH) {
+            const chunk = toScan.slice(i, i + GEO_SCAN_BATCH);
+            const enriched = await Promise.all(
+              chunk.map(async (p) => {
+                const loc = await PhotoLibrary.loadPhotoLocation(p.id);
+                // Cache négatif : on mémorise aussi l'absence de GPS (null).
+                cache[p.id] = loc ? { lat: loc.lat, lng: loc.lng } : null;
+                return loc ? { ...p, lat: loc.lat, lng: loc.lng } : null;
+              })
+            );
+
+            const found = enriched.filter(Boolean);
+            if (found.length > 0) {
+              set((state) => ({ geoPhotos: [...state.geoPhotos, ...found] }));
+            }
+            set({ geoScanProgress: { scanned: Math.min(i + GEO_SCAN_BATCH, toScan.length), total: toScan.length } });
+          }
+
+          await saveGpsCache(cache);
+          set({ geoScanStatus: "done", geoScanProgress: null });
+        } catch (err) {
+          console.warn("scanGeo failed:", err);
+          set({ geoScanStatus: "done", geoScanProgress: null });
+        } finally {
+          geoScanRunning = false;
         }
       },
     })),
