@@ -43,6 +43,26 @@ function capGroups(groups, maxGroups) {
   return groups.slice(0, maxGroups);
 }
 
+// Options de tri disponibles dans le menu des doublons.
+const SORT_OPTIONS = [
+  { key: "recent", label: "Plus récent", icon: "🕐" },
+  { key: "old",    label: "Plus vieux",  icon: "📅" },
+  { key: "count",  label: "Plus nombreux", icon: "🔢" },
+];
+
+// Trie une liste de groupes de doublons selon le mode choisi par l'utilisateur.
+function sortGroups(groups, sortMode) {
+  const sorted = [...groups];
+  if (sortMode === "old") {
+    sorted.sort((a, b) => a.photos[0].creationTime - b.photos[0].creationTime);
+  } else if (sortMode === "count") {
+    sorted.sort((a, b) => b.photos.length - a.photos.length);
+  } else {
+    sorted.sort((a, b) => b.photos[0].creationTime - a.photos[0].creationTime);
+  }
+  return sorted;
+}
+
 export function DuplicatesScreen({ navigation, route }) {
   // maxGroups : limite optionnelle (ex: batch de 5 regroupements depuis la notification quotidienne).
   // Absent quand l'écran est ouvert depuis le menu → tous les doublons sont affichés.
@@ -56,7 +76,8 @@ export function DuplicatesScreen({ navigation, route }) {
   const addKept             = usePhotoStore((s) => s.addKept);
   const undoLast            = usePhotoStore((s) => s.undoLast);
 
-  const [groups, setGroups]                     = useState(null); // null = calcul en cours
+  const [rawGroups, setRawGroups]               = useState(null); // null = calcul en cours, groupes non triés
+  const [sortMode, setSortMode]                 = useState("recent"); // "recent" | "old" | "count"
   const [selectedGroupIdx, setSelectedGroupIdx] = useState(null);
   const [fullscreen, setFullscreen]             = useState(null);
   // Historique pour le undo (snapshots du store avant chaque action)
@@ -101,15 +122,18 @@ export function DuplicatesScreen({ navigation, route }) {
 
   // Détection différée : l'écran s'affiche d'abord, le calcul suit au tick suivant.
   useEffect(() => {
-    setGroups(null);
+    setRawGroups(null);
     const id = setTimeout(() => {
-      const result = findDuplicates(activePhotos).sort(
-        (a, b) => b.photos[0].creationTime - a.photos[0].creationTime
-      );
-      setGroups(capGroups(result, maxGroups));
+      setRawGroups(findDuplicates(activePhotos));
     }, 0);
     return () => clearTimeout(id);
-  }, [activePhotos, maxGroups]);
+  }, [activePhotos]);
+
+  // Tri + limite appliqués à l'affichage, indépendamment du recalcul des doublons.
+  const groups = useMemo(() => {
+    if (rawGroups === null) return null;
+    return capGroups(sortGroups(rawGroups, sortMode), maxGroups);
+  }, [rawGroups, sortMode, maxGroups]);
 
   const totalDuplicates = groups ? groups.reduce((a, g) => a + g.photos.length, 0) : 0;
 
@@ -162,10 +186,9 @@ export function DuplicatesScreen({ navigation, route }) {
         ...storeState.kept.map((p) => p.id),
       ]);
       const newActivePhotos = storeState.libraryPhotos.filter((p) => !newExcludedIds.has(p.id));
-      const newGroups = capGroups(
-        findDuplicates(newActivePhotos).sort((a, b) => b.photos[0].creationTime - a.photos[0].creationTime),
-        maxGroups
-      );
+      const newRawGroups = findDuplicates(newActivePhotos);
+      const newGroups = capGroups(sortGroups(newRawGroups, sortMode), maxGroups);
+      setRawGroups(newRawGroups);
       // Le groupe courant a disparu, le même index pointe maintenant sur le suivant
       const nextGroup = newGroups[fullscreen.groupIdx];
       if (nextGroup) {
@@ -246,6 +269,34 @@ export function DuplicatesScreen({ navigation, route }) {
           </Text>
         </View>
       </View>
+
+      {/* ── Sélecteur de tri ── */}
+      {groups !== null && groups.length > 0 && (
+        <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: S.pad, paddingBottom: 12 }}>
+          {SORT_OPTIONS.map((opt) => {
+            const isActive = sortMode === opt.key;
+            return (
+              <TouchableOpacity
+                key={opt.key}
+                onPress={() => setSortMode(opt.key)}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: "row", alignItems: "center", gap: 5,
+                  paddingHorizontal: 12, paddingVertical: 7,
+                  borderRadius: S.radiusFull,
+                  backgroundColor: isActive ? C.accent : C.bgCard,
+                  borderWidth: 1, borderColor: isActive ? C.accent : C.border,
+                }}
+              >
+                <Text style={{ fontSize: 12 }}>{opt.icon}</Text>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: isActive ? "#fff" : C.textMuted }}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
       {/* ── Calcul en cours ── */}
       {groups === null ? (

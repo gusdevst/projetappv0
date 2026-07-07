@@ -107,13 +107,26 @@ function buildAlbumName(subName) {
 /**
  * Ajoute UNE photo au dossier Pellicule natif correspondant à subName.
  * Si le dossier n'existe pas encore, il est créé avec cette première photo.
- * Appelée automatiquement à chaque coup de cœur ou ajout à un album.
  *
  * @param {string} assetId - ID de la photo (asset.id de la media library)
  * @param {string} subName - Nom du sous-dossier, ex: "❤️ Coups de cœur" ou "Vacances"
  */
 export async function addPhotoToPelliculeAlbum(assetId, subName) {
   if (!assetId || !subName) return;
+  await addPhotosToPelliculeAlbum([assetId], subName);
+}
+
+/**
+ * Ajoute PLUSIEURS photos au dossier Pellicule natif en un seul appel natif.
+ * Regrouper les assets dans un seul appel à addAssetsToAlbumAsync fait qu'iOS
+ * ne demande la permission "Autoriser à modifier ces photos" qu'UNE seule fois
+ * pour tout le lot, au lieu d'une popup par photo si on boucle appel par appel.
+ *
+ * @param {string[]} assetIds - IDs des photos (asset.id de la media library)
+ * @param {string} subName - Nom du sous-dossier, ex: "❤️ Coups de cœur" ou "Vacances"
+ */
+export async function addPhotosToPelliculeAlbum(assetIds, subName) {
+  if (!assetIds || assetIds.length === 0 || !subName) return;
 
   const albumName = buildAlbumName(subName);
 
@@ -121,16 +134,20 @@ export async function addPhotoToPelliculeAlbum(assetId, subName) {
     const existing = await MediaLibrary.getAlbumAsync(albumName);
 
     if (existing) {
-      // Le dossier existe déjà → on y ajoute simplement la photo
-      await MediaLibrary.addAssetsToAlbumAsync([assetId], existing.id, false);
+      // Le dossier existe déjà → on y ajoute tout le lot en un seul appel
+      await MediaLibrary.addAssetsToAlbumAsync(assetIds, existing.id, false);
     } else {
-      // Première photo → on crée le dossier avec elle
-      // Sur iOS comme Android, createAlbumAsync exige au moins une photo
-      await MediaLibrary.createAlbumAsync(albumName, assetId, false);
+      // Le dossier n'existe pas → on le crée avec la 1ère photo, puis on
+      // ajoute le reste du lot en un seul appel (une seule popup iOS)
+      const created = await MediaLibrary.createAlbumAsync(albumName, assetIds[0], false);
+      const rest = assetIds.slice(1);
+      if (rest.length > 0) {
+        await MediaLibrary.addAssetsToAlbumAsync(rest, created.id, false);
+      }
     }
   } catch (err) {
     // On ne bloque pas l'UX si la synchro galerie échoue (permission partielle, etc.)
-    console.warn("[Pellicule] addPhotoToPelliculeAlbum:", err.message);
+    console.warn("[Pellicule] addPhotosToPelliculeAlbum:", err.message);
   }
 }
 

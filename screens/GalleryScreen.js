@@ -20,7 +20,7 @@ import { ZoomableImage } from "../components/ZoomableImage";
 import BackButton from "../components/BackButton";
 import { usePhotoStore } from "../store/usePhotoStore";
 import * as Sharing from "expo-sharing";
-import { addPhotoToPelliculeAlbum } from "../services/photoLibrary";
+import { addPhotosToPelliculeAlbum } from "../services/photoLibrary";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 
@@ -249,11 +249,11 @@ export function GalleryScreen({ navigation, route }) {
     setSyncLoading(true);
     setSyncDone(false);
     try {
-      // On appelle addPhotoToPelliculeAlbum pour chaque photo.
-      // La fonction crée le dossier natif à la 1ère photo, puis y ajoute les suivantes.
-      for (const photo of exportPhotos) {
-        await addPhotoToPelliculeAlbum(photo.id, exportAlbumName);
-      }
+      // Un seul appel natif groupé pour tout le lot : iOS ne demande la
+      // permission "Autoriser à modifier ces photos" qu'une seule fois,
+      // au lieu d'une popup par photo.
+      const assetIds = exportPhotos.map((photo) => photo.id);
+      await addPhotosToPelliculeAlbum(assetIds, exportAlbumName);
       setSyncDone(true);
     } catch (err) {
       Alert.alert("Erreur", "La synchronisation a échoué. Vérifie les permissions de l'app.");
