@@ -2,7 +2,7 @@
 import { useMemo, useState, useRef, useEffect } from "react";
 import {
   View, Text, TouchableOpacity,
-  StatusBar, Dimensions, Modal, FlatList, Platform, Animated, ActivityIndicator,
+  StatusBar, Dimensions, Modal, FlatList, Platform, Animated, ActivityIndicator, Alert,
 } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -249,6 +249,69 @@ export function DuplicatesScreen({ navigation, route }) {
     advanceAfterAction(currentPhoto, addSkipped, "up");
   }
 
+  // 🗑 Tout supprimer : marque toutes les copies du groupe comme supprimées d'un coup,
+  // puis passe au groupe suivant (même logique de fin de groupe qu'advanceAfterAction).
+  function deleteWholeGroup() {
+    if (!fullscreen || fullscreen.photos.length === 0) return;
+
+    // Snapshot avant action → l'annulation restaure tout le groupe en une fois.
+    const stateNow = usePhotoStore.getState();
+    setHistory((h) => [...h, {
+      keptSnap:      stateNow.kept,
+      deletedSnap:   stateNow.deleted,
+      printedSnap:   stateNow.printed,
+      skippedSnap:   stateNow.skipped,
+      hesitatedSnap: stateNow.hesitated,
+      fullscreenSnap: fullscreen,
+    }]);
+
+    flashFeedback("rgba(232,99,122,0.7)", "down");
+    fullscreen.photos.forEach((p) => addDeleted(p));
+
+    // Groupe entièrement traité → on cherche le suivant
+    const storeState = usePhotoStore.getState();
+    const newExcludedIds = new Set([
+      ...storeState.deleted.map((p) => p.id),
+      ...storeState.skipped.map((p) => p.id),
+      ...storeState.kept.map((p) => p.id),
+    ]);
+    const newActivePhotos = storeState.libraryPhotos.filter((p) => !newExcludedIds.has(p.id));
+    const newRawGroups = findDuplicates(newActivePhotos);
+    const newGroups = capGroups(sortGroups(newRawGroups, sortMode), maxGroups);
+    setRawGroups(newRawGroups);
+
+    const nextGroup = newGroups[fullscreen.groupIdx];
+    if (nextGroup) {
+      setNextGroupToast(true);
+      setTimeout(() => setNextGroupToast(false), 1200);
+      setHistory([]);
+      setFullscreen({ photos: [...nextGroup.photos], idx: 0, groupIdx: fullscreen.groupIdx });
+      setTimeout(() => {
+        flatListRef.current?.scrollToIndex({ index: 0, animated: false, viewPosition: 0.5 });
+      }, 50);
+    } else {
+      setFullscreen(null);
+      setSelectedGroupIdx(null);
+    }
+  }
+
+  // Confirmation avant suppression massive (action plus impactante qu'un swipe).
+  function handleDeleteAllGroup() {
+    if (!fullscreen || fullscreen.photos.length === 0) return;
+    const count = fullscreen.photos.length;
+    Alert.alert(
+      "Tout supprimer ?",
+      `Les ${count} photos de ce groupe seront supprimées.`,
+      [
+        { text: "Annuler", style: "cancel" },
+        { text: "Tout supprimer", style: "destructive", onPress: deleteWholeGroup },
+      ]
+    );
+  }
+
+  // Échelle responsive de la barre de boutons (référence 390 px → scale = 1 = tailles actuelles).
+  const uiScale = Math.min(1, SW / 390);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
@@ -435,7 +498,7 @@ export function DuplicatesScreen({ navigation, route }) {
             </View>
           )}
 
-          {/* ── Top bar — compteur seulement, 🚪 déplacé en bas à gauche ── */}
+          {/* ── Top bar — compteur seulement (🚪 est dans la rangée de boutons) ── */}
           {fullscreen && (
             <View style={{
               position: "absolute", top: Platform.OS === "android" ? 16 : 52,
@@ -506,10 +569,41 @@ export function DuplicatesScreen({ navigation, route }) {
                     </TouchableOpacity>
                   );
                 }}
+                // CTA après la dernière miniature : supprimer tout le groupe d'un coup
+                ListFooterComponent={
+                  <TouchableOpacity
+                    onPress={handleDeleteAllGroup}
+                    activeOpacity={0.85}
+                    style={{
+                      height: THUMB_SIZE, borderRadius: 10, paddingHorizontal: 14,
+                      flexDirection: "row", alignItems: "center", gap: 6,
+                      backgroundColor: "rgba(232,99,122,0.25)",
+                      borderWidth: 1.5, borderColor: "rgba(232,99,122,0.7)",
+                    }}
+                  >
+                    <Text style={{ fontSize: 18 }}>🗑</Text>
+                    <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>Tout supprimer</Text>
+                  </TouchableOpacity>
+                }
               />
 
               {/* ── Boutons action ── */}
-              <View style={{ paddingHorizontal: 16, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 14 }}>
+              <View style={{ paddingHorizontal: 16, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 14, transform: [{ scale: uiScale }] }}>
+
+                {/* 🚪 Fermer le plein écran — même ligne que les CTA (label invisible pour aligner) */}
+                <View style={{ alignItems: "center", gap: 5 }}>
+                  <Text style={{ fontSize: 10, opacity: 0 }}>_</Text>
+                  <TouchableOpacity
+                    onPress={() => { showAndroidBars(); setFullscreen(null); }}
+                    style={{
+                      backgroundColor: "rgba(255,255,255,0.12)",
+                      borderRadius: S.radiusFull, padding: 10,
+                      borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+                    }}
+                  >
+                    <Text style={{ fontSize: 22 }}>🚪</Text>
+                  </TouchableOpacity>
+                </View>
 
                 {/* 🗑 Supprimer */}
                 <View style={{ alignItems: "center", gap: 5 }}>
@@ -562,20 +656,6 @@ export function DuplicatesScreen({ navigation, route }) {
                   </TouchableOpacity>
                 </View>
 
-              </View>
-
-              {/* 🚪 Fermer le plein écran — bas gauche */}
-              <View style={{ paddingHorizontal: 16, paddingTop: 10, alignItems: "flex-start" }}>
-                <TouchableOpacity
-                  onPress={() => { showAndroidBars(); setFullscreen(null); }}
-                  style={{
-                    backgroundColor: "rgba(255,255,255,0.12)",
-                    borderRadius: S.radiusFull, padding: 10,
-                    borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
-                  }}
-                >
-                  <Text style={{ fontSize: 22 }}>🚪</Text>
-                </TouchableOpacity>
               </View>
             </View>
           )}

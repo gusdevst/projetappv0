@@ -23,6 +23,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { ZoomableImage } from "../components/ZoomableImage";
+import { SessionTutoOverlay } from "../components/SessionTutoOverlay";
 
 function getEdgeContainerStyle(edge) {
   if (edge === "up")    return { position: "absolute", top: 0,    left: 0, right: 0, height: 220 };
@@ -57,7 +58,19 @@ export function SwipeScreen({ navigation, route }) {
     albums, createAlbum, addPhotoToAlbum,
     swipeMappingsMenage, swipeMappingsAlbum,
     libraryPhotos,
+    swipeTutoSeen, setSwipeTutoSeen,
+    albumTutoSeen, setAlbumTutoSeen,
   } = usePhotoStore();
+
+  // ── Tuto 1re session ───────────────────────────────────────────────────
+  // On affiche l'overlay explicatif une seule fois par mode.
+  const tutoAlreadySeen = isAlbum ? albumTutoSeen : swipeTutoSeen;
+  const [showTuto, setShowTuto] = useState(!tutoAlreadySeen);
+  const closeTuto = () => {
+    setShowTuto(false);
+    if (isAlbum) setAlbumTutoSeen(true);
+    else         setSwipeTutoSeen(true);
+  };
 
   // Bon mapping selon le mode
   const swipeMappings = isAlbum ? swipeMappingsAlbum : swipeMappingsMenage;
@@ -267,9 +280,17 @@ export function SwipeScreen({ navigation, route }) {
 
   const pct = Math.round((idx / queue.length) * 100);
 
+  // Échelle responsive de la barre de boutons.
+  // Référence 390 px (largeur d'un iPhone standard) → scale = 1 = tailles actuelles.
+  // Écran plus étroit → on réduit proportionnellement pour tout garder sur une ligne.
+  const uiScale = Math.min(1, SW / 390);
+
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <StatusBar hidden={true} />
+
+      {/* Tuto affiché une seule fois à la 1re session du mode courant */}
+      <SessionTutoOverlay visible={showTuto} mode={mode} onClose={closeTuto} />
 
       {/* Halo de feedback */}
       {feedbackEdge && (
@@ -377,7 +398,23 @@ export function SwipeScreen({ navigation, route }) {
         position: "absolute", bottom: 32, left: 0, right: 0,
         flexDirection: "row", justifyContent: "center",
         alignItems: "center", gap: 14, zIndex: 10,
+        transform: [{ scale: uiScale }],
       }}>
+
+        {/* 🚪 Fin de tri — même ligne que les CTA de swipe (label invisible pour aligner) */}
+        <View style={{ alignItems: "center", gap: 5 }}>
+          <Text style={{ fontSize: 10, opacity: 0 }}>_</Text>
+          <TouchableOpacity
+            onPress={handleFinDeTri}
+            style={{
+              backgroundColor: "rgba(255,255,255,0.12)",
+              borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+              borderRadius: S.radiusFull, padding: 10,
+            }}
+          >
+            <Text style={{ fontSize: 22 }}>🚪</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* 🗑 Supprimer — la flèche suit la direction configurée ; masqué si "supprimer" n'est mappé sur aucun swipe */}
         {deleteDir && (
@@ -485,21 +522,6 @@ export function SwipeScreen({ navigation, route }) {
             est de choisir les photos à mettre dans l'album, pas de créer des favoris. */}
 
       </View>
-
-      {/* 🚪 Fin de tri — discret, bas gauche (ménage et album) */}
-      <TouchableOpacity
-          onPress={handleFinDeTri}
-          style={{
-            position: "absolute", bottom: 16, left: 20, zIndex: 15,
-            backgroundColor: "rgba(255,255,255,0.12)",
-            borderRadius: S.radiusFull,
-            padding: 10,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.15)",
-          }}
-        >
-          <Text style={{ fontSize: 22 }}>🚪</Text>
-        </TouchableOpacity>
 
       {/* Modal picker d'album (long-press sur 📁) */}
       <Modal

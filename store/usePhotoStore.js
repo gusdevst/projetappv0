@@ -79,6 +79,13 @@ export const usePhotoStore = create(
       notifPromptSeen: false,
       setNotifPromptSeen: (v) => set({ notifPromptSeen: v }),
 
+      // A-t-on déjà montré le tuto de la 1re session ? (un par mode)
+      // Persisté → l'overlay explicatif ne s'affiche qu'une seule fois.
+      swipeTutoSeen: false,                              // mode TRI (ménage)
+      setSwipeTutoSeen: (v) => set({ swipeTutoSeen: v }),
+      albumTutoSeen: false,                              // mode ALBUM
+      setAlbumTutoSeen: (v) => set({ albumTutoSeen: v }),
+
       // ─── État de la photothèque (NON persisté — rechargé à chaque ouverture) ─
       permission:      "undetermined", // "undetermined" | "granted" | "denied"
       libraryPhotos:     [],
@@ -452,6 +459,8 @@ export const usePhotoStore = create(
         notificationHour2:       state.notificationHour2,
         notificationMinute2:     state.notificationMinute2,
         notifPromptSeen:         state.notifPromptSeen,
+        swipeTutoSeen:           state.swipeTutoSeen,
+        albumTutoSeen:           state.albumTutoSeen,
         randomCount:             state.randomCount,
         sortPriority:            state.sortPriority,
       }),
