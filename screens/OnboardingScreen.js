@@ -3,10 +3,11 @@
 // Trois slides simples — pas de carousel complexe, juste un index local.
 
 import { useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, Image } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, Image, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
+import { useNotificationReminder } from "../hooks/useNotificationReminder";
 
 const SLIDES = [
   {
@@ -32,6 +33,7 @@ const SLIDES = [
   },
   {
     emoji: "🔔",
+    notif: true, // slide qui déclenche la demande d'autorisation des notifications
     title: "Des rappels pour avancer",
     desc: "Configure la fréquence (quotidien, 2x/jour, hebdo…) et l'heure de tes rappels. Choisis ton rythme de session — Rapide (10 photos), Normal (30) ou Sérieux (50) — et Pellicule t'indique combien de sessions il reste pour tout trier.",
   },
@@ -47,11 +49,29 @@ export function OnboardingScreen() {
   const [loading, setLoading] = useState(false);
   const requestPermission = usePhotoStore((s) => s.requestPermission);
   const loadLibrary = usePhotoStore((s) => s.loadLibrary);
+  const { enableReminders, markPromptSeen } = useNotificationReminder();
 
   const isLast = idx === SLIDES.length - 1;
   const slide = SLIDES[idx];
 
   const onNext = async () => {
+    // Slide rappels → on demande l'autorisation des notifications
+    if (slide.notif) {
+      setLoading(true);
+      const result = await enableReminders("daily"); // demande la permission + programme un rappel quotidien
+      markPromptSeen(); // on a posé la question : on ne la reposera plus ailleurs
+      setLoading(false);
+      if (!result.success && result.reason === "permission_denied") {
+        Alert.alert(
+          "Notifications désactivées",
+          "Pas de souci ! Tu pourras activer tes rappels quand tu veux depuis le menu Rappels de l'application.",
+          [{ text: "Compris", onPress: () => setIdx(idx + 1) }]
+        );
+        return;
+      }
+      setIdx(idx + 1);
+      return;
+    }
     if (!isLast) {
       setIdx(idx + 1);
       return;
@@ -117,7 +137,7 @@ export function OnboardingScreen() {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>
-              {isLast ? "Autoriser l'accès aux photos" : "Continuer"}
+              {isLast ? "Autoriser l'accès aux photos" : slide.notif ? "Activer les rappels" : "Continuer"}
             </Text>
           )}
         </TouchableOpacity>
