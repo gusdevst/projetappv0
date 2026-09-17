@@ -19,7 +19,7 @@ const SLIDES = [
   {
     emoji: "🔀",
     title: "Swipe pour décider",
-    desc: "Glisse à droite pour garder, à gauche pour supprimer, vers le haut pour imprimer. Comme Tinder, mais pour tes photos.",
+    desc: "Glisse vers le haut ou à droite pour garder, vers le bas pour supprimer, à gauche si tu hésites. Comme Tinder, mais pour tes photos.",
   },
   {
     emoji: "❤️",

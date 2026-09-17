@@ -45,7 +45,8 @@
         {
           "photosPermission": "Pellicule a besoin d'accéder à tes photos pour t'aider à les trier.",
           "savePhotosPermission": "Pellicule a besoin d'enregistrer des photos dans ta photothèque.",
-          "isAccessMediaLocationEnabled": true
+          "isAccessMediaLocationEnabled": true,
+          "granularPermissions": ["photo"]
         }
       ],
       [

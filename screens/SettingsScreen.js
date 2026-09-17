@@ -20,7 +20,7 @@ const TUTORIAL_SLIDES = [
   {
     emoji: "↔️",
     title: "Swipe pour décider",
-    desc: "Glisse à droite ou à gauche pour passer, vers le bas pour supprimer. Chaque direction est personnalisable dans les paramètres.",
+    desc: "Glisse vers le haut ou à droite pour garder, vers le bas pour supprimer, à gauche si tu hésites. Chaque direction est personnalisable dans les paramètres.",
   },
   {
     emoji: "❤️",

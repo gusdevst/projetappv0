@@ -17,8 +17,8 @@ const CONTENT = {
     accent: C.accent,
     title: "Bienvenue dans le tri 👋",
     steps: [
-      { icon: "👆", text: "Appuie sur un bouton ou swipe la photo pour décider : garder, supprimer ou passer." },
-      { icon: "↔️", text: "Chaque direction de swipe correspond à une action. Rapide une fois pris en main." },
+      { icon: "👆", text: "Appuie sur un bouton ou swipe : haut ou droite pour garder, bas pour supprimer." },
+      { icon: "🤔", text: "Swipe à gauche si tu hésites — la photo reviendra plus tard, sans être décidée." },
       { icon: "⚙️", text: "Le bouton réglages, en haut à droite, te laisse personnaliser chaque swipe." },
     ],
   },
@@ -26,8 +26,8 @@ const CONTENT = {
     accent: C.album,
     title: "Créons ton album 📁",
     steps: [
-      { icon: "👆", text: "Appuie ou swipe pour ajouter la photo à l'album, ou la passer." },
-      { icon: "📁", text: "Le badge de l'album, en haut, montre les photos déjà ajoutées." },
+      { icon: "👆", text: "Appuie sur un bouton ou swipe vers le haut pour ajouter la photo à l'album." },
+      { icon: "🤔", text: "Swipe vers le bas ou à droite pour passer, à gauche si tu hésites." },
       { icon: "⚙️", text: "Le bouton réglages, en haut à droite, te laisse personnaliser chaque swipe." },
     ],
   },

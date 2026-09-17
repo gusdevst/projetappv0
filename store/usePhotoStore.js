@@ -6,7 +6,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as PhotoLibrary from "../services/photoLibrary";
 import { loadGpsCache, saveGpsCache } from "../services/gpsCache";
 
-const GEO_SCAN_BATCH = 50;
+// Petits lots + vraie pause entre chaque (voir plus bas) : sur une grosse
+// photothèque (plusieurs milliers de photos), scanner par lots trop gros
+// enchaîne les appels natifs sans laisser respirer la mémoire, ce qui peut
+// faire fermer l'app par iOS (memory jetsam) sur des appareils avec moins de RAM.
+const GEO_SCAN_BATCH = 20;
 
 // Flag pour désactiver facilement le pré-chargement GPS en arrière-plan
 // (étape 3) sans toucher au scan déclenché manuellement depuis MapScreen.
@@ -408,10 +412,11 @@ export const usePhotoStore = create(
             }
             set({ geoScanProgress: { scanned: Math.min(i + GEO_SCAN_BATCH, toScan.length), total: toScan.length } });
 
-            // Micro-pause : rend la main au thread JS entre deux batches, pour
-            // que l'UI (navigation, animations) reste fluide pendant un scan
-            // de plusieurs milliers de photos, notamment en arrière-plan (étape 3).
-            await new Promise((resolve) => setTimeout(resolve, 0));
+            // Pause entre deux batches : rend la main au thread JS pour que l'UI
+            // (navigation, animations) reste fluide, et laisse le temps à la
+            // mémoire des appels natifs précédents d'être libérée avant d'en
+            // relancer un lot, pendant un scan de plusieurs milliers de photos.
+            await new Promise((resolve) => setTimeout(resolve, 30));
           }
 
           await saveGpsCache(cache);

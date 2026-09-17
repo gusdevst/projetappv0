@@ -53,8 +53,12 @@ export function MapScreen({ navigation, route }) {
     return geoPhotos.filter((p) => activeIds.has(p.id));
   }, [geoPhotos, activePhotos]);
 
-  // Chargement "plein écran" seulement tant qu'aucune donnée n'est encore disponible
-  const loading = geoScanStatus === "idle" || (geoScanStatus === "scanning" && geoPhotos.length === 0 && !geoScanProgress);
+  // Chargement "plein écran" tant qu'aucune photo géolocalisée n'est encore
+  // disponible. On attend d'avoir au moins un résultat (ou la fin du scan)
+  // avant de monter la carte (WebView) : la monter dès le début du scan la
+  // ferait démarrer en même temps que la 1re salve d'appels GPS natifs, ce qui
+  // double la charge mémoire au pire moment sur une grosse photothèque.
+  const loading = geoScanStatus === "idle" || (geoScanStatus === "scanning" && geoPhotos.length === 0);
 
   // ─── Déclenchement du scan (une seule fois, si jamais lancé) ────────────
   useEffect(() => {
