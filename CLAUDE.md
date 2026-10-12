@@ -1,194 +1,148 @@
-# Projet Mobile - Instructions IA
+# Pellicule — Contexte projet & instructions IA
 
-## Objectif du projet
-
-Cette application mobile a pour objectif de passer d’un prototype React Native à une application mobile complète, stable et publiable sur iOS et Android.
-
-L’objectif est :
-- d’avoir une architecture propre,
-- un code maintenable,
-- une expérience utilisateur fluide,
-- un 1er MVP rapidement pour faire tester à des beta testeurs privés
-- une application prête pour les stores 
-
-Le projet doit être expliqué simplement et étape par étape car le porteur du projet n’est pas développeur mobile. 
+> Fichier de passation. Lu en début de session pour retrouver l'état du projet
+> sans re-scanner tout le code. **À maintenir à jour** à chaque étape importante.
+> Dernière mise à jour : 2026-09-21.
 
 ---
 
-# Stack technique
+## 1. C'est quoi Pellicule
 
-## Frontend mobile
-- React Native
-- Expo si possible
-- JavaScript (pas TypeScript pour le moment sauf besoin important)
+App mobile de **tri de photos**. L'utilisateur passe sa photothèque en revue via
+un **swipe façon Tinder** : garder / supprimer / imprimer. Objectif : vider le
+trop-plein de photos sans y passer des heures.
 
-## Outils
-- VS Code
-- GitHub
-- Claude
-- Git
+- Ancien nom : **Phototri** (encore le `slug` technique). Nom public : **Pellicule**.
+- Porteur : **Augustin**, **non-développeur**. Il apprend React Native et Git.
+- Stade : **V1 en cours**, déjà buildée et configurée pour la beta (TestFlight).
+  Ce n'est plus un prototype.
 
 ---
 
-# Règles importantes
+## 2. État actuel (au 2026-09-21)
 
-## Explications
+- Dernière vraie activité de code : **7 juillet 2026** (~2 mois de pause).
+- Dernier commit : `57779fe "notifs"` — a branché la **demande d'autorisation
+  des notifications dans l'onboarding** (`screens/OnboardingScreen.js`).
+- **Travail en cours NON commité** sur la branche `check-swipe-tutorial-coherence` :
+  7 fichiers modifiés (tutoriel + onboarding + carte + réglages + store).
+  → à sécuriser en priorité, risque de perte.
 
-Toujours :
-- expliquer simplement,
-- détailler les étapes,
-- préciser où créer les fichiers,
-- expliquer les commandes terminal,
-- éviter le jargon inutile.
-
-Quand une modification est proposée :
-- toujours préciser le fichier concerné,
-- montrer le code complet si possible,
-- expliquer ce qui change.
+Tous les gros bugs de la phase proto sont **réglés** :
+NavigationContainer unique · écrans câblés au navigateur · vraies photos
+(`expo-media-library`) · état persisté (Zustand `persist` + AsyncStorage) ·
+`app.json` + `eas.json` complets · aucun secret en clair.
 
 ---
 
-# Architecture souhaitée
+## 3. Stack technique (versions réelles)
 
-Le projet doit rester organisé.
-
-Structure souhaitée :
-
-- /screens
-- /components
-- /services
-- /assets
-- /navigation
-- /hooks
-- /utils
-
-Éviter :
-- les fichiers trop longs,
-- la duplication de logique,
-- les dépendances inutiles.
+- **Expo 54** / **React Native 0.81** / **React 19** · New Architecture activée.
+- **React Navigation 7** — stack JS (`createStackNavigator`).
+- **Zustand 5** pour l'état global (avec `persist`).
+- JavaScript (pas TypeScript, sauf le strict nécessaire).
+- Workflow natif : **dev-client Expo** (dossier `ios/` généré par prebuild, ignoré par Git).
+- Libs clés : expo-media-library, expo-notifications, expo-file-system,
+  expo-image, expo-linear-gradient, react-native-reanimated + gesture-handler,
+  react-native-webview, **react-native-purchases (RevenueCat — installé mais PAS encore branché)**.
 
 ---
 
-# UI / UX
+## 4. Carte du code (où trouver quoi)
 
-L’application doit avoir :
-- un design moderne,
-- une interface simple,
-- une bonne lisibilité,
-- des animations fluides mais légères,
-- une expérience proche des apps modernes type startup.
+Racine : `/Users/augustindevasselot/Documents/phototri/`
 
-Toujours privilégier :
-- simplicité,
-- performance,
-- clarté.
+- `App.js` — point d'entrée unique. Monte la navigation, vérifie la permission
+  photo au démarrage, gère le tap sur une notif (→ lance une session de tri).
+- `index.js` — bootstrap Expo.
+- `app.json` — config app + build (permissions, plugins, icône).
+- `eas.json` — profils de build EAS (development / preview / production).
 
----
+**navigation/**
+- `AppNavigator.js` — déclare les 13 écrans. Un seul NavigationContainer (dans App.js).
 
-# Qualité de code
+**store/**
+- `usePhotoStore.js` (~474 l.) — **cerveau de l'app**. État du tri, filtres albums,
+  réglages de rappels, flags "vu une fois". Persisté via AsyncStorage.
 
-Le code doit :
-- être propre,
-- lisible,
-- commenté uniquement si nécessaire,
-- éviter les hacks temporaires,
-- éviter le code inutile.
+**screens/** (13)
+- `OnboardingScreen` · `PermissionDeniedScreen` — arrivée + permissions.
+- `HomeScreen` (~906 l.) · `TriModeScreen` — accueil + choix du mode de tri.
+- `SwipeScreen` (~668 l.) — le tri par swipe (cœur de l'app).
+- `GalleryScreen` (~864 l.) · `MomentScreen` — galerie / albums / moments.
+- `DuplicatesScreen` (~668 l.) — détection et tri des doublons.
+- `MapScreen` — tri par lieu (GPS).
+- `RappelsScreen` — réglage des notifications de rappel.
+- `SummaryScreen` — bilan de session.
+- `SettingsScreen` · `PartenairesScreen` — réglages + partenaires impression.
 
-Toujours vérifier :
-- imports inutilisés,
-- erreurs React Native,
-- performances,
-- compatibilité iOS / Android.
+**components/** — briques UI réutilisables : `BackButton`, `Toggle`, `PhotoGrid`,
+`ZoomableImage`, `RowSetting`, `AlbumFiltersBar`, `SessionTutoOverlay` (overlay tuto).
 
----
+**services/** — logique métier, pas d'UI :
+- `photoLibrary.js` — wrapper expo-media-library (permission, chargement, suppression).
+- `photoAnalysis.js` — calculs purs sur les photos (pas d'I/O).
+- `notificationService.js` — rappels locaux "pense à trier".
+- `gpsCache.js` — cache persistant des coordonnées GPS.
 
-# Git et sécurité
+**hooks/** — `useAndroidBack` (bouton retour Android), `useNotificationReminder`
+(logique d'activation des rappels, partagée).
 
-Ne jamais :
-- supprimer des fichiers critiques sans explication,
-- modifier massivement le projet sans prévenir,
-- exposer des clés API,
-- commiter des secrets.
-
-Avant une grosse modification :
-- expliquer l’impact,
-- proposer une stratégie simple.
+**constants/** — `theme.js` (couleurs `C`, styles `S`).
 
 ---
 
-# Méthode de travail attendue
+## 5. Config build & stores
 
-Quand une fonctionnalité est demandée :
-
-1. Expliquer le plan
-2. Identifier les fichiers à modifier
-3. Générer le code
-4. Expliquer comment tester
-5. Expliquer comment commit Git
-
-Toujours fonctionner étape par étape.
+- iOS bundle id : `com.phototri.app` · Android package : `com.phototri.app`
+- EAS projectId : `9505ec18-08e3-4669-8002-a4992177bd04` · owner : `augustindevasselot`
+- App Store Connect : app créée (ascAppId `6786287707`) → cible TestFlight.
+- Build beta : `eas build --profile preview` puis `eas submit`.
 
 ---
 
-# Priorités du projet
+## 6. Git — comment on travaille
 
-Priorité :
-1. Application fonctionnelle
-2. UX fluide
-3. Stabilité
-4. Performance
-5. Publication stores
-6. Optimisation avancée ensuite
+- Repo : `https://github.com/gusdevst/projetappv0` (public, handle `gusdevst`).
+- **Branche de référence = `main`** (la plus à jour ; `retourbeta` y est déjà intégrée).
+- Branche de travail actuelle : `check-swipe-tutorial-coherence` (= main + 7 fichiers WIP).
+- Branches plus anciennes (juin) probablement abandonnées : `fix/stabilisation-beta`,
+  `feature/notifications`, `feature/couleurs`. À nettoyer un jour.
+- **Augustin commit et push lui-même depuis VS Code.** Ne pas push depuis le shell.
+- Messages de commit à soigner (éviter "notifs", "cache" → dur à relire 2 mois après).
 
 ---
 
-# Aide attendue de Claude
+## 7. Dettes connues (à traiter, non bloquant)
 
-Claude doit pouvoir :
-- corriger les bugs,
-- proposer des améliorations UX,
-- aider à structurer le projet,
-- aider au déploiement,
-- aider à la configuration GitHub,
-- aider à préparer les stores,
-- expliquer les erreurs simplement.
-- Suggérer d'aller plus vite en proposant la mise en place d'agent IA pour coder directement avec mon compte CLAUDE.
+1. **Repo pollué** : des dossiers d'outils IA sont suivis par Git alors qu'ils ne
+   devraient pas — `claude-code/` (41 Mo, avec son propre `.git`), `.gemini/`,
+   `.qoder/`, `.kiro/`. À sortir du suivi Git (`git rm -r --cached` + `.gitignore`).
+2. **6 branches** : clarifier / supprimer les mortes.
+3. **RevenueCat installé mais pas configuré** (`Purchases.configure` absent) → le
+   Premium payant n'est pas encore actif.
+4. **Écrans très longs** (`HomeScreen` 906 l., `GalleryScreen` 864 l.) → à découper
+   en composants quand on y retouchera.
 
-<!-- code-review-graph MCP tools -->
-## MCP Tools: code-review-graph
+---
 
-**IMPORTANT: This project has a knowledge graph. ALWAYS use the
-code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
-the codebase.** The graph is faster, cheaper (fewer tokens), and gives
-you structural context (callers, dependents, test coverage) that file
-scanning cannot.
+## 8. Prochaines étapes probables
 
-### When to use graph tools FIRST
+1. Sécuriser le WIP (commit des 7 fichiers).
+2. Relancer l'app sur téléphone pour confirmer que rien n'a bougé après 2 mois.
+3. Nettoyer le repo (dossiers pollués) et les branches.
+4. Finir le tutoriel / onboarding (le chantier en cours).
+5. Plus tard : brancher RevenueCat (Premium), backend pour l'IA "Album IA".
 
-- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
-- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
-- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
-- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
-- **Architecture questions**: `get_architecture_overview` + `list_communities`
+---
 
-Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
+## 9. Comment bosser avec Augustin (règles à respecter)
 
-### Key Tools
-
-| Tool | Use when |
-| ------ | ---------- |
-| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
-| `get_review_context` | Need source snippets for review — token-efficient |
-| `get_impact_radius` | Understanding blast radius of a change |
-| `get_affected_flows` | Finding which execution paths are impacted |
-| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
-| `semantic_search_nodes` | Finding functions/classes by name or keyword |
-| `get_architecture_overview` | Understanding high-level codebase structure |
-| `refactor_tool` | Planning renames, finding dead code |
-
-### Workflow
-
-1. The graph auto-updates on file changes (via hooks).
-2. Use `detect_changes` for code review.
-3. Use `get_affected_flows` to understand impact.
-4. Use `query_graph` pattern="tests_for" to check coverage.
+- **Il n'est pas développeur.** Sois ultra pédagogue, mais sans blabla.
+- **Phrases courtes, pas de mots de remplissage, ne narre pas.**
+- **Une seule étape à la fois**, puis attendre sa validation avant la suite.
+- Expliquer le **pourquoi**, avec des **métaphores concrètes**.
+- Toujours donner le **chemin exact** du fichier et **quoi copier/coller**.
+- Pas de gros dumps de code. Vérifier la cohérence imports/exports.
+- Agir comme un **CTO senior qui forme un junior**.
+- Français.
