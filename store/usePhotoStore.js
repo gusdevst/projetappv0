@@ -241,7 +241,7 @@ export const usePhotoStore = create(
       createAlbum: (name) => set((state) => ({
         albums: [
           ...state.albums,
-          { id: `album-${Date.now()}`, name: name.trim() || "Album sans nom", photoIds: [] },
+          { id: `album-${Date.now()}`, name: name.trim() || "Album sans nom", photoIds: [], updatedAt: Date.now() },
         ],
       })),
 
@@ -259,14 +259,14 @@ export const usePhotoStore = create(
 
       renameAlbum: (albumId, newName) => set((state) => ({
         albums: state.albums.map((a) =>
-          a.id === albumId ? { ...a, name: newName.trim() || a.name } : a
+          a.id === albumId ? { ...a, name: newName.trim() || a.name, updatedAt: Date.now() } : a
         ),
       })),
 
       addPhotoToAlbum: (albumId, photoId) => set((state) => ({
         albums: state.albums.map((a) =>
           a.id === albumId && !a.photoIds.includes(photoId)
-            ? { ...a, photoIds: [...a.photoIds, photoId] }
+            ? { ...a, photoIds: [...a.photoIds, photoId], updatedAt: Date.now() }
             : a
         ),
       })),
@@ -274,7 +274,7 @@ export const usePhotoStore = create(
       removePhotoFromAlbum: (albumId, photoId) => set((state) => {
         const updatedAlbums = state.albums.map((a) =>
           a.id === albumId
-            ? { ...a, photoIds: a.photoIds.filter((id) => id !== photoId) }
+            ? { ...a, photoIds: a.photoIds.filter((id) => id !== photoId), updatedAt: Date.now() }
             : a
         );
         // Si la photo n'appartient plus à aucun album, la sortir de printed
@@ -417,6 +417,11 @@ export const usePhotoStore = create(
               set((state) => ({ geoPhotos: [...state.geoPhotos, ...found] }));
             }
             set({ geoScanProgress: { scanned: Math.min(i + GEO_SCAN_BATCH, toScan.length), total: toScan.length } });
+
+            // Sauvegarde intermédiaire toutes les ~200 photos : si l'app est
+            // fermée ou tuée en plein scan, on reprend où on s'était arrêté
+            // au lieu de tout recommencer à chaque lancement.
+            if ((i / GEO_SCAN_BATCH) % 10 === 9) await saveGpsCache(cache);
 
             // Pause entre deux batches : rend la main au thread JS pour que l'UI
             // (navigation, animations) reste fluide, et laisse le temps à la

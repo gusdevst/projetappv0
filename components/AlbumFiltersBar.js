@@ -6,7 +6,7 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { C } from "../constants/theme";
 
-const TYPE_EMOJI = { date: "📅", lieu: "🗺", coeur: "❤️", visage: "👤" };
+const TYPE_EMOJI = { date: "📅", lieu: "🌍", coeur: "❤️", visage: "👤" };
 
 export function AlbumFiltersBar({ filters, onRemove, onClear, matchCount }) {
   if (!filters || filters.length === 0) return null;

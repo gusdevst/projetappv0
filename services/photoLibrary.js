@@ -65,9 +65,15 @@ export async function loadPhotos() {
  */
 export async function loadPhotoLocation(assetId) {
   try {
-    const info = await MediaLibrary.getAssetInfoAsync(assetId);
-    if (info.location?.latitude && info.location?.longitude) {
-      return { lat: info.location.latitude, lng: info.location.longitude };
+    // shouldDownloadFromNetwork: false → on lit seulement les métadonnées.
+    // Sans ça (valeur par défaut = true), iOS TÉLÉCHARGE chaque photo iCloud en
+    // pleine qualité juste pour lire sa position : réseau, mémoire, crash possible.
+    const info = await MediaLibrary.getAssetInfoAsync(assetId, { shouldDownloadFromNetwork: false });
+    const lat = info?.location?.latitude;
+    const lng = info?.location?.longitude;
+    // typeof : une latitude de 0 (équateur) est valide, "if (lat)" la rejetterait.
+    if (typeof lat === "number" && typeof lng === "number" && !(lat === 0 && lng === 0)) {
+      return { lat, lng };
     }
     return null;
   } catch {

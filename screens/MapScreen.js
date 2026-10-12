@@ -35,12 +35,10 @@ export function MapScreen({ navigation, route }) {
 
   const [selectedKeys, setSelectedKeys] = useState(new Set());
   const webviewRef = useRef(null);
-  // File d'attente des marqueurs à injecter dans la WebView sans tout recharger
-  const pendingMarkersRef = useRef([]);
-  // Longueur de geoPhotos au moment du montage : tout ce qui dépasse cette
-  // longueur est "nouveau depuis qu'on regarde cet écran" (à injecter en JS).
-  // Ce qui était déjà là au montage est directement inclus dans le HTML initial.
-  const baselineGeoLengthRef = useRef(geoPhotos.length);
+  // La WebView est-elle prête à recevoir des commandes JS ?
+  const mapReadyRef = useRef(false);
+  // Minuterie de regroupement des mises à jour (une toutes les 800 ms max).
+  const redrawTimerRef = useRef(null);
 
   const activePhotos = useMemo(() => {
     const ids = new Set(deleted.map((p) => p.id));
@@ -69,15 +67,6 @@ export function MapScreen({ navigation, route }) {
     // automatiquement un scan déjà démarré ou terminé en revenant sur l'écran.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // ─── File d'injection : ce qui arrive dans geoPhotos après le montage ───
-  useEffect(() => {
-    const prevLen = baselineGeoLengthRef.current;
-    if (geoPhotos.length > prevLen) {
-      pendingMarkersRef.current.push(...geoPhotos.slice(prevLen));
-    }
-    baselineGeoLengthRef.current = geoPhotos.length;
-  }, [geoPhotos]);
 
   // ─── Clusters ────────────────────────────────────────────────────────────
   const clusters = useMemo(() => {
@@ -108,28 +97,44 @@ export function MapScreen({ navigation, route }) {
     return result;
   }, [selectedKeys, clusters, photosWithGeo]);
 
-  // ─── Synchronisation carte / sélection ───────────────────────────────────
+  // ─── Mises à jour de la carte SANS la recharger ──────────────────────────
+  // Avant : le HTML dépendait des marqueurs → à chaque lot de 20 photos scannées
+  // (toutes les ~30 ms), la WebView rechargeait toute la carte. Des centaines de
+  // rechargements = mémoire qui explose = crash. Maintenant : la page est créée
+  // UNE fois, puis on lui envoie la liste à jour, au plus toutes les 800 ms.
+  const latestRef = useRef({ markers: [], selected: [] });
+  latestRef.current = { markers, selected: [...selectedKeys] };
+
+  const pushToMap = useCallback(() => {
+    if (!mapReadyRef.current || !webviewRef.current) return;
+    const { markers: m, selected } = latestRef.current;
+    webviewRef.current.injectJavaScript(
+      `if (window.setMarkers) { setMarkers(${JSON.stringify(m)}); updateSelection(${JSON.stringify(selected)}); } true;`
+    );
+  }, []);
+
+  // Nouveaux lieux trouvés pendant le scan → mise à jour regroupée.
   useEffect(() => {
-    if (!webviewRef.current) return;
-    const js = `updateSelection(${JSON.stringify([...selectedKeys])}); true;`;
-    webviewRef.current.injectJavaScript(js);
+    if (redrawTimerRef.current) return;
+    redrawTimerRef.current = setTimeout(() => {
+      redrawTimerRef.current = null;
+      pushToMap();
+    }, 800);
+  }, [markers, pushToMap]);
+
+  // Sélection → immédiat (c'est l'utilisateur qui touche).
+  useEffect(() => {
+    if (!mapReadyRef.current || !webviewRef.current) return;
+    webviewRef.current.injectJavaScript(`if (window.updateSelection) updateSelection(${JSON.stringify([...selectedKeys])}); true;`);
   }, [selectedKeys]);
 
-  // Injection des nouveaux marqueurs trouvés pendant le scan
-  const injectNewMarkers = useCallback(() => {
-    if (!webviewRef.current || pendingMarkersRef.current.length === 0) return;
-    // Recalculer les clusters depuis photosWithGeo n'est pas disponible ici,
-    // donc on recalcule à partir des pendingMarkers
-    const newClusters = {};
-    pendingMarkersRef.current.forEach((p) => {
-      const key = `${p.lat.toFixed(1)}_${p.lng.toFixed(1)}`;
-      if (!newClusters[key]) newClusters[key] = { key, lat: p.lat, lng: p.lng, count: 0, label: `${p.lat.toFixed(2)}, ${p.lng.toFixed(2)}` };
-      newClusters[key].count++;
-    });
-    pendingMarkersRef.current = [];
-    const payload = JSON.stringify(Object.values(newClusters));
-    webviewRef.current.injectJavaScript(`addOrUpdateMarkers(${payload}); true;`);
-  }, []);
+  // Nettoyage de la minuterie en quittant l'écran.
+  useEffect(() => () => { if (redrawTimerRef.current) clearTimeout(redrawTimerRef.current); }, []);
+
+  const onMapLoaded = () => {
+    mapReadyRef.current = true;
+    pushToMap();
+  };
 
   const toggleCluster = (key) => {
     setSelectedKeys((prev) => {
@@ -141,7 +146,13 @@ export function MapScreen({ navigation, route }) {
   };
 
   // ─── HTML de la carte ────────────────────────────────────────────────────
-  const html = useMemo(() => `<!DOCTYPE html><html><head>
+  // Créé UNE seule fois (au premier affichage de la carte) puis jamais modifié.
+  const htmlRef = useRef(null);
+  if (!htmlRef.current && !loading) htmlRef.current = buildMapHtml(markers);
+  const html = htmlRef.current;
+  // Même objet à chaque rendu → la WebView ne recharge jamais la page.
+  const webSource = useMemo(() => ({ html }), [html]);
+  function buildMapHtml(markers) { return `<!DOCTYPE html><html><head>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -174,18 +185,11 @@ export function MapScreen({ navigation, route }) {
 
     markers.forEach(addMarkerToMap);
 
-    function addOrUpdateMarkers(newMarkers){
-      newMarkers.forEach(function(g){
-        var existing=markers.find(function(m){return m.key===g.key;});
-        if(existing){
-          existing.count+=g.count;
-          markerMap[g.key].setIcon(makeIcon(existing,selectedKeys.has(g.key)));
-          markerMap[g.key].getTooltip().setContent('<b>'+existing.label+'</b><br>'+existing.count+' photo(s)');
-        } else {
-          markers.push(g);
-          addMarkerToMap(g);
-        }
-      });
+    function setMarkers(list){
+      Object.keys(markerMap).forEach(function(k){ map.removeLayer(markerMap[k]); });
+      markerMap={};
+      markers=list;
+      markers.forEach(addMarkerToMap);
     }
 
     function updateSelection(keys){
@@ -195,7 +199,7 @@ export function MapScreen({ navigation, route }) {
         if(g) markerMap[k].setIcon(makeIcon(g,selectedKeys.has(k)));
       });
     }
-  </script></body></html>`, [markers]);
+  </script></body></html>`; }
 
   const onMessage = (e) => {
     try {
@@ -273,7 +277,7 @@ export function MapScreen({ navigation, route }) {
         </View>
       ) : photosWithGeo.length === 0 && !geoScanProgress ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-          <Text style={{ fontSize: 56, marginBottom: 12 }}>🗺</Text>
+          <Text style={{ fontSize: 56, marginBottom: 12 }}>🌍</Text>
           <Text style={{ fontSize: 16, fontWeight: "700", color: C.text, textAlign: "center" }}>
             Aucune photo géolocalisée
           </Text>
@@ -284,14 +288,15 @@ export function MapScreen({ navigation, route }) {
       ) : (
         <>
           {/* Carte */}
-          <View style={{ height: 300, marginHorizontal: S.pad, borderRadius: S.radius, overflow: "hidden", borderWidth: 1, borderColor: C.border }}>
+          {/* La carte prend toute la place disponible : plus facile de zoomer et de toucher les lieux */}
+          <View style={{ flex: 1, minHeight: 380, marginHorizontal: S.pad, borderRadius: S.radius, overflow: "hidden", borderWidth: 1, borderColor: C.border }}>
             <WebView
               ref={webviewRef}
-              source={{ html }}
+              source={webSource}
               style={{ flex: 1 }}
               onMessage={onMessage}
               javaScriptEnabled
-              onLoadEnd={injectNewMarkers}
+              onLoadEnd={onMapLoaded}
             />
           </View>
 

@@ -2,7 +2,7 @@
 
 > Fichier de passation. Lu en début de session pour retrouver l'état du projet
 > sans re-scanner tout le code. **À maintenir à jour** à chaque étape importante.
-> Dernière mise à jour : 2026-09-21.
+> Dernière mise à jour : 2026-10-13.
 
 ---
 
@@ -146,3 +146,16 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 - Pas de gros dumps de code. Vérifier la cohérence imports/exports.
 - Agir comme un **CTO senior qui forme un junior**.
 - Français.
+
+---
+
+## 10. Session 12-13 oct. 2026 (branche `octobre27`, non commité)
+
+- Partage HD par swipe (action "share" réglable) → `services/photoShare.js`, `ZoomableImage` prop `bounceDirs`.
+- Dates 1970 : repli sur `modificationTime` dans `services/photoLibrary.js`.
+- Accueil Tri : carte objectif (jours restants, mois dès 180 j), barre de stats supprimée,
+  briques "Par date" (calendrier direct, `components/RangeCalendarPicker.js`) + "Même instant" (ex-Doublons, icône 📷),
+  lignes Corbeille (Vider + compteur `freedMo` Go libérés) et Rappel (interrupteur). Par lieu / Par visage supprimés.
+- Accueil Album : carte "Ton prochain album" (mosaïque), filtre ❤️ en pastille, liste "Mes albums"
+  (Coups de cœur = album auto en tête, menu ··· renommer/supprimer), partenaires réduits à un bandeau.
+- Par lieu (🌍) revenu en mode Album uniquement (carte agrandie). Écran orphelin : `MomentScreen`.

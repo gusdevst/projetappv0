@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   ScrollView, StatusBar, View, Text, Image,
-  TouchableOpacity, Alert, Modal, ActivityIndicator, Linking, PanResponder, Switch,
+  TouchableOpacity, Alert, Modal, ActivityIndicator, Linking, PanResponder, Switch, TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -93,6 +93,45 @@ const RHYTHM_LABEL = {
   every2days: "tous les 2 jours", weekly: "par semaine",
 };
 
+// Rose des Coups de cœur.
+const C_PINK = "#c4466a";
+
+// "aujourd'hui", "hier", "il y a 3 j", "il y a 2 sem.", "il y a 4 mois"
+function timeAgo(ts) {
+  const days = Math.floor((Date.now() - ts) / 86400000);
+  if (days <= 0) return "modifié aujourd'hui";
+  if (days === 1) return "modifié hier";
+  if (days < 7) return `il y a ${days} j`;
+  if (days < 30) return `il y a ${Math.floor(days / 7)} sem.`;
+  return `il y a ${Math.max(1, Math.floor(days / 30))} mois`;
+}
+
+// Ligne d'album : couverture + nom + sous-titre + menu "···".
+function AlbumRow({ cover, title, badge, sub, onPress, onMenu }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 11, borderBottomWidth: 1, borderBottomColor: C.bgMuted }}
+    >
+      {cover
+        ? <ExpoImage source={{ uri: cover }} contentFit="cover" style={{ width: 44, height: 44, borderRadius: 10 }} />
+        : <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: C.bgMuted, alignItems: "center", justifyContent: "center" }}><Text>🖼</Text></View>}
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={{ fontSize: 14, fontWeight: "800", color: C.text }} numberOfLines={1}>{title}</Text>
+          {badge && (
+            <Text style={{ fontSize: 9, fontWeight: "800", color: C_PINK, backgroundColor: "#fbe9ef", borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, overflow: "hidden" }}>{badge}</Text>
+          )}
+        </View>
+        <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }} numberOfLines={1}>{sub}</Text>
+      </View>
+      <TouchableOpacity onPress={onMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Text style={{ fontSize: 18, fontWeight: "900", color: C.textMuted, letterSpacing: 1 }}>···</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+
 // Titre de la ligne "rappel" selon la fréquence.
 const REMINDER_TITLE = {
   off: "Rappels désactivés", daily: "Rappel quotidien", twice_daily: "Rappel 2 fois par jour",
@@ -163,6 +202,8 @@ export function HomeScreen({ navigation, route }) {
   const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
   const addAlbumFilter    = usePhotoStore((state) => state.addAlbumFilter);
   const emptyTrash        = usePhotoStore((state) => state.emptyTrash);
+  const renameAlbum       = usePhotoStore((state) => state.renameAlbum);
+  const deleteAlbum       = usePhotoStore((state) => state.deleteAlbum);
   const freedMo           = usePhotoStore((state) => state.freedMo);
   const notificationHour   = usePhotoStore((state) => state.notificationHour);
   const notificationMinute = usePhotoStore((state) => state.notificationMinute);
@@ -392,6 +433,49 @@ export function HomeScreen({ navigation, route }) {
     }
   }
 
+  // ── Mes albums (mode Album) ──────────────────────────────────────────────
+  const photoById = useMemo(() => new Map(libraryPhotos.map((p) => [p.id, p])), [libraryPhotos]);
+  // Couverture = dernière photo ajoutée encore présente dans la photothèque.
+  const albumCover = (a) => {
+    for (let k = a.photoIds.length - 1; k >= 0; k--) {
+      const p = photoById.get(a.photoIds[k]);
+      if (p) return p.url;
+    }
+    return null;
+  };
+  // Date de modif : updatedAt, sinon la date de création cachée dans l'id ("album-<timestamp>").
+  const albumTime = (a) => a.updatedAt || Number(String(a.id).replace("album-", "")) || 0;
+  const recentAlbums = [...albums].sort((x, y) => albumTime(y) - albumTime(x)).slice(0, 3);
+
+  const [renameTarget, setRenameTarget] = useState(null); // album en cours de renommage
+  const [renameText, setRenameText]     = useState("");
+
+  // Menu "···" d'un album. album = null → Coups de cœur (ni renommable, ni supprimable).
+  function openAlbumMenu(album) {
+    const soon = () => Alert.alert("Bientôt disponible", "L'impression de tes albums arrive bientôt 🌸");
+    if (!album) {
+      Alert.alert("Coups de cœur", "Album automatique : il se remplit quand tu touches ❤️ pendant le tri.", [
+        { text: "Ouvrir", onPress: () => navigation.navigate("Gallery", { section: "kept" }) },
+        { text: "Imprimer (bientôt)", onPress: soon },
+        { text: "Fermer", style: "cancel" },
+      ]);
+      return;
+    }
+    Alert.alert(album.name, `${album.photoIds.length} photo${album.photoIds.length > 1 ? "s" : ""}`, [
+      { text: "Renommer", onPress: () => { setRenameText(album.name); setRenameTarget(album); } },
+      { text: "Imprimer (bientôt)", onPress: soon },
+      {
+        text: "Supprimer", style: "destructive",
+        onPress: () => Alert.alert(
+          "Supprimer l'album ?",
+          `« ${album.name} » sera supprimé. Les photos restent sur ton téléphone.`,
+          [{ text: "Annuler", style: "cancel" }, { text: "Supprimer", style: "destructive", onPress: () => deleteAlbum(album.id) }]
+        ),
+      },
+      { text: "Annuler", style: "cancel" },
+    ]);
+  }
+
   // ── Calendrier "Par date" ────────────────────────────────────────────────
   // Année de la plus vieille photo → borne basse du sélecteur d'année.
   const minYear = useMemo(() => {
@@ -440,56 +524,10 @@ export function HomeScreen({ navigation, route }) {
     },
     isMenage
       ? { emoji: "📷", label: "Même instant",  desc: "Prises à quelques secondes", onPress: () => navigation.navigate("Duplicates") }
-      : { emoji: "❤️", label: "Coup de cœur",  desc: coeurActive ? "✓ Dans les filtres" : "Photos aimées", onPress: toggleCoeurFilter, active: coeurActive },
+      // Mode Album : "Par lieu" (le filtre ❤️ est une pastille dans la ligne des filtres)
+      : { emoji: "🌍", label: "Par lieu", desc: "Choisis sur la carte", onPress: () => navigation.navigate("Map", { mode: "album" }) },
   ];
 
-  // ── Cartes du bas : 3e carte selon le mode ───────────────────────────────
-  const bottomCards = [
-    isMenage
-      ? {
-          key: "deleted",
-          emoji: "🗑",  label: "Corbeille",  count: deleted.length,
-          sub: `${deletedSize.toFixed(0)} Mo`, bg: "#f5e8e8", color: C.red,
-          nav: () => navigation.navigate("Gallery", { section: "deleted" }),
-        }
-      : {
-          key: "partners",
-          emoji: "🤝", label: "Partenaires", count: 3,
-          sub: "bientôt", bg: "#eef0f4", color: C.textMuted, disabled: true,
-          nav: () => Alert.alert("Bientôt disponible", "L'impression de tes souvenirs arrive bientôt 🌸"),
-        },
-    isMenage
-      ? {
-          key: "rappels",
-          emoji: "🔔", label: "Rappels",
-          count: notificationFrequency !== "off" ? "ACTIF" : "INACTIF",
-          sub: {
-            off:         "désactivé",
-            daily:       "quotidien",
-            twice_daily: "2 fois / jour",
-            every2days:  "tous les 2 jours",
-            weekly:      "hebdomadaire",
-          }[notificationFrequency] ?? "désactivé",
-          bg: "#f0f0ff",
-          color: notificationFrequency !== "off" ? C.accent : C.textMuted,
-          nav: () => navigation.navigate("Rappels"),
-        }
-      : {
-          key: "album",
-          emoji: "🗂️", label: "Mes albums", count: albums.length,
-          sub: `album${albums.length > 1 ? "s" : ""}`, bg: "#e6f4f2", color: C_ALBUM,
-          nav: () => navigation.navigate("Gallery", { section: "album" }),
-        },
-    // Coups de cœur : seulement en mode Album (retiré du mode Tri pour alléger l'écran).
-    isMenage
-      ? null
-      : {
-          key: "kept",
-          emoji: "❤️", label: "Coups de cœur", count: kept.length,
-          sub: `${kept.length} photo${kept.length > 1 ? "s" : ""}`, bg: "#e6f0ea", color: C.green,
-          nav: () => navigation.navigate("Gallery", { section: "kept" }),
-        },
-  ];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} {...screenPan.panHandlers}>
@@ -717,6 +755,23 @@ export function HomeScreen({ navigation, route }) {
             </TouchableOpacity>
           ))}
 
+          {/* Mode Album : filtre Coups de cœur (on pioche dans l'album Coups de cœur) */}
+          {!isMenage && (
+            <TouchableOpacity
+              onPress={toggleCoeurFilter}
+              style={{
+                flexDirection: "row", alignItems: "center", gap: 5,
+                paddingHorizontal: 9, paddingVertical: 6, borderRadius: 99,
+                borderWidth: 1.5,
+                borderColor: coeurActive ? C_PINK : C.border,
+                backgroundColor: coeurActive ? C_PINK : C.bgCard,
+              }}
+            >
+              <Text style={{ fontSize: 12 }}>❤️</Text>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: coeurActive ? "#fff" : C.textMuted }}>Coups de cœur</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             onPress={openAlbumPicker}
             style={{
@@ -785,8 +840,9 @@ export function HomeScreen({ navigation, route }) {
         )}
 
         {/* ── Grille des briques ──────────────────────────────────────────────── */}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: -4, marginBottom: 10 }}>
-          {gridItems.map((t) => (
+        {/* Même taille de brique dans les 2 modes (50 %) ; seule, elle est centrée. */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", marginHorizontal: -4, marginBottom: 10 }}>
+          {gridItems.filter(Boolean).map((t) => (
             <View key={t.label} style={{ width: "50%", padding: 4 }}>
               <TouchableOpacity
                 onPress={t.onPress}
@@ -816,46 +872,6 @@ export function HomeScreen({ navigation, route }) {
             </View>
           ))}
         </View>
-
-        {/* ── Mode ALBUM : produits d'impression ─────────────────────── */}
-        {!isMenage && (
-          <>
-            {/* Titre section */}
-            <Text style={{ fontWeight: "800", fontSize: 12, color: C_ALBUM, marginBottom: 8, letterSpacing: 0.5 }}>
-              🎁 IMPRIMER TES SOUVENIRS · BIENTÔT
-            </Text>
-
-            {/* Produits — une seule ligne, scroll désactivé pour ne pas bloquer le swipe de mode */}
-            <ScrollView
-              horizontal
-              scrollEnabled={false}
-              showsHorizontalScrollIndicator={false}
-              style={{ marginHorizontal: -14, marginBottom: 12 }}
-              contentContainerStyle={{ paddingHorizontal: 14, gap: 10 }}
-            >
-              {PRODUCTS.map((prod) => (
-                <TouchableOpacity
-                  key={prod.key}
-                  onPress={() => Alert.alert("Bientôt disponible", "L'impression de tes souvenirs arrive bientôt 🌸")}
-                  style={{
-                    width: 108,
-                    backgroundColor: prod.bg,
-                    borderRadius: 16,
-                    padding: 14,
-                    alignItems: "center",
-                    borderWidth: 1.5,
-                    borderColor: prod.color + "40",
-                    opacity: 0.5,
-                  }}
-                >
-                  <Text style={{ fontSize: 28, marginBottom: 6 }}>{prod.emoji}</Text>
-                  <Text style={{ fontWeight: "800", fontSize: 12, color: prod.color, textAlign: "center" }}>{prod.label}</Text>
-                  <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3, textAlign: "center" }}>{prod.desc}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </>
-        )}
 
         {/* ── Mode TRI : corbeille + rappel (2 lignes d'action) ──────────── */}
         {isMenage && (
@@ -920,31 +936,94 @@ export function HomeScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* ── Mode ALBUM : 3 cartes côte à côte ──────────────────────────── */}
+        {/* ── Mode ALBUM : liste "Mes albums" (Coups de cœur = album auto) ── */}
         {!isMenage && (
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {bottomCards.filter(Boolean).map((s) => (
+          <View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginHorizontal: 3, marginBottom: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: "800", color: C.textMid, letterSpacing: 0.4 }}>
+                MES ALBUMS · {albums.length + 1}
+              </Text>
+              <TouchableOpacity onPress={() => navigation.navigate("Gallery", { section: "album" })}>
+                <Text style={{ fontSize: 12, fontWeight: "800", color: C_ALBUM }}>Tout voir ›</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ backgroundColor: C.bgCard, borderRadius: 16, borderWidth: 1, borderColor: C.border, overflow: "hidden" }}>
+              {/* Coups de cœur : toujours en premier, automatique */}
+              <AlbumRow
+                cover={kept[kept.length - 1]?.url}
+                title="Coups de cœur"
+                badge="AUTO"
+                sub={`${kept.length} photo${kept.length > 1 ? "s" : ""} · rempli avec le ❤️`}
+                onPress={() => navigation.navigate("Gallery", { section: "kept" })}
+                onMenu={() => openAlbumMenu(null)}
+              />
+              {/* Albums créés, les plus récemment modifiés d'abord (3 max) */}
+              {recentAlbums.map((a) => (
+                <AlbumRow
+                  key={a.id}
+                  cover={albumCover(a)}
+                  title={a.name}
+                  sub={`${a.photoIds.length} photo${a.photoIds.length > 1 ? "s" : ""}${a.updatedAt ? ` · ${timeAgo(a.updatedAt)}` : ""}`}
+                  onPress={() => navigation.navigate("Gallery", { section: "album", albumId: a.id })}
+                  onMenu={() => openAlbumMenu(a)}
+                />
+              ))}
+              {/* Nouvel album = créer un album à partir de la sélection actuelle */}
+              <TouchableOpacity
+                onPress={() => (queue.length > 0
+                  ? handleCTA()
+                  : Alert.alert("Aucune photo sélectionnée", "Choisis d'abord des photos avec les filtres au-dessus."))}
+                style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 11, borderTopWidth: 1, borderTopColor: C.bgMuted }}
+              >
+                <View style={{ width: 44, height: 44, borderRadius: 10, borderWidth: 1.5, borderStyle: "dashed", borderColor: C_ALBUM, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 20, color: C_ALBUM }}>＋</Text>
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: "800", color: C_ALBUM }}>Nouvel album</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Partenaires d'impression : bandeau discret */}
             <TouchableOpacity
-              key={s.key}
-              onPress={s.nav}
-              style={{
-                flex: 1, backgroundColor: C.bgCard, borderRadius: S.radius,
-                padding: 11, borderWidth: 1, borderColor: C.border, alignItems: "center",
-                opacity: s.disabled ? 0.5 : 1,
-              }}
+              onPress={() => Alert.alert("Bientôt disponible", "L'impression de tes albums arrive bientôt 🌸")}
+              style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, paddingVertical: 9, paddingHorizontal: 12,
+                borderRadius: 12, borderWidth: 1, borderStyle: "dashed", borderColor: C.border }}
             >
-              <View style={{ width: 40, height: 40, backgroundColor: s.bg, borderRadius: 12, alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
-                <Text style={{ fontSize: 18 }}>{s.emoji}</Text>
-              </View>
-              <Text style={{ fontSize: 19, fontWeight: "900", color: s.color }}>{s.count}</Text>
-              <Text style={{ fontSize: 11, fontWeight: "700", color: C.text, marginTop: 2 }}>{s.label}</Text>
-              <Text style={{ fontSize: 9, color: C.textMuted, marginTop: 1, textAlign: "center" }}>{s.sub}</Text>
+              <Text style={{ fontSize: 13 }}>🎁</Text>
+              <Text style={{ flex: 1, fontSize: 12, fontWeight: "700", color: C.textMid }}>Imprimer tes albums</Text>
+              <Text style={{ fontSize: 10, fontWeight: "800", color: C.textMuted, backgroundColor: C.bgMuted, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, overflow: "hidden" }}>BIENTÔT</Text>
             </TouchableOpacity>
-          ))}
-        </View>
+          </View>
         )}
 
       </ScrollView>
+
+      {/* ── Renommer un album ─────────────────────────────────────── */}
+      <Modal visible={!!renameTarget} transparent animationType="fade" onRequestClose={() => setRenameTarget(null)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: 24 }}>
+          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 20 }}>
+            <Text style={{ fontSize: 16, fontWeight: "800", color: C.text, marginBottom: 12 }}>Renommer l'album</Text>
+            <TextInput
+              value={renameText}
+              onChangeText={setRenameText}
+              autoFocus
+              placeholder="Nom de l'album"
+              style={{ borderWidth: 1.5, borderColor: C.border, borderRadius: 12, padding: 12, fontSize: 15, color: C.text }}
+            />
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+              <TouchableOpacity onPress={() => setRenameTarget(null)}
+                style={{ flex: 1, padding: 13, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, alignItems: "center" }}>
+                <Text style={{ color: C.textMuted, fontWeight: "700" }}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => { renameAlbum(renameTarget.id, renameText); setRenameTarget(null); }}
+                style={{ flex: 1, padding: 13, borderRadius: 12, backgroundColor: C_ALBUM, alignItems: "center" }}>
+                <Text style={{ color: "#fff", fontWeight: "800" }}>Valider</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Calendrier de la brique "Par date" ──────────────────────── */}
       <RangeCalendarPicker
