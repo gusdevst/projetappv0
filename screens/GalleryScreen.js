@@ -19,7 +19,7 @@ import { PhotoGrid } from "../components/PhotoGrid";
 import { ZoomableImage } from "../components/ZoomableImage";
 import BackButton from "../components/BackButton";
 import { usePhotoStore } from "../store/usePhotoStore";
-import * as Sharing from "expo-sharing";
+import { sharePhoto } from "../services/photoShare";
 import { addPhotosToPelliculeAlbum } from "../services/photoLibrary";
 
 const { width: SW, height: SH } = Dimensions.get("window");
@@ -104,16 +104,8 @@ export function GalleryScreen({ navigation, route }) {
 
   // ── Partage natif (WhatsApp, SMS, etc.) ──────────────────────────────────
   const handleShare = async (photo) => {
-    try {
-      const available = await Sharing.isAvailableAsync();
-      if (!available) {
-        Alert.alert("Partage indisponible", "Cette fonctionnalité n'est pas disponible sur cet appareil.");
-        return;
-      }
-      await Sharing.shareAsync(photo.url);
-    } catch (e) {
-      Alert.alert("Erreur", "Impossible de partager cette photo.");
-    }
+    const ok = await sharePhoto(photo.id); // fichier original HD, pas l'étiquette ph://
+    if (!ok) Alert.alert("Partage impossible", "Cette photo n'a pas pu être préparée pour le partage.");
   };
 
   // ── Masquer StatusBar + NavigationBar Android en plein écran ────────────

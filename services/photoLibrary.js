@@ -196,14 +196,21 @@ function mapAssetToPhoto(asset) {
   // ajouterait plusieurs secondes au chargement initial → on reste sur l'approximation.
   const approxSizeMo = (asset.width * asset.height * 0.4) / (1024 * 1024);
 
-  const date = new Date(asset.creationTime);
+  // Date de prise de vue. Certaines photos n'en ont pas (WhatsApp, web, vieux
+  // transferts) → le téléphone renvoie 0 = 1er janvier 1970. Dans ce cas on se
+  // rabat sur la date de modification du fichier (souvent la date d'arrivée).
+  const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
+  const creationTime = asset.creationTime > ONE_YEAR_MS
+    ? asset.creationTime
+    : (asset.modificationTime > ONE_YEAR_MS ? asset.modificationTime : asset.creationTime);
+  const date = new Date(creationTime);
   const year = String(date.getFullYear());
 
   return {
     id: asset.id,
     url: asset.uri,
     filename: asset.filename ?? "",
-    creationTime: asset.creationTime, // ms epoch — utilisé par photoAnalysis pour clusters/doublons
+    creationTime, // ms epoch (corrigé si absent, cf. plus haut) — utilisé par photoAnalysis pour clusters/doublons
     year,
     size: Number(approxSizeMo.toFixed(1)),
     width: asset.width,

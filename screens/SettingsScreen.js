@@ -59,6 +59,7 @@ const SWIPE_ACTIONS_MENAGE = [
   { key: "skip",     label: "Conserver la photo",     desc: "Garder sur le téléphone et passer à la suivante", emoji: "💚" },
   { key: "delete",   label: "Supprimer",              desc: "Envoyer dans la corbeille",                       emoji: "🗑" },
   { key: "hesitate", label: "Je déciderai plus tard", desc: "Mettre de côté pour décider ensuite",             emoji: "🤔" },
+  { key: "share",    label: "Partager",               desc: "Envoyer la photo en HD (Messages, WhatsApp, AirDrop…)", emoji: "📤" },
   { key: "none",     label: "Désactivée",             desc: "Rien ne se passe, la photo rebondit",             emoji: "🚫" },
 ];
 
@@ -68,6 +69,7 @@ const SWIPE_ACTIONS_ALBUM = [
   { key: "skip",     label: "Ne pas envoyer dans l'album", desc: "Photo conservée, elle pourra revenir pour un autre album", emoji: "⏭️" },
   { key: "delete",   label: "Supprimer",                   desc: "Envoyer dans la corbeille (tri en même temps)",       emoji: "🗑" },
   { key: "hesitate", label: "Je déciderai plus tard",      desc: "Mettre de côté pour décider ensuite",                 emoji: "🤔" },
+  { key: "share",    label: "Partager",               desc: "Envoyer la photo en HD (Messages, WhatsApp, AirDrop…)", emoji: "📤" },
   { key: "none",     label: "Désactivée",                  desc: "Rien ne se passe, la photo rebondit",                 emoji: "🚫" },
 ];
 

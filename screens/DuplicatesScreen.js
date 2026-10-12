@@ -321,13 +321,13 @@ export function DuplicatesScreen({ navigation, route }) {
         <BackButton mode="menage" onPress={() => navigation.goBack()} />
         <View>
           <Text style={{ fontWeight: "800", fontSize: 18, color: C.text }}>
-            {maxGroups ? "Doublons du jour" : "Doublons probables"}
+            {maxGroups ? "Même instant · du jour" : "Même instant"}
           </Text>
           <Text style={{ fontSize: 11, color: C.textMuted }}>
             {groups === null
               ? "Analyse en cours…"
               : groups.length === 0
-              ? "Aucun doublon détecté"
+              ? "Aucune série détectée"
               : `${groups.length} groupe(s) · ${totalDuplicates} photos`}
           </Text>
         </View>
@@ -365,15 +365,15 @@ export function DuplicatesScreen({ navigation, route }) {
       {groups === null ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color={C.accent} />
-          <Text style={{ color: C.textMuted, marginTop: 12 }}>Détection des doublons…</Text>
+          <Text style={{ color: C.textMuted, marginTop: 12 }}>Recherche des photos du même instant…</Text>
         </View>
 
       /* ── État vide ── */
       ) : groups.length === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 40 }}>
-          <Text style={{ fontSize: 56, marginBottom: 12 }}>🪞</Text>
+          <Text style={{ fontSize: 56, marginBottom: 12 }}>📷</Text>
           <Text style={{ fontSize: 16, fontWeight: "700", color: C.text, textAlign: "center" }}>
-            Pas de doublons détectés
+            Aucune photo du même instant
           </Text>
           <Text style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 8, lineHeight: 18 }}>
             On détecte les photos prises à moins de 5 secondes d'écart avec les mêmes dimensions (mode rafale, double appui…).

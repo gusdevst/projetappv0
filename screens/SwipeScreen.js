@@ -12,6 +12,7 @@ import {
   TextInput,
   ScrollView,
   Image,
+  Alert,
 } from "react-native";
 
 let NavigationBar = null;
@@ -24,6 +25,7 @@ import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { SessionTutoOverlay } from "../components/SessionTutoOverlay";
+import { sharePhoto, getShareableUri } from "../services/photoShare";
 
 function getEdgeContainerStyle(edge) {
   if (edge === "up")    return { position: "absolute", top: 0,    left: 0, right: 0, height: 220 };
@@ -140,6 +142,26 @@ export function SwipeScreen({ navigation, route }) {
 
   const photo = queue[idx] || null;
 
+  // ── Partage par swipe ─────────────────────────────────────────────────────
+  // Directions réglées sur "Partager" : la photo rebondit au lieu de s'envoler.
+  const shareDirs = ["up", "down", "left", "right"].filter((d) => swipeMappings?.[d] === "share");
+  const sharingRef = useRef(false); // évite d'ouvrir 2 feuilles de partage d'affilée
+
+  // Préchargement : on prépare le fichier HD dès que la photo s'affiche,
+  // comme un colis emballé avant l'arrivée du livreur → feuille instantanée.
+  useEffect(() => {
+    if (photo && shareDirs.length) getShareableUri(photo.id).catch(() => {});
+  }, [photo?.id, shareDirs.length]);
+
+  const handleShare = async (dir) => {
+    if (!photo || sharingRef.current) return;
+    sharingRef.current = true;
+    flashFeedback("rgba(90,150,255,0.6)", dir);
+    const ok = await sharePhoto(photo.id);
+    sharingRef.current = false;
+    if (!ok) Alert.alert("Partage impossible", "Cette photo n'a pas pu être préparée pour le partage.");
+  };
+
   // ── Fin de tri anticipée ─────────────────────────────────────────────────
   const handleFinDeTri = () => {
     // Mode ménage sans aucun swipe → rien à montrer, on retourne directement à l'accueil
@@ -223,6 +245,7 @@ export function SwipeScreen({ navigation, route }) {
 
   const swipe = (dir) => {
     const actionKey = swipeMappings?.[dir] || "none";
+    if (actionKey === "share") { handleShare(dir); return; } // pas une décision de tri
     performAction(actionKey, dir);
   };
 
@@ -391,6 +414,7 @@ export function SwipeScreen({ navigation, route }) {
         onSwipeRight={() => swipe("right")}
         onSwipeUp={() => swipe("up")}
         onSwipeDown={() => swipe("down")}
+        bounceDirs={shareDirs}
       />
 
       {/* ── Boutons d'action ── */}

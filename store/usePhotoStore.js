@@ -39,7 +39,8 @@ export const usePhotoStore = create(
       albumFilters: [],
 
       // Mappings swipe pour le mode MÉNAGE (nettoyer la photothèque).
-      // Actions possibles : "skip" | "delete" | "favorite" | "hesitate" | "none"
+      // Actions possibles : "skip" | "delete" | "favorite" | "hesitate" | "share" | "none"
+      // "share" = ouvre le partage HD, la photo reste affichée (pas une décision de tri).
       // up = "skip" : conserver la photo. Le bouton ❤️ est l'unique moyen d'ajouter aux coups de cœur.
       swipeMappingsMenage: {
         up:    "skip",
@@ -290,13 +291,18 @@ export const usePhotoStore = create(
 
       // ─── Vider la corbeille (vraie suppression via MediaLibrary) ────────
       // Retourne true si la suppression a réussi, false sinon.
+      // Total estimé (en Mo) des photos supprimées définitivement via Pellicule. Persisté.
+      freedMo: 0,
+
       emptyTrash: async () => {
         const { deleted } = get();
         if (deleted.length === 0) return true;
         try {
           const ok = await PhotoLibrary.deletePhotos(deleted.map((p) => p.id));
           if (ok) {
-            set({ deleted: [] });
+            // On ajoute la taille des photos supprimées au compteur "Go libérés".
+            const freed = deleted.reduce((a, p) => a + (p.size || 0), 0);
+            set({ deleted: [], freedMo: (get().freedMo || 0) + freed });
             // ⚠️ Recharger la photothèque : sans ça, les photos supprimées restent
             // dans libraryPhotos et réapparaissent dans la file de tri (écran noir).
             await get().loadLibrary();
@@ -468,6 +474,7 @@ export const usePhotoStore = create(
         albumTutoSeen:           state.albumTutoSeen,
         randomCount:             state.randomCount,
         sortPriority:            state.sortPriority,
+        freedMo:                 state.freedMo,
       }),
     }
   )

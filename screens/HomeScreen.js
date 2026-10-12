@@ -2,15 +2,19 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   ScrollView, StatusBar, View, Text, Image,
-  TouchableOpacity, Alert, Modal, ActivityIndicator, Linking, PanResponder,
+  TouchableOpacity, Alert, Modal, ActivityIndicator, Linking, PanResponder, Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Image as ExpoImage } from "expo-image";
 
 import { C, S, FILTERS } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { getAlbums, getAlbumAssetIds } from "../services/photoLibrary";
 import { AlbumFiltersBar } from "../components/AlbumFiltersBar";
+import { RangeCalendarPicker, dateLabel } from "../components/RangeCalendarPicker";
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
+import { cancelReminders } from "../services/notificationService";
 
 // C_ALBUM utilise désormais la valeur centralisée dans theme.js
 const C_ALBUM = C.album;
@@ -81,6 +85,45 @@ function formatSize(mo) {
   return `${(mo / 1024).toFixed(1)} Go`;
 }
 
+// Nombre de sessions par jour selon la fréquence des rappels.
+// Pas de rappel = 1 session = 1 jour.
+const SESSIONS_PER_DAY = { off: 1, daily: 1, twice_daily: 2, every2days: 0.5, weekly: 1 / 7 };
+const RHYTHM_LABEL = {
+  off: "par jour", daily: "par jour", twice_daily: "2 fois par jour",
+  every2days: "tous les 2 jours", weekly: "par semaine",
+};
+
+// Titre de la ligne "rappel" selon la fréquence.
+const REMINDER_TITLE = {
+  off: "Rappels désactivés", daily: "Rappel quotidien", twice_daily: "Rappel 2 fois par jour",
+  every2days: "Rappel tous les 2 jours", weekly: "Rappel hebdomadaire",
+};
+// Style commun des lignes corbeille / rappel.
+const rowStyle = {
+  flexDirection: "row", alignItems: "center", gap: 11,
+  backgroundColor: C.bgCard, borderRadius: 16, borderWidth: 1, borderColor: C.border,
+  paddingVertical: 11, paddingHorizontal: 12,
+};
+const iconBox = { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" };
+
+// Durée lisible : en jours jusqu'à 179, en mois à partir de 180.
+function formatDuration(days) {
+  if (days >= 180) return { val: Math.round(days / 30), unit: "mois" };
+  return { val: days, unit: days > 1 ? "jours" : "jour" };
+}
+
+// Garde les photos prises entre deux dates (journées entières incluses).
+// to absent = jusqu'à aujourd'hui.
+function inDateRange(photos, range) {
+  if (!range) return photos;
+  const f = range.from;
+  const from = new Date(f.getFullYear(), f.getMonth(), f.getDate()).getTime();
+  const to = range.to
+    ? new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate(), 23, 59, 59, 999).getTime()
+    : Infinity;
+  return photos.filter((p) => p.creationTime >= from && p.creationTime <= to);
+}
+
 function applyFilter(photos, filter) {
   if (filter === "Toutes") return photos;
   if (filter === "Screenshots") return photos.filter((p) => p.isScreenshot);
@@ -119,6 +162,11 @@ export function HomeScreen({ navigation, route }) {
   const removeAlbumFilter = usePhotoStore((state) => state.removeAlbumFilter);
   const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
   const addAlbumFilter    = usePhotoStore((state) => state.addAlbumFilter);
+  const emptyTrash        = usePhotoStore((state) => state.emptyTrash);
+  const freedMo           = usePhotoStore((state) => state.freedMo);
+  const notificationHour   = usePhotoStore((state) => state.notificationHour);
+  const notificationMinute = usePhotoStore((state) => state.notificationMinute);
+  const setNotificationFrequency = usePhotoStore((state) => state.setNotificationFrequency);
 
   // ── Mode actif : ménage (orange) ou album (violet) ──────────────────────
   const [activeMode, setActiveMode] = useState("menage");
@@ -127,6 +175,10 @@ export function HomeScreen({ navigation, route }) {
 
   const [activeFilter, setActiveFilter] = useState("Toutes");
 
+  // Brique "Par date" : période choisie au calendrier (mode Tri), ouverte depuis l'accueil.
+  const [dateRange, setDateRange]       = useState(null); // { from: Date, to: Date|null } | null
+  const [showCalendar, setShowCalendar] = useState(false);
+
   // Filtres date proposés selon le mode actif
   const dateFilters = isMenage ? MENAGE_DATE_FILTERS : ALBUM_DATE_FILTERS;
 
@@ -134,6 +186,7 @@ export function HomeScreen({ navigation, route }) {
   function switchMode(key) {
     setActiveMode(key);
     setRandomFiftyActive(false);
+    setDateRange(null);
     const allowed = key === "menage" ? MENAGE_DATE_FILTERS : ALBUM_DATE_FILTERS;
     setActiveFilter((f) => (allowed.includes(f) ? f : "Toutes"));
   }
@@ -246,7 +299,6 @@ export function HomeScreen({ navigation, route }) {
 
   // ── Queues ───────────────────────────────────────────────────────────────
   const deletedSize = deleted.reduce((a, p) => a + p.size, 0);
-  const librarySize = libraryPhotos.reduce((a, p) => a + p.size, 0);
 
   const menageExcludedIds = new Set([
     ...kept.map((x) => x.id),
@@ -268,6 +320,13 @@ export function HomeScreen({ navigation, route }) {
   const progressPct = libraryPhotos.length > 0
     ? Math.min(100, (triees / libraryPhotos.length) * 100) : 0;
 
+  // ── Carte "objectif" du mode Tri ─────────────────────────────────────────
+  const resteATrier = Math.max(0, libraryPhotos.length - triees);
+  const trieesSize  = libraryPhotos.reduce((a, p) => (menageExcludedIds.has(p.id) ? a + p.size : a), 0);
+  const sessionsRestantes = Math.ceil(resteATrier / randomCount);
+  const joursRestants = Math.ceil(sessionsRestantes / (SESSIONS_PER_DAY[notificationFrequency] ?? 1));
+  const duree = formatDuration(joursRestants);
+
   // Filtres combinés (mode album, intersection ET) : on précalcule un Set d'ids par filtre.
   const albumFilterSets = useMemo(
     () => albumFilters.map((f) => new Set(f.photoIds)),
@@ -280,7 +339,7 @@ export function HomeScreen({ navigation, route }) {
   if (!isMenage && albumFilterSets.length > 0) {
     remaining = remaining.filter((p) => albumFilterSets.every((s) => s.has(p.id)));
   }
-  const filteredPool = applyFilter(remaining, activeFilter);
+  const filteredPool = inDateRange(applyFilter(remaining, activeFilter), dateRange);
   const queue = randomFiftyActive
     ? randomQueue.filter((p) => !excludedIds.has(p.id))
     : filteredPool;
@@ -296,20 +355,91 @@ export function HomeScreen({ navigation, route }) {
     }
   }
 
-  const ctaLabel = () => {
-    if (libraryLoading || albumFiltering) return "Chargement de tes photos…";
-    if (queue.length === 0) return isMenage ? "🎉 Tout est trié !" : "Aucune photo disponible";
-    if (isMenage) return `🔀 Faire le tri · ${queue.length} photos`;
-    return `📚 Créer un album · ${queue.length} photos`;
-  };
+  // ── Grille : 2 briques (Par date + 2e brique selon le mode) ──────────────────────────────────
+  // ── Corbeille + rappel (mode Tri) ────────────────────────────────────────
+  const [emptying, setEmptying] = useState(false);
 
-  // ── Grille 2×2 : 4e item selon le mode ──────────────────────────────────
+  // Vider la corbeille : toujours une confirmation avant la suppression définitive.
+  function handleEmptyTrash() {
+    Alert.alert(
+      "Vider la corbeille",
+      `Supprimer définitivement ${deleted.length} photo${deleted.length > 1 ? "s" : ""} ? Sur iPhone, elles restent récupérables 30 jours dans « Supprimés récemment ».`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer", style: "destructive",
+          onPress: async () => {
+            setEmptying(true);
+            const ok = await emptyTrash();
+            setEmptying(false);
+            if (!ok) Alert.alert("Erreur", "La suppression a échoué. Vérifie que Pellicule a le droit de supprimer des photos.");
+          },
+        },
+      ]
+    );
+  }
+
+  // Interrupteur du rappel : ON = rappel quotidien (heure des Réglages), OFF = tout annuler.
+  async function toggleReminder(on) {
+    if (on) {
+      const result = await enableReminders("daily");
+      if (!result?.success) {
+        Alert.alert("Notifications bloquées", "Pour recevoir des rappels, autorise les notifications de Pellicule dans les Réglages de ton téléphone.");
+      }
+    } else {
+      await cancelReminders();
+      setNotificationFrequency("off");
+    }
+  }
+
+  // ── Calendrier "Par date" ────────────────────────────────────────────────
+  // Année de la plus vieille photo → borne basse du sélecteur d'année.
+  const minYear = useMemo(() => {
+    let min = new Date().getFullYear();
+    for (const p of libraryPhotos) {
+      const y = new Date(p.creationTime).getFullYear();
+      if (y < min) min = y;
+    }
+    return min;
+  }, [libraryPhotos]);
+
+  const rangeLabel = (r) => `${dateLabel(r.from)}${r.to ? ` → ${dateLabel(r.to)}` : " → auj."}`;
+
+  function handleCalendarConfirm(from, to) {
+    setShowCalendar(false);
+    const range = { from, to: to || null };
+    if (isMenage) {
+      // TRI : la période devient le filtre actif → le gros bouton trie cette période.
+      setDateRange(range);
+      setActiveFilter("Toutes");
+      setRandomFiftyActive(false);
+    } else {
+      // ALBUM : la période s'ajoute aux filtres combinés (comme avant depuis l'écran Moments).
+      const deletedIds = new Set(deleted.map((p) => p.id));
+      const photos = inDateRange(libraryPhotos.filter((p) => !deletedIds.has(p.id)), range);
+      if (photos.length === 0) {
+        Alert.alert("Aucune photo", "Aucune photo n'a été prise sur cette période.");
+        return;
+      }
+      addAlbumFilter({
+        id: `date-${from.getTime()}_${to ? to.getTime() : "now"}`,
+        type: "date",
+        label: rangeLabel(range),
+        photoIds: photos.map((p) => p.id),
+      });
+    }
+  }
+
   const gridItems = [
-    { emoji: "📅", label: "Par moment", desc: "Soirée, voyage…",    onPress: () => navigation.navigate("Moments", { mode: activeMode }) },
-    { emoji: "🗺",  label: "Par lieu",   desc: "Carte interactive",  onPress: () => navigation.navigate("Map",     { mode: activeMode }) },
-    { emoji: "👤", label: "Par visage", desc: "Bientôt disponible", disabled: true, onPress: () => Alert.alert("Bientôt disponible", "La reconnaissance des visages arrive prochainement 🌸") },
+    {
+      emoji: "📅", label: "Par date",
+      desc: dateRange ? rangeLabel(dateRange) : "Choisis une période",
+      active: !!dateRange,
+      onClear: dateRange ? () => setDateRange(null) : null,
+      onPress: () => setShowCalendar(true),
+    },
     isMenage
-      ? { emoji: "🪞", label: "Doublons",      desc: "Photos similaires", onPress: () => navigation.navigate("Duplicates") }
+      ? { emoji: "📷", label: "Même instant",  desc: "Prises à quelques secondes", onPress: () => navigation.navigate("Duplicates") }
       : { emoji: "❤️", label: "Coup de cœur",  desc: coeurActive ? "✓ Dans les filtres" : "Photos aimées", onPress: toggleCoeurFilter, active: coeurActive },
   ];
 
@@ -350,13 +480,9 @@ export function HomeScreen({ navigation, route }) {
           sub: `album${albums.length > 1 ? "s" : ""}`, bg: "#e6f4f2", color: C_ALBUM,
           nav: () => navigation.navigate("Gallery", { section: "album" }),
         },
+    // Coups de cœur : seulement en mode Album (retiré du mode Tri pour alléger l'écran).
     isMenage
-      ? {
-          key: "kept",
-          emoji: "❤️", label: "Coup de ❤️", count: kept.length,
-          sub: `${kept.length} photo${kept.length > 1 ? "s" : ""}`, bg: "#e6f0ea", color: C.green,
-          nav: () => navigation.navigate("Gallery", { section: "kept" }),
-        }
+      ? null
       : {
           key: "kept",
           emoji: "❤️", label: "Coups de cœur", count: kept.length,
@@ -431,31 +557,139 @@ export function HomeScreen({ navigation, route }) {
           })}
         </View>
 
-        {/* ── CTA ─────────────────────────────────────────────────────── */}
-        <TouchableOpacity
-          onPress={handleCTA}
-          disabled={libraryLoading || albumFiltering || queue.length === 0}
-          style={{
-            backgroundColor: modeColor,
-            borderRadius: 18,
-            padding: 18,
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 12,
-            opacity: libraryLoading || albumFiltering || queue.length === 0 ? 0.6 : 1,
-          }}
-        >
-          <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>
-            {ctaLabel()}
-          </Text>
-          {!libraryLoading && !albumFiltering && queue.length > 0 && (
-            <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 3 }}>
-              {isMenage
-                ? `${libraryPhotos.length - triees} restantes à trier`
-                : "Toutes tes photos sauf les supprimées"}
-            </Text>
-          )}
-        </TouchableOpacity>
+        {/* ── Mode TRI : carte objectif (avancement + jours restants + bouton) ── */}
+        {isMenage && (
+          <LinearGradient
+            colors={C.accentGrad}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={{ borderRadius: 22, padding: 18, marginBottom: 12 }}
+          >
+            {progressPct >= 100 ? (
+              <Text style={{ fontSize: 26, fontWeight: "900", color: "#fff", marginBottom: 12 }}>🎉 Tout est trié !</Text>
+            ) : (
+              <>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.8)", letterSpacing: 0.6 }}>
+                  PHOTOTHÈQUE TRIÉE DANS
+                </Text>
+                <Text style={{ color: "#fff", marginTop: 2 }}>
+                  <Text style={{ fontSize: 40, fontWeight: "900" }}>≈ {duree.val} </Text>
+                  <Text style={{ fontSize: 17, fontWeight: "800" }}>{duree.unit}</Text>
+                </Text>
+                <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginBottom: 12 }}>
+                  à raison d'une session de {randomCount} photos {RHYTHM_LABEL[notificationFrequency] ?? "par jour"}
+                </Text>
+              </>
+            )}
+
+            {/* Barre d'avancement */}
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)", overflow: "hidden" }}>
+              <View style={{ height: 6, width: `${progressPct}%`, backgroundColor: "#fff", borderRadius: 3 }} />
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6, marginBottom: 14 }}>
+              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.9)" }}>
+                <Text style={{ fontWeight: "900" }}>{Math.round(progressPct)} %</Text> · {triees} triées
+              </Text>
+              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.9)" }}>
+                <Text style={{ fontWeight: "900" }}>{formatSize(trieesSize)}</Text> triés
+              </Text>
+            </View>
+
+            {/* Bouton principal */}
+            <TouchableOpacity
+              onPress={handleCTA}
+              disabled={libraryLoading || albumFiltering || queue.length === 0}
+              style={{
+                backgroundColor: "#fff", borderRadius: 16, paddingVertical: 15,
+                alignItems: "center",
+                opacity: libraryLoading || albumFiltering || queue.length === 0 ? 0.6 : 1,
+              }}
+            >
+              <Text style={{ fontSize: 16, fontWeight: "900", color: C.accent }}>
+                {libraryLoading || albumFiltering
+                  ? "Chargement de tes photos…"
+                  : queue.length === 0
+                  ? "Rien à trier ici"
+                  : `▶ Faire le tri · ${queue.length} photo${queue.length > 1 ? "s" : ""}`}
+              </Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        )}
+
+        {/* ── Mode ALBUM : carte "Ton prochain album" (aperçu + bouton) ── */}
+        {!isMenage && (() => {
+          const busy = libraryLoading || albumFiltering;
+          const preview = queue.slice(0, 5);
+          const extra = Math.max(0, queue.length - 4);
+          // Résumé des filtres actifs : filtres combinés + année + dossier
+          const filterParts = [
+            ...albumFilters.map((f) => f.label),
+            ...(activeFilter !== "Toutes" ? [activeFilter] : []),
+            ...(selectedAlbum ? [selectedAlbum.title] : []),
+          ];
+          const filterSummary = filterParts.length ? filterParts.join(" · ") : "Toutes tes photos";
+          const thumb = (p, style) => (
+            <ExpoImage key={p.id} source={{ uri: p.url }} contentFit="cover"
+              style={[{ borderRadius: 8, backgroundColor: "rgba(255,255,255,0.18)" }, style]} />
+          );
+          return (
+            <LinearGradient
+              colors={[C_ALBUM, "#2f9488"]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 22, padding: 16, marginBottom: 12 }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.8)", letterSpacing: 0.6 }}>
+                TON PROCHAIN ALBUM
+              </Text>
+
+              {/* Mosaïque : 1 grande photo + 4 petites (la dernière affiche "+N") */}
+              {preview.length > 0 ? (
+                <View style={{ flexDirection: "row", gap: 4, height: 96, marginTop: 10, marginBottom: 10 }}>
+                  {thumb(preview[0], { flex: 2, height: 96 })}
+                  <View style={{ flex: 2, flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+                    {preview.slice(1, 5).map((p, k) => (
+                      <View key={p.id} style={{ width: "48%", height: 46 }}>
+                        {thumb(p, { width: "100%", height: 46 })}
+                        {k === 3 && extra > 0 && (
+                          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 8,
+                            backgroundColor: "rgba(0,0,0,0.35)", alignItems: "center", justifyContent: "center" }}>
+                            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 13 }}>+{extra}</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : (
+                <View style={{ height: 96, marginTop: 10, marginBottom: 10, borderRadius: 10,
+                  backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12 }}>
+                    {busy ? "Chargement de tes photos…" : "Aucune photo avec ces filtres"}
+                  </Text>
+                </View>
+              )}
+
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 12, gap: 8 }}>
+                <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.95)" }}>
+                  <Text style={{ fontWeight: "900" }}>{queue.length} photo{queue.length > 1 ? "s" : ""}</Text> sélectionnée{queue.length > 1 ? "s" : ""}
+                </Text>
+                <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", flexShrink: 1, textAlign: "right" }} numberOfLines={1}>
+                  {filterSummary}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleCTA}
+                disabled={busy || queue.length === 0}
+                style={{ backgroundColor: "#fff", borderRadius: 16, paddingVertical: 15, alignItems: "center",
+                  opacity: busy || queue.length === 0 ? 0.6 : 1 }}
+              >
+                <Text style={{ fontSize: 16, fontWeight: "900", color: C_ALBUM }}>
+                  {busy ? "Chargement…" : queue.length === 0 ? "Ajuste tes filtres" : `📔 Créer l'album · ${queue.length} photo${queue.length > 1 ? "s" : ""}`}
+                </Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          );
+        })()}
 
         {/* ── Filtres : compacts et centrés sous le CTA (2 lignes max) ──── */}
         <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginBottom: 12, alignItems: "center" }}>
@@ -469,7 +703,7 @@ export function HomeScreen({ navigation, route }) {
           {dateFilters.map((f) => (
             <TouchableOpacity
               key={f}
-              onPress={() => setActiveFilter(f)}
+              onPress={() => { setActiveFilter(f); setDateRange(null); }}
               style={{
                 paddingHorizontal: 9, paddingVertical: 6, borderRadius: 99,
                 borderWidth: 1.5,
@@ -550,7 +784,7 @@ export function HomeScreen({ navigation, route }) {
           />
         )}
 
-        {/* ── Grille 2×2 ──────────────────────────────────────────────── */}
+        {/* ── Grille des briques ──────────────────────────────────────────────── */}
         <View style={{ flexDirection: "row", flexWrap: "wrap", marginHorizontal: -4, marginBottom: 10 }}>
           {gridItems.map((t) => (
             <View key={t.label} style={{ width: "50%", padding: 4 }}>
@@ -558,15 +792,26 @@ export function HomeScreen({ navigation, route }) {
                 onPress={t.onPress}
                 style={{
                   backgroundColor: t.active ? `${modeColor}15` : C.bgCard,
-                  borderRadius: 16, padding: 12, alignItems: "center",
+                  borderRadius: 20, paddingVertical: 20, paddingHorizontal: 12,
+                  minHeight: 128, alignItems: "center", justifyContent: "center",
                   borderWidth: t.active ? 1.5 : 1,
                   borderColor: t.active ? modeColor : C.border,
                   opacity: t.disabled ? 0.5 : 1,
                 }}
               >
-                <Text style={{ fontSize: 22, marginBottom: 4 }}>{t.emoji}</Text>
-                <Text style={{ fontWeight: "700", fontSize: 13, color: C.text, textAlign: "center" }}>{t.label}</Text>
-                <Text style={{ fontSize: 11, color: t.active ? modeColor : C.textMuted, marginTop: 1, textAlign: "center" }}>{t.desc}</Text>
+                <Text style={{ fontSize: 34, marginBottom: 8 }}>{t.emoji}</Text>
+                <Text style={{ fontWeight: "800", fontSize: 16, color: C.text, textAlign: "center" }}>{t.label}</Text>
+                <Text style={{ fontSize: 12, color: t.active ? modeColor : C.textMuted, marginTop: 3, textAlign: "center" }} numberOfLines={2}>{t.desc}</Text>
+                {/* Croix pour effacer la période choisie */}
+                {t.onClear && (
+                  <TouchableOpacity
+                    onPress={t.onClear}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={{ position: "absolute", top: 8, right: 10 }}
+                  >
+                    <Text style={{ fontSize: 14, color: modeColor, fontWeight: "800" }}>✕</Text>
+                  </TouchableOpacity>
+                )}
               </TouchableOpacity>
             </View>
           ))}
@@ -612,62 +857,73 @@ export function HomeScreen({ navigation, route }) {
           </>
         )}
 
-        {/* ── Stats + avancement (mode ménage uniquement) ─────────────── */}
+        {/* ── Mode TRI : corbeille + rappel (2 lignes d'action) ──────────── */}
         {isMenage && (
-        <View style={{ backgroundColor: C.bgCard, borderRadius: 14, padding: 10, borderWidth: 1, borderColor: C.border, marginBottom: 10 }}>
-          <View style={{ flexDirection: "row" }}>
-            {[
-              { label: "Photos",    val: libraryPhotos.length, subval: formatSize(librarySize), color: C.accent },
-              { label: "Triées",    val: triees,               subval: null,                    color: C.green },
-              { label: "À libérer", val: formatSize(deletedSize), subval: null, color: C.red, onPress: () => navigation.navigate("Gallery", { section: "deleted" }) },
-            ].map((s, i) => (
-              <TouchableOpacity
-                key={s.label}
-                onPress={s.onPress}
-                disabled={!s.onPress}
-                style={{ flex: 1, alignItems: "center", borderLeftWidth: i > 0 ? 1 : 0, borderLeftColor: C.border }}
-              >
-                <Text style={{ fontSize: 15, fontWeight: "800", color: s.color }}>{s.val}</Text>
-                {s.subval && <Text style={{ fontSize: 9, fontWeight: "700", color: s.color, opacity: 0.7, marginTop: 1 }}>{s.subval}</Text>}
-                <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{s.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {libraryPhotos.length > 0 && (
-            <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: C.textMuted }}>
-                  {progressPct >= 100 ? "🎉 Tout est trié !" : "Avancement du tri"}
+          <View style={{ gap: 8 }}>
+            {/* Corbeille */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Gallery", { section: "deleted" })}
+              style={rowStyle}
+            >
+              <View style={[iconBox, { backgroundColor: "#f5e8e8" }]}><Text style={{ fontSize: 17 }}>🗑</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: "800", color: C.text }}>
+                  {deleted.length > 0
+                    ? `${deleted.length} photo${deleted.length > 1 ? "s" : ""} à supprimer`
+                    : "Corbeille vide"}
                 </Text>
-                <Text style={{ fontSize: 12, fontWeight: "900", color: C.accent }}>{Math.round(progressPct)}%</Text>
-              </View>
-              <View style={{ height: 5, backgroundColor: C.border, borderRadius: 3, overflow: "hidden" }}>
-                <View style={{ height: 5, width: `${progressPct}%`, backgroundColor: C.accent, borderRadius: 3 }} />
-              </View>
-              <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 4 }}>
-                {triees} sur {libraryPhotos.length} photos triées
-                {libraryTotalCount > libraryPhotos.length && ` · ${libraryTotalCount - libraryPhotos.length} non chargées`}
-              </Text>
-
-              {/* Estimation du nombre de sessions avant le tri complet */}
-              {progressPct < 100 && (() => {
-                const reste    = libraryPhotos.length - triees;
-                const sessions = Math.ceil(reste / randomCount);
-                return (
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: C.accent, marginTop: 6 }}>
-                    ≈ {sessions} session{sessions > 1 ? "s" : ""} de {randomCount} photos avant le tri complet
+                {deleted.length > 0 && (
+                  <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{formatSize(deletedSize)} à libérer</Text>
+                )}
+                {freedMo > 0 && (
+                  <Text style={{ fontSize: 11, color: C.green, fontWeight: "700", marginTop: 2 }}>
+                    💾 ≈ {formatSize(freedMo)} déjà libérés grâce à Pellicule
                   </Text>
-                );
-              })()}
-            </View>
-          )}
-        </View>
+                )}
+              </View>
+              {deleted.length > 0 && (
+                <TouchableOpacity
+                  onPress={handleEmptyTrash}
+                  disabled={emptying}
+                  style={{ backgroundColor: C.red, borderRadius: 10, paddingHorizontal: 13, paddingVertical: 9, opacity: emptying ? 0.6 : 1 }}
+                >
+                  {emptying
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>Vider</Text>}
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+
+            {/* Rappel */}
+            <TouchableOpacity onPress={() => navigation.navigate("Rappels")} style={rowStyle}>
+              <View style={[iconBox, { backgroundColor: "#eaf0f8" }]}><Text style={{ fontSize: 17 }}>🔔</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: "800", color: C.text }}>{REMINDER_TITLE[notificationFrequency] ?? "Rappels désactivés"}</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+                  {notificationsEnabled ? "Pour garder le rythme" : "Active-les pour garder le rythme"}
+                </Text>
+              </View>
+              {notificationsEnabled && (
+                <View style={{ backgroundColor: "#eaf0f8", borderRadius: 9, paddingHorizontal: 9, paddingVertical: 6 }}>
+                  <Text style={{ color: C.accent, fontWeight: "800", fontSize: 12 }}>
+                    {notificationHour}:{String(notificationMinute).padStart(2, "0")}
+                  </Text>
+                </View>
+              )}
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={toggleReminder}
+                trackColor={{ true: C.green, false: C.border }}
+                thumbColor="#fff"
+              />
+            </TouchableOpacity>
+          </View>
         )}
 
-        {/* ── 3 sections côte à côte ───────────────────────────────────── */}
+        {/* ── Mode ALBUM : 3 cartes côte à côte ──────────────────────────── */}
+        {!isMenage && (
         <View style={{ flexDirection: "row", gap: 8 }}>
-          {bottomCards.map((s) => (
+          {bottomCards.filter(Boolean).map((s) => (
             <TouchableOpacity
               key={s.key}
               onPress={s.nav}
@@ -686,8 +942,20 @@ export function HomeScreen({ navigation, route }) {
             </TouchableOpacity>
           ))}
         </View>
+        )}
 
       </ScrollView>
+
+      {/* ── Calendrier de la brique "Par date" ──────────────────────── */}
+      <RangeCalendarPicker
+        visible={showCalendar}
+        initialFrom={dateRange?.from ?? null}
+        initialTo={dateRange?.to ?? null}
+        accent={modeColor}
+        minYear={minYear}
+        onConfirm={handleCalendarConfirm}
+        onCancel={() => setShowCalendar(false)}
+      />
 
       {/* ── Modal sélection de dossier ──────────────────────────────── */}
       <Modal visible={showAlbumModal} transparent animationType="slide" onRequestClose={() => setShowAlbumModal(false)}>

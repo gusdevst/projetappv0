@@ -7,6 +7,8 @@
 //   onSwipeRight  : () => void — swipe vers la droite
 //   onSwipeUp     : () => void — swipe vers le haut
 //   onSwipeDown   : () => void — swipe vers le bas
+//   bounceDirs    : string[] — directions où la photo REVIENT au centre au lieu
+//                   de s'envoler (ex. ["up"] pour le partage). Le callback est appelé.
 //
 // Ref (imperatif) :
 //   flyOff(dir, callback) — anime la carte hors écran dans la direction donnée
@@ -37,7 +39,7 @@ const SWIPE_THRESHOLD = 80;
 const FLY_DURATION = 280;
 
 export const ZoomableImage = forwardRef(function ZoomableImage(
-  { uri, onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, style },
+  { uri, onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, bounceDirs, style },
   ref
 ) {
   const scale      = useSharedValue(1);
@@ -119,6 +121,19 @@ export const ZoomableImage = forwardRef(function ZoomableImage(
       if (absX < SWIPE_THRESHOLD && absY < SWIPE_THRESHOLD) {
         translateX.value = withSpring(0);
         translateY.value = withSpring(0);
+        return;
+      }
+
+      // Direction "rebond" (ex. partager) : la photo revient au centre,
+      // et on appelle le callback tout de suite → la feuille de partage s'ouvre.
+      const dir = absX >= absY
+        ? (e.translationX < 0 ? "left" : "right")
+        : (e.translationY < 0 ? "up" : "down");
+      if (bounceDirs && bounceDirs.includes(dir)) {
+        const cb = dir === "left" ? onSwipeLeft : dir === "right" ? onSwipeRight : dir === "up" ? onSwipeUp : onSwipeDown;
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+        if (cb) runOnJS(cb)();
         return;
       }
 

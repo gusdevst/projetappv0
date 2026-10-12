@@ -408,10 +408,10 @@ export function RappelsScreen({ navigation }) {
           onPress={() => setSortPriority({ type: "duplicates", nativeAlbumId: null, nativeAlbumTitle: null })}
           style={[styles.priorityCard, sortPriority?.type === "duplicates" && styles.priorityCardActive]}
         >
-          <Text style={{ fontSize: 22 }}>🪞</Text>
+          <Text style={{ fontSize: 22 }}>📷</Text>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.priorityTitle, sortPriority?.type === "duplicates" && { color: C.accent }]}>Doublons</Text>
-            <Text style={styles.priorityDesc}>Trie un batch de 5 regroupements de doublons détectés automatiquement</Text>
+            <Text style={[styles.priorityTitle, sortPriority?.type === "duplicates" && { color: C.accent }]}>Même instant</Text>
+            <Text style={styles.priorityDesc}>Trie 5 séries de photos prises à quelques secondes d'écart</Text>
           </View>
           {sortPriority?.type === "duplicates" && <CheckMark />}
         </TouchableOpacity>

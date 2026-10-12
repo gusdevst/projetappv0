@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corbeille et rappels — mode Tri</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#fff; --muted-bg:#eef0f4; --border:#c8d0de;
+    --accent:#2e4d7a; --accent2:#4a6d9e; --text:#1a2840; --mid:#3a5272; --muted:#7a8ea8;
+    --green:#2e7d52; --green-soft:#e6f0ea; --red:#b83232; --red-soft:#f5e8e8; --blue-soft:#eaf0f8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;background:#e3e6ec;color:var(--text);padding:24px 16px 48px}
+  h1{font-size:20px;font-weight:800;text-align:center}
+  .intro{max-width:760px;margin:6px auto 22px;text-align:center;color:var(--mid);font-size:13px;line-height:1.5}
+  .row{display:flex;flex-wrap:wrap;gap:28px;justify-content:center;align-items:flex-start}
+  .col{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:340px}
+  .tag{font-weight:800;font-size:15px}
+  .why{font-size:12px;color:var(--mid);text-align:center;line-height:1.45}
+  .phone{width:330px;background:var(--bg);border-radius:38px;border:9px solid #1a2840;padding:14px 12px 18px;box-shadow:0 18px 40px rgba(26,40,64,.18)}
+  .ghost{background:linear-gradient(150deg,var(--accent),var(--accent2));border-radius:22px;height:70px;opacity:.35;margin-bottom:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700}
+  .chips{display:flex;gap:5px;justify-content:center;margin-bottom:10px;opacity:.45}
+  .chip{font-size:10px;font-weight:700;color:var(--muted);background:var(--card);border:1.5px solid var(--border);border-radius:99px;padding:4px 8px}
+  .grid{display:flex;gap:8px;margin-bottom:14px;opacity:.45}
+  .tile{flex:1;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:16px 8px;text-align:center;font-size:28px}
+  .tile b{display:block;font-size:14px;margin-top:4px}
+  .ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 auto}
+  .sw{width:38px;height:22px;border-radius:11px;background:var(--green);position:relative;flex:0 0 auto}
+  .sw:after{content:"";position:absolute;right:2px;top:2px;width:18px;height:18px;border-radius:50%;background:#fff}
+  .g{color:var(--green);font-weight:700}
+  .muted{color:var(--muted)}
+
+  /* A — carte coupée en deux */
+  .split{display:flex;background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden}
+  .half{flex:1;padding:12px}
+  .half+.half{border-left:1px solid var(--muted-bg)}
+  .half .h{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;margin-bottom:8px}
+  .half .n{font-size:22px;font-weight:900;line-height:1}
+  .half small{display:block;font-size:10px;margin-top:3px}
+  .half .act{margin-top:10px;font-size:11px;font-weight:800;border-radius:10px;padding:7px 0;text-align:center}
+
+  /* B — deux lignes d'action */
+  .line{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:11px 12px;margin-bottom:8px}
+  .line .t{flex:1;min-width:0}
+  .line b{font-size:13.5px;display:block}
+  .line small{font-size:10.5px;color:var(--muted)}
+  .btnR{background:var(--red);color:#fff;font-weight:800;font-size:11.5px;border-radius:10px;padding:8px 12px}
+  .hour{background:var(--blue-soft);color:var(--accent);font-weight:800;font-size:12px;border-radius:9px;padding:6px 9px}
+  .savedline{font-size:10.5px;margin-top:3px}
+
+  /* C — jauge + phrase */
+  .gauge{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:13px;margin-bottom:8px}
+  .gauge .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+  .gauge .top b{font-size:13.5px}
+  .link{font-size:11.5px;font-weight:800;color:var(--red)}
+  .track{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--muted-bg)}
+  .track .a{width:69%;background:var(--green)}
+  .track .b{width:31%;background:repeating-linear-gradient(45deg,#e7a9a9 0 4px,#f5e8e8 4px 8px)}
+  .legend{display:flex;justify-content:space-between;font-size:10.5px;margin-top:6px}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .dot{width:8px;height:8px;border-radius:2px;display:inline-block}
+  .next{display:flex;align-items:center;gap:10px;background:var(--blue-soft);border-radius:16px;padding:11px 12px}
+  .next .t{flex:1;font-size:12px;line-height:1.35}
+  .next b{font-weight:800}
+  .edit{font-size:11px;font-weight:800;color:var(--accent)}
+  .notes{max-width:900px;margin:30px auto 0;background:#fff;border-radius:16px;padding:16px 20px;font-size:13px;line-height:1.55;color:var(--mid)}
+  .notes b{color:var(--text)}
+</style>
+</head>
+<body>
+<h1>Corbeille et rappels en mode Tri : 3 maquettes</h1>
+<p class="intro">Les Coups de cœur ont quitté le mode Tri (ils restent en mode Album). Il reste 2 raccourcis : la <b>corbeille</b>, avec le compteur de Go libérés, et les <b>rappels</b>.</p>
+
+<div class="row">
+
+  <div class="col">
+    <div class="tag">A · Une carte coupée en deux</div>
+    <div class="phone">
+      <div class="ghost">Carte « Photothèque triée dans… »</div>
+      <div class="chips"><span class="chip">Toutes</span><span class="chip">7 derniers jours</span><span class="chip">2026</span></div>
+      <div class="grid"><div class="tile">📅<b>Par date</b></div><div class="tile">⚡<b>Même instant</b></div></div>
+      <div class="split">
+        <div class="half">
+          <div class="h"><span class="ico" style="background:var(--red-soft);width:26px;height:26px;font-size:13px">🗑</span>Corbeille</div>
+          <div class="n" style="color:var(--red)">132</div>
+          <small class="muted">photos · 540 Mo</small>
+          <small class="g">💾 1,2 Go libérés</small>
+          <div class="act" style="background:var(--red-soft);color:var(--red)">Vider ›</div>
+        </div>
+        <div class="half">
+          <div class="h"><span class="ico" style="background:var(--blue-soft);width:26px;height:26px;font-size:13px">🔔</span>Rappels</div>
+          <div class="n" style="color:var(--accent)">9h00</div>
+          <small class="muted">tous les jours</small>
+          <small class="g">● activé</small>
+          <div class="act" style="background:var(--blue-soft);color:var(--accent)">Régler ›</div>
+        </div>
+      </div>
+    </div>
+    <p class="why"><b>L'idée :</b> un seul bloc horizontal, deux moitiés bien séparées. Compact et équilibré, et la forme rectangulaire se distingue des briques carrées.</p>
+  </div>
+
+  <div class="col">
+    <div class="tag">B · Deux lignes d'action</div>
+    <div class="phone">
+      <div class="ghost">Carte « Photothèque triée dans… »</div>
+      <div class="chips"><span class="chip">Toutes</span><span class="chip">7 derniers jours</span><span class="chip">2026</span></div>
+      <div class="grid"><div class="tile">📅<b>Par date</b></div><div class="tile">⚡<b>Même instant</b></div></div>
+      <div class="line">
+        <div class="ico" style="background:var(--red-soft)">🗑</div>
+        <div class="t"><b>132 photos à supprimer</b><small>540 Mo à libérer</small><div class="savedline g">💾 1,2 Go déjà libérés</div></div>
+        <span class="btnR">Vider</span>
+      </div>
+      <div class="line">
+        <div class="ico" style="background:var(--blue-soft)">🔔</div>
+        <div class="t"><b>Rappel quotidien</b><small>Pour garder le rythme</small></div>
+        <span class="hour">9:00</span>
+        <div class="sw"></div>
+      </div>
+    </div>
+    <p class="why"><b>L'idée :</b> chaque ligne a son action directe. On vide la corbeille, on change l'heure ou on coupe le rappel sans quitter l'accueil. Le plus pratique au quotidien.</p>
+  </div>
+
+  <div class="col">
+    <div class="tag">C · Jauge d'espace + prochain rappel</div>
+    <div class="phone">
+      <div class="ghost">Carte « Photothèque triée dans… »</div>
+      <div class="chips"><span class="chip">Toutes</span><span class="chip">7 derniers jours</span><span class="chip">2026</span></div>
+      <div class="grid"><div class="tile">📅<b>Par date</b></div><div class="tile">⚡<b>Même instant</b></div></div>
+      <div class="gauge">
+        <div class="top"><b>💾 Espace gagné</b><span class="link">🗑 Vider · 132 ›</span></div>
+        <div class="track"><div class="a"></div><div class="b"></div></div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--green)"></i><b class="g">1,2 Go</b> libérés</span>
+          <span><i class="dot" style="background:#e7a9a9"></i>540 Mo en attente</span>
+        </div>
+      </div>
+      <div class="next">
+        <span style="font-size:18px">🔔</span>
+        <div class="t">Prochaine session<br><b>demain à 9h00</b></div>
+        <span class="edit">Modifier ›</span>
+      </div>
+    </div>
+    <p class="why"><b>L'idée :</b> on raconte un résultat plutôt que d'afficher des boutons. La jauge montre ce que Pellicule t'a fait gagner et ce qu'il reste à gagner en vidant la corbeille. Le rappel devient un rendez-vous.</p>
+  </div>
+</div>
+
+<div class="notes">
+  <b>Si les rappels sont coupés :</b> A affiche « Désactivé » en gris, B montre l'interrupteur éteint, C remplace le rendez-vous par « 🔔 Active un rappel pour garder le rythme ».<br>
+  <b>Corbeille vide :</b> le bouton « Vider » disparaît, et seul le compteur de Go libérés reste visible.
+</div>
+</body>
+</html>
