@@ -83,8 +83,6 @@ export function SwipeScreen({ navigation, route }) {
   // Les flèches affichées au-dessus des boutons suivent ainsi le paramétrage.
   // Priorité haut > droite > gauche > bas si plusieurs directions ont la même action.
   const dirFor = (action) => ["up", "right", "left", "down"].find((d) => swipeMappings?.[d] === action) || null;
-  const keepDir   = dirFor("skip");   // conserver la photo (mode ménage)
-  const deleteDir = dirFor("delete"); // supprimer
   const albumDir  = dirFor("album");  // ajouter à l'album (mode album)
 
   const [history, setHistory]     = useState([]);
@@ -250,9 +248,17 @@ export function SwipeScreen({ navigation, route }) {
     performAction(actionKey, dir);
   };
 
-  const handleTrashPress = () => {
-    const d = deleteDir || "down";
-    zoomableRef.current?.flyOff(d, () => performAction("delete", d));
+  // Appui sur un bord = même effet que le swipe dans cette direction.
+  // La photo s'envole d'abord (comme un vrai swipe), puis l'action s'applique.
+  const handleEdgePress = (dir) => {
+    const actionKey = swipeMappings?.[dir] || "none";
+    if (actionKey === "none") return;
+    if (actionKey === "share") { handleShare(dir); return; } // partage : la photo reste
+    zoomableRef.current?.flyOff(dir, () => performAction(actionKey, dir));
+  };
+  // Appui long sur le bord "album" = choisir l'album (comme l'appui long sur 📁).
+  const handleEdgeLongPress = (dir) => {
+    if (isAlbum && swipeMappings?.[dir] === "album") setShowAlbumPicker(true);
   };
   // Cœur = coup de cœur (favoris) + on conserve la photo et on passe à la suivante.
   // performAction("favorite") gère l'ajout aux favoris, l'historique (undo) et l'avance.
@@ -260,11 +266,6 @@ export function SwipeScreen({ navigation, route }) {
     if (!photo) return;
     setHeartedThisPhoto(true);
     performAction("favorite", null);
-  };
-  // Bouton "conserver" (mode ménage) : même action que le swipe qui conserve.
-  const handleKeepPress = () => {
-    if (!keepDir) return;
-    zoomableRef.current?.flyOff(keepDir, () => performAction("skip", keepDir));
   };
   const handleAlbumPress = () => {
     const d = albumDir || "up";
@@ -419,7 +420,12 @@ export function SwipeScreen({ navigation, route }) {
       />
 
       {/* Filigranes des actions sur les 4 bords */}
-      <SwipeEdgeHints mappings={swipeMappings} isMenage={isMenage} />
+      <SwipeEdgeHints
+        mappings={swipeMappings}
+        isMenage={isMenage}
+        onPress={handleEdgePress}
+        onLongPress={handleEdgeLongPress}
+      />
 
       {/* ── Boutons d'action ── */}
       <View style={{

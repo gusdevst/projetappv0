@@ -1,7 +1,9 @@
-// Filigranes permanents sur les 4 bords de l'écran de swipe.
-// Chaque bord affiche l'action que l'utilisateur a réglée pour cette direction.
-// pointerEvents="none" : purement visuel, les gestes passent à travers.
-import { View, Text } from "react-native";
+// Actions affichées en filigrane sur les 4 bords de l'écran de swipe.
+// Chaque bord affiche l'action réglée pour cette direction ET sert de bouton :
+// un appui = même effet que le swipe dans cette direction.
+// pointerEvents="box-none" : le calque laisse passer les gestes partout,
+// sauf sur les 4 zones d'appui.
+import { View, Text, TouchableOpacity } from "react-native";
 
 // action → libellé affiché sur le bord
 function labelFor(action, isMenage) {
@@ -18,6 +20,8 @@ function labelFor(action, isMenage) {
 
 const TOP = 96;     // sous la barre du haut
 const BOTTOM = 150; // au-dessus des boutons du bas
+const TAP = 48;     // épaisseur de la zone d'appui (≥ 44 px, taille d'un doigt)
+const LEN = 180;    // longueur de la zone d'appui
 
 // Ombre portée : garde le texte lisible sur une photo claire, sans fond coloré.
 const labelStyle = {
@@ -25,39 +29,59 @@ const labelStyle = {
   textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
 };
 
-export function SwipeEdgeHints({ mappings, isMenage }) {
+export function SwipeEdgeHints({ mappings, isMenage, onPress, onLongPress }) {
   const up    = labelFor(mappings?.up, isMenage);
   const down  = labelFor(mappings?.down, isMenage);
   const left  = labelFor(mappings?.left, isMenage);
   const right = labelFor(mappings?.right, isMenage);
 
+  const tapProps = (dir) => ({
+    onPress: () => onPress?.(dir),
+    onLongPress: onLongPress ? () => onLongPress(dir) : undefined,
+    delayLongPress: 350,
+    activeOpacity: 0.5,
+    accessibilityRole: "button",
+  });
+
   return (
-    <View pointerEvents="none" style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, zIndex: 5 }}>
+    <View pointerEvents="box-none" style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, zIndex: 5 }}>
       {up && (
-        <View style={{ position: "absolute", top: TOP + 10, left: 0, right: 0, alignItems: "center" }}>
-          <Text style={labelStyle}>↑ {up}</Text>
+        <View pointerEvents="box-none" style={{ position: "absolute", top: TOP, left: 0, right: 0, alignItems: "center" }}>
+          <TouchableOpacity {...tapProps("up")} accessibilityLabel={up}
+            style={{ width: LEN, height: TAP, alignItems: "center", justifyContent: "center" }}>
+            <Text style={labelStyle}>↑ {up}</Text>
+          </TouchableOpacity>
         </View>
       )}
 
       {left && (
-        <View style={{ position: "absolute", top: TOP, bottom: BOTTOM, left: 0, width: 44, justifyContent: "center", alignItems: "center" }}>
-          <View style={{ width: 240, alignItems: "center", transform: [{ rotate: "-90deg" }] }}>
-            <Text numberOfLines={1} style={labelStyle}>{left} ↑</Text>
-          </View>
+        <View pointerEvents="box-none" style={{ position: "absolute", top: TOP, bottom: BOTTOM, left: 0, width: TAP, justifyContent: "center" }}>
+          <TouchableOpacity {...tapProps("left")} accessibilityLabel={left}
+            style={{ width: TAP, height: LEN, alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 240, alignItems: "center", transform: [{ rotate: "-90deg" }] }}>
+              <Text numberOfLines={1} style={labelStyle}>{left} ↑</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       )}
 
       {right && (
-        <View style={{ position: "absolute", top: TOP, bottom: BOTTOM, right: 0, width: 44, justifyContent: "center", alignItems: "center" }}>
-          <View style={{ width: 240, alignItems: "center", transform: [{ rotate: "90deg" }] }}>
-            <Text numberOfLines={1} style={labelStyle}>{right} ↑</Text>
-          </View>
+        <View pointerEvents="box-none" style={{ position: "absolute", top: TOP, bottom: BOTTOM, right: 0, width: TAP, justifyContent: "center" }}>
+          <TouchableOpacity {...tapProps("right")} accessibilityLabel={right}
+            style={{ width: TAP, height: LEN, alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 240, alignItems: "center", transform: [{ rotate: "90deg" }] }}>
+              <Text numberOfLines={1} style={labelStyle}>{right} ↑</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       )}
 
       {down && (
-        <View style={{ position: "absolute", bottom: 132, left: 0, right: 0, alignItems: "center" }}>
-          <Text style={labelStyle}>{down} ↓</Text>
+        <View pointerEvents="box-none" style={{ position: "absolute", bottom: 118, left: 0, right: 0, alignItems: "center" }}>
+          <TouchableOpacity {...tapProps("down")} accessibilityLabel={down}
+            style={{ width: LEN, height: TAP, alignItems: "center", justifyContent: "center" }}>
+            <Text style={labelStyle}>{down} ↓</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
