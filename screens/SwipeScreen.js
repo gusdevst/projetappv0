@@ -25,6 +25,8 @@ import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { SessionTutoOverlay } from "../components/SessionTutoOverlay";
+import { SwipeEdgeHints } from "../components/SwipeEdgeHints";
+import { ExitIcon } from "../components/ExitIcon";
 import { sharePhoto, getShareableUri } from "../services/photoShare";
 
 function getEdgeContainerStyle(edge) {
@@ -84,7 +86,6 @@ export function SwipeScreen({ navigation, route }) {
   const keepDir   = dirFor("skip");   // conserver la photo (mode ménage)
   const deleteDir = dirFor("delete"); // supprimer
   const albumDir  = dirFor("album");  // ajouter à l'album (mode album)
-  const DIR_LABEL = { up: "↑ haut", down: "↓ bas", left: "← gauche", right: "→ droite" };
 
   const [history, setHistory]     = useState([]);
 
@@ -417,48 +418,33 @@ export function SwipeScreen({ navigation, route }) {
         bounceDirs={shareDirs}
       />
 
+      {/* Filigranes des actions sur les 4 bords */}
+      <SwipeEdgeHints mappings={swipeMappings} isMenage={isMenage} />
+
       {/* ── Boutons d'action ── */}
       <View style={{
         position: "absolute", bottom: 32, left: 0, right: 0,
         flexDirection: "row", justifyContent: "center",
-        alignItems: "center", gap: 14, zIndex: 10,
+        alignItems: "center", gap: 28, zIndex: 10,
         transform: [{ scale: uiScale }],
       }}>
 
-        {/* 🚪 Fin de tri — même ligne que les CTA de swipe (label invisible pour aligner) */}
+        {/* Fin de tri (icône sortie) */}
         <View style={{ alignItems: "center", gap: 5 }}>
-          <Text style={{ fontSize: 10, opacity: 0 }}>_</Text>
           <TouchableOpacity
             onPress={handleFinDeTri}
             style={{
               backgroundColor: "rgba(255,255,255,0.12)",
               borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
-              borderRadius: S.radiusFull, padding: 10,
+              borderRadius: S.radiusFull, padding: 11,
             }}
           >
-            <Text style={{ fontSize: 22 }}>🚪</Text>
+            <ExitIcon size={22} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        {/* 🗑 Supprimer — la flèche suit la direction configurée ; masqué si "supprimer" n'est mappé sur aucun swipe */}
-        {deleteDir && (
-          <View style={{ alignItems: "center", gap: 5 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(232,99,122,0.9)", letterSpacing: 0.3 }}>{DIR_LABEL[deleteDir]}</Text>
-            <TouchableOpacity
-              onPress={handleTrashPress}
-              style={{
-                backgroundColor: "rgba(232,99,122,0.2)", borderWidth: 2, borderColor: "rgba(232,99,122,.5)",
-                borderRadius: S.radiusFull, padding: 18,
-              }}
-            >
-              <Text style={{ fontSize: 20 }}>🗑</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* ↩ Annuler */}
         <View style={{ alignItems: "center", gap: 5 }}>
-          <Text style={{ fontSize: 10, opacity: 0 }}>_</Text>
           <TouchableOpacity
             onPress={undo}
             disabled={!history.length}
@@ -474,26 +460,9 @@ export function SwipeScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
-        {/* Mode MÉNAGE : ✅ conserver — repère du swipe qui garde la photo (contraire de 🗑) */}
-        {isMenage && keepDir && (
-          <View style={{ alignItems: "center", gap: 5 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>{DIR_LABEL[keepDir]}</Text>
-            <TouchableOpacity
-              onPress={handleKeepPress}
-              style={{
-                backgroundColor: "rgba(92,184,122,0.2)", borderWidth: 2, borderColor: "rgba(92,184,122,.5)",
-                borderRadius: S.radiusFull, padding: 18,
-              }}
-            >
-              <Text style={{ fontSize: 20 }}>✅</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Mode MÉNAGE : ❤️ coup de cœur (favoris + passe à la suivante) */}
         {isMenage && (
           <View style={{ alignItems: "center", gap: 5 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>appui</Text>
             <TouchableOpacity
               onPress={handleHeartPress}
               style={{
@@ -508,10 +477,9 @@ export function SwipeScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Mode ALBUM : 📁 ajouter à l'album — la flèche suit la direction configurée */}
+        {/* Mode ALBUM : 📁 ajouter à l'album (appui long = choisir l'album) */}
         {isAlbum && albumDir && (
           <View style={{ alignItems: "center", gap: 5 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(176,122,216,0.9)", letterSpacing: 0.3 }}>{DIR_LABEL[albumDir]}</Text>
             <TouchableOpacity
               onPress={handleAlbumPress}
               onLongPress={() => setShowAlbumPicker(true)}
@@ -522,22 +490,6 @@ export function SwipeScreen({ navigation, route }) {
               }}
             >
               <Text style={{ fontSize: 20 }}>📁</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Mode ALBUM : ⏭️ ne pas envoyer dans l'album — photo conservée, pourra revenir */}
-        {isAlbum && keepDir && (
-          <View style={{ alignItems: "center", gap: 5 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.8)", letterSpacing: 0.3 }}>{DIR_LABEL[keepDir]}</Text>
-            <TouchableOpacity
-              onPress={handleKeepPress}
-              style={{
-                backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 2, borderColor: "rgba(255,255,255,0.35)",
-                borderRadius: S.radiusFull, padding: 18,
-              }}
-            >
-              <Text style={{ fontSize: 20 }}>⏭️</Text>
             </TouchableOpacity>
           </View>
         )}
