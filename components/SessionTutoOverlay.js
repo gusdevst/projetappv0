@@ -1,7 +1,7 @@
 // components/SessionTutoOverlay.js
 // Overlay d'accueil affiché UNE SEULE FOIS à la 1re session de chaque mode.
 // Il se pose par-dessus l'écran de tri réel (SwipeScreen) pour que l'utilisateur
-// voie les vrais boutons derrière le voile pendant qu'on les explique.
+// voie les vrais bords et boutons derrière le voile pendant qu'on les explique.
 //
 // Props :
 //   visible  → true pour afficher l'overlay
@@ -17,18 +17,18 @@ const CONTENT = {
     accent: C.accent,
     title: "Bienvenue dans le tri 👋",
     steps: [
-      { icon: "👆", text: "Appuie sur un bouton ou swipe : haut ou droite pour garder, bas pour supprimer." },
-      { icon: "🤔", text: "Swipe à gauche si tu hésites — la photo reviendra plus tard, sans être décidée." },
-      { icon: "⚙️", text: "Le bouton réglages, en haut à droite, te laisse personnaliser chaque swipe." },
+      { icon: "👆", text: "Swipe la photo : haut ou droite pour garder, bas pour supprimer, gauche si tu hésites." },
+      { icon: "🔤", text: "Pas envie de swiper ? Appuie sur le mot écrit au bord de l'écran : même effet." },
+      { icon: "❤️", text: "❤️ ajoute aux coups de cœur, ↩ annule. ⚙️ en haut à droite pour changer chaque direction." },
     ],
   },
   album: {
     accent: C.album,
     title: "Créons ton album 📁",
     steps: [
-      { icon: "👆", text: "Appuie sur un bouton ou swipe vers le haut pour ajouter la photo à l'album." },
-      { icon: "🤔", text: "Swipe vers le bas ou à droite pour passer, à gauche si tu hésites." },
-      { icon: "⚙️", text: "Le bouton réglages, en haut à droite, te laisse personnaliser chaque swipe." },
+      { icon: "👆", text: "Swipe vers le haut pour ajouter la photo à l'album. Bas ou droite pour passer, gauche si tu hésites." },
+      { icon: "🔤", text: "Pas envie de swiper ? Appuie sur le mot écrit au bord de l'écran : même effet." },
+      { icon: "📁", text: "Appui long sur 📁 pour choisir un autre album. ⚙️ en haut à droite pour changer chaque direction." },
     ],
   },
 };

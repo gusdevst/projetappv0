@@ -6,7 +6,7 @@
 import { View, Text, TouchableOpacity } from "react-native";
 
 // action → libellé affiché sur le bord
-function labelFor(action, isMenage) {
+export function labelFor(action, isMenage) {
   switch (action) {
     case "skip":     return isMenage ? "GARDER" : "PASSER";
     case "delete":   return "SUPPRIMER";

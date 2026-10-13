@@ -6,6 +6,7 @@ import { View, Text, ScrollView, TouchableOpacity, Modal, StatusBar, Alert } fro
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { RowSetting } from "../components/RowSetting";
+import { SwipeDemo } from "../components/SwipeDemo";
 import BackButton from "../components/BackButton";
 import { usePhotoStore } from "../store/usePhotoStore";
 
@@ -18,19 +19,14 @@ const TUTORIAL_SLIDES = [
     desc: "Tes souvenirs méritent mieux. On va t'aider à trier ta photothèque sans douleur — photo par photo.",
   },
   {
-    emoji: "↔️",
-    title: "Swipe pour décider",
-    desc: "Glisse vers le haut ou à droite pour garder, vers le bas pour supprimer, à gauche si tu hésites. Chaque direction est personnalisable dans les paramètres.",
+    demo: "swipe", // mini-écran de tri avec les actions sur les bords
+    title: "Swipe ou clic pour décider",
+    desc: "Swipe la photo vers une action, ou clique directement sur l'action écrite au bord. Chaque direction est personnalisable dans les paramètres.",
   },
   {
     emoji: "❤️",
     title: "Coup de cœur",
     desc: "Appuie sur le bouton ❤️ pendant le tri pour ajouter une photo à tes coups de cœur. Retrouve-les dans le menu principal.",
-  },
-  {
-    emoji: "🗂️",
-    title: "Créer un album",
-    desc: "Choisis le mode Album pour sélectionner des photos et les regrouper dans un album souvenir.",
   },
   {
     emoji: "🖼️",
@@ -51,6 +47,10 @@ const TUTORIAL_SLIDES = [
     emoji: "🔒",
     title: "Tes photos restent privées",
     desc: "Tout se passe sur ton téléphone. Pellicule n'envoie aucune photo sur un serveur.",
+  },  {
+    emoji: "🗂️",
+    title: "Créer un album",
+    desc: "Choisis le mode Album pour sélectionner des photos et les regrouper dans un album souvenir.",
   },
 ];
 
@@ -107,6 +107,9 @@ export function SettingsScreen({ navigation, route }) {
   const setRandomCount           = usePhotoStore((s) => s.setRandomCount);
   const restartTri               = usePhotoStore((s) => s.restartTri);
   const resetKept                = usePhotoStore((s) => s.resetKept);
+  const setSwipeTutoSeen         = usePhotoStore((s) => s.setSwipeTutoSeen);
+  const setAlbumTutoSeen         = usePhotoStore((s) => s.setAlbumTutoSeen);
+  const setPermission            = usePhotoStore((s) => s.setPermission);
 
   const comingSoon = (feature) =>
     Alert.alert("Bientôt disponible", `${feature} arrive très vite !`);
@@ -391,6 +394,28 @@ export function SettingsScreen({ navigation, route }) {
         <RowSetting emoji="🎓" label="Tutoriel" desc="Revoir comment fonctionne Pellicule"
           onPress={() => { setTutorialIdx(0); setShowTutorial(true); }}
           right={<Text style={{ color: C.textMuted }}>›</Text>} />
+        <RowSetting emoji="👆" label="Revoir le tuto du tri" desc="Réafficher l'explication au début de ta prochaine session"
+          onPress={() => {
+            // On "oublie" que les tutos ont été vus → ils réapparaîtront à la prochaine session.
+            setSwipeTutoSeen(false);
+            setAlbumTutoSeen(false);
+            Alert.alert("C'est noté 👍", "Le tuto s'affichera au début de ta prochaine session de tri (mode Tri et mode Album).");
+          }}
+          right={<Text style={{ color: C.textMuted }}>›</Text>} />
+
+        {/* ⚠️ TEMPORAIRE (dev) — relance l'onboarding d'installation pour le retravailler.
+            Visible seulement en mode développement (__DEV__), jamais dans TestFlight / App Store.
+            À supprimer quand l'onboarding sera finalisé. */}
+        {__DEV__ && (
+          <RowSetting emoji="🛠️" label="[DEV] Revoir l'onboarding" desc="Relance les écrans du premier lancement"
+            onPress={() => {
+              // L'app affiche l'onboarding tant que la permission photo est "undetermined".
+              // On remet ce statut → AppNavigator bascule tout seul sur l'onboarding.
+              // Au dernier écran, iOS ne redemande pas (déjà accordé) → retour direct à l'accueil.
+              setPermission("undetermined");
+            }}
+            right={<Text style={{ color: C.textMuted }}>›</Text>} />
+        )}
 
         {/* ── Section Compte ───────────────────────────────────────────────── */}
         <Section title="Compte" />
@@ -473,7 +498,11 @@ export function SettingsScreen({ navigation, route }) {
 
             {/* Slide actuel */}
             <View style={{ alignItems: "center", marginBottom: 24 }}>
-              <Text style={{ fontSize: 52, marginBottom: 16 }}>{TUTORIAL_SLIDES[tutorialIdx].emoji}</Text>
+              {TUTORIAL_SLIDES[tutorialIdx].demo === "swipe" ? (
+                <SwipeDemo style={{ marginBottom: 16 }} />
+              ) : (
+                <Text style={{ fontSize: 52, marginBottom: 16 }}>{TUTORIAL_SLIDES[tutorialIdx].emoji}</Text>
+              )}
               <Text style={{ fontSize: 20, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 10 }}>
                 {TUTORIAL_SLIDES[tutorialIdx].title}
               </Text>

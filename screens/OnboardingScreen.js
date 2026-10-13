@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
+import { SwipeDemo } from "../components/SwipeDemo";
 
 const SLIDES = [
   {
@@ -17,9 +18,9 @@ const SLIDES = [
     desc: "Tes souvenirs méritent mieux. On va t'aider à trier ta photothèque sans douleur.",
   },
   {
-    emoji: "🔀",
-    title: "Swipe pour décider",
-    desc: "Glisse vers le haut ou à droite pour garder, vers le bas pour supprimer, à gauche si tu hésites. Comme Tinder, mais pour tes photos.",
+    demo: "swipe", // mini-écran de tri avec les actions sur les bords
+    title: "Swipe ou clic pour décider",
+    desc: "Swipe la photo vers une action, ou clique directement sur l'action écrite au bord. Comme pendant le tri.",
   },
   {
     emoji: "❤️",
@@ -27,15 +28,15 @@ const SLIDES = [
     desc: "Appuie sur le bouton ❤️ pendant le tri pour ajouter une photo à tes coups de cœur. Retrouve-les dans le menu principal.",
   },
   {
-    emoji: "🗂️",
-    title: "Créer un album",
-    desc: "Choisis le mode Album pour sélectionner des photos et les regrouper dans un album souvenir.",
-  },
-  {
     emoji: "🔔",
     notif: true, // slide qui déclenche la demande d'autorisation des notifications
     title: "Des rappels pour avancer",
     desc: "Configure la fréquence (quotidien, 2x/jour, hebdo…) et l'heure de tes rappels. Choisis ton rythme de session — Rapide (10 photos), Normal (30) ou Sérieux (50) — et Pellicule t'indique combien de sessions il reste pour tout trier.",
+  },
+  {
+    emoji: "🗂️",
+    title: "Créer un album",
+    desc: "Choisis le mode Album pour sélectionner des photos et les regrouper dans un album souvenir.",
   },
   {
     emoji: "🔒",
@@ -95,6 +96,8 @@ export function OnboardingScreen() {
             source={require("../assets/icon.png")}
             style={{ width: 110, height: 110, borderRadius: 25, marginBottom: 24 }}
           />
+        ) : slide.demo === "swipe" ? (
+          <SwipeDemo style={{ marginBottom: 24 }} />
         ) : (
           <Text style={{ fontSize: 88, marginBottom: 24 }}>{slide.emoji}</Text>
         )}
