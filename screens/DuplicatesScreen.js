@@ -13,6 +13,8 @@ import { usePhotoStore } from "../store/usePhotoStore";
 import { findDuplicates } from "../services/photoAnalysis";
 import { ZoomableImage } from "../components/ZoomableImage";
 import BackButton from "../components/BackButton";
+import { ExitIcon } from "../components/ExitIcon";
+import { SwipeEdgeHints } from "../components/SwipeEdgeHints";
 
 let NavigationBar = null;
 try { NavigationBar = require("expo-navigation-bar"); } catch (e) {}
@@ -20,6 +22,9 @@ try { NavigationBar = require("expo-navigation-bar"); } catch (e) {}
 const { width: SW, height: SH } = Dimensions.get("window");
 const PHOTO_SIZE = (SW - S.pad * 2 - 28 - 28 - 8) / 2;
 const THUMB_SIZE = 56;
+// Actions fixes de cet écran : haut = garder, bas = supprimer.
+// Gauche / droite servent à naviguer entre les photos de l'instant.
+const EDGE_MAPPINGS = { up: "skip", down: "delete" };
 
 // Helpers halo (identiques à SwipeScreen)
 function getEdgeContainerStyle(edge) {
@@ -85,6 +90,7 @@ export function DuplicatesScreen({ navigation, route }) {
   const [nextGroupToast, setNextGroupToast]     = useState(false);
 
   const flatListRef     = useRef(null);
+  const zoomableRef     = useRef(null); // permet de faire "s'envoler" la photo au tap sur un bord
   const feedbackOpacity = useRef(new Animated.Value(0)).current;
   const [feedbackColor, setFeedbackColor] = useState("rgba(232,99,122,0.7)");
   const [feedbackEdge,  setFeedbackEdge]  = useState(null);
@@ -222,8 +228,8 @@ export function DuplicatesScreen({ navigation, route }) {
   }
 
   // Directions fixes (indépendantes du mapping swipe personnalisé du mode ménage) :
-  // elles doivent toujours correspondre aux boutons "↓ bas = supprimer" et
-  // "↑ garder" affichés en bas de l'écran.
+  // elles doivent toujours correspondre aux filigranes "↑ GARDER" et
+  // "SUPPRIMER ↓" affichés sur les bords (EDGE_MAPPINGS).
   function getSwipeHandler(direction) {
     if (!currentPhoto) return undefined;
     if (direction === "down") return () => advanceAfterAction(currentPhoto, addDeleted, "down");
@@ -247,6 +253,16 @@ export function DuplicatesScreen({ navigation, route }) {
   function handleConserverPress() {
     if (!currentPhoto) return;
     advanceAfterAction(currentPhoto, addSkipped, "up");
+  }
+
+  // Appui sur un bord = même effet que le swipe (comme SwipeScreen) :
+  // la photo s'envole d'abord, puis l'action s'applique.
+  function handleEdgePress(dir) {
+    if (!currentPhoto) return;
+    const action = dir === "down" ? handleDeletePress : dir === "up" ? handleConserverPress : null;
+    if (!action) return;
+    if (zoomableRef.current?.flyOff) zoomableRef.current.flyOff(dir, action);
+    else action();
   }
 
   // 🗑 Tout supprimer : marque toutes les copies du groupe comme supprimées d'un coup,
@@ -301,7 +317,7 @@ export function DuplicatesScreen({ navigation, route }) {
     const count = fullscreen.photos.length;
     Alert.alert(
       "Tout supprimer ?",
-      `Les ${count} photos de ce groupe seront supprimées.`,
+      `Les ${count} photos de cet instant seront supprimées.`,
       [
         { text: "Annuler", style: "cancel" },
         { text: "Tout supprimer", style: "destructive", onPress: deleteWholeGroup },
@@ -327,8 +343,8 @@ export function DuplicatesScreen({ navigation, route }) {
             {groups === null
               ? "Analyse en cours…"
               : groups.length === 0
-              ? "Aucune série détectée"
-              : `${groups.length} groupe(s) · ${totalDuplicates} photos`}
+              ? "Aucun instant détecté"
+              : `${groups.length} instant(s) · ${totalDuplicates} photos`}
           </Text>
         </View>
       </View>
@@ -412,7 +428,7 @@ export function DuplicatesScreen({ navigation, route }) {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: "800", fontSize: 14, color: C.text }}>
-                      {g.photos.length} photos quasi identiques
+                      {g.photos.length} photos du même instant
                     </Text>
                     <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{dateStr}</Text>
                   </View>
@@ -467,6 +483,7 @@ export function DuplicatesScreen({ navigation, route }) {
           {/* Photo principale avec swipe gestures */}
           {currentPhoto && (
             <ZoomableImage
+              ref={zoomableRef}
               key={currentPhoto.id}
               uri={currentPhoto.url}
               onSwipeLeft={fullscreen && fullscreen.idx < groupSize - 1
@@ -478,8 +495,18 @@ export function DuplicatesScreen({ navigation, route }) {
             />
           )}
 
+          {/* Filigranes GARDER (haut) / SUPPRIMER (bas), cliquables — comme SwipeScreen */}
+          {fullscreen && (
+            <SwipeEdgeHints
+              mappings={EDGE_MAPPINGS}
+              isMenage
+              onPress={handleEdgePress}
+              downBottom={190}
+            />
+          )}
+
           {/* Flèches latérales semi-transparentes : indiquent qu'on peut balayer
-              de gauche à droite pour voir les autres copies du doublon */}
+              de gauche à droite pour voir les autres photos du même instant */}
           {fullscreen && groupSize > 1 && (
             <View
               pointerEvents="none"
@@ -498,7 +525,7 @@ export function DuplicatesScreen({ navigation, route }) {
             </View>
           )}
 
-          {/* ── Top bar — compteur seulement (🚪 est dans la rangée de boutons) ── */}
+          {/* ── Top bar — compteur seulement (la sortie est dans la rangée de boutons) ── */}
           {fullscreen && (
             <View style={{
               position: "absolute", top: Platform.OS === "android" ? 16 : 52,
@@ -507,7 +534,7 @@ export function DuplicatesScreen({ navigation, route }) {
             }}>
               <View style={{ backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
                 <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
-                  {fullscreen.idx + 1} / {groupSize}
+                  {groupSize > 1 ? `‹  ${fullscreen.idx + 1} / ${groupSize}  ›` : "1 / 1"}
                 </Text>
               </View>
             </View>
@@ -526,18 +553,12 @@ export function DuplicatesScreen({ navigation, route }) {
                 shadowOpacity: 0.25, shadowRadius: 10, elevation: 10,
               }}>
                 <Text style={{ fontSize: 15, fontWeight: "800", color: "#111" }}>
-                  Groupe suivant →
+                  Instant suivant →
                 </Text>
               </View>
             </View>
           )}
 
-          {/* Indication navigation swipe */}
-          <View style={{ position: "absolute", left: 0, right: 0, bottom: 155, alignItems: "center", zIndex: 10, pointerEvents: "none" }}>
-            <View style={{ backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 99, paddingHorizontal: 14, paddingVertical: 6 }}>
-              <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>← → Naviguer entre les copies</Text>
-            </View>
-          </View>
 
           {/* ── Barre basse : miniatures + undo ── */}
           {fullscreen && (
@@ -587,74 +608,44 @@ export function DuplicatesScreen({ navigation, route }) {
                 }
               />
 
-              {/* ── Boutons action ── */}
-              <View style={{ paddingHorizontal: 16, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 14, transform: [{ scale: uiScale }] }}>
+              {/* ── Boutons action (même rangée que SwipeScreen : sortie · annuler · coup de cœur) ──
+                  Garder / Supprimer se font par swipe ou en touchant les bords. */}
+              <View style={{ paddingHorizontal: 16, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 28, transform: [{ scale: uiScale }] }}>
 
-                {/* 🚪 Fermer le plein écran — même ligne que les CTA (label invisible pour aligner) */}
-                <View style={{ alignItems: "center", gap: 5 }}>
-                  <Text style={{ fontSize: 10, opacity: 0 }}>_</Text>
-                  <TouchableOpacity
-                    onPress={() => { showAndroidBars(); setFullscreen(null); }}
-                    style={{
-                      backgroundColor: "rgba(255,255,255,0.12)",
-                      borderRadius: S.radiusFull, padding: 10,
-                      borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
-                    }}
-                  >
-                    <Text style={{ fontSize: 22 }}>🚪</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* 🗑 Supprimer */}
-                <View style={{ alignItems: "center", gap: 5 }}>
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(232,99,122,0.9)", letterSpacing: 0.3 }}>↓ bas</Text>
-                  <TouchableOpacity
-                    onPress={handleDeletePress}
-                    style={{ backgroundColor: "rgba(232,99,122,0.2)", borderWidth: 2, borderColor: "rgba(232,99,122,.5)", borderRadius: S.radiusFull, padding: 18 }}
-                  >
-                    <Text style={{ fontSize: 22 }}>🗑</Text>
-                  </TouchableOpacity>
-                </View>
+                {/* Sortie — fermer le plein écran */}
+                <TouchableOpacity
+                  onPress={() => { showAndroidBars(); setFullscreen(null); }}
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.12)",
+                    borderRadius: S.radiusFull, padding: 11,
+                    borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+                  }}
+                >
+                  <ExitIcon size={22} color="#fff" />
+                </TouchableOpacity>
 
                 {/* ↩ Annuler */}
-                <View style={{ alignItems: "center", gap: 5 }}>
-                  <Text style={{ fontSize: 10, opacity: 0 }}>_</Text>
-                  <TouchableOpacity
-                    onPress={undo}
-                    disabled={!history.length}
-                    style={{
-                      backgroundColor: history.length ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.25)",
-                      borderWidth: 2, borderColor: "rgba(0,0,0,0.08)",
-                      borderRadius: S.radiusFull, padding: 14,
-                      shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: history.length ? 0.35 : 0, shadowRadius: 6, elevation: history.length ? 6 : 0,
-                    }}
-                  >
-                    <Text style={{ fontSize: 20, fontWeight: "800", color: history.length ? "#222" : "rgba(255,255,255,0.4)" }}>↩</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* ✅ Garder (addSkipped) — swipe vers le haut */}
-                <View style={{ alignItems: "center", gap: 5 }}>
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>↑ garder</Text>
-                  <TouchableOpacity
-                    onPress={handleConserverPress}
-                    style={{ backgroundColor: "rgba(92,184,122,0.2)", borderWidth: 2, borderColor: "rgba(92,184,122,.5)", borderRadius: S.radiusFull, padding: 18 }}
-                  >
-                    <Text style={{ fontSize: 22 }}>✅</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  onPress={undo}
+                  disabled={!history.length}
+                  style={{
+                    backgroundColor: history.length ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.4)",
+                    borderWidth: 2, borderColor: "rgba(0,0,0,0.08)",
+                    borderRadius: S.radiusFull, padding: 14,
+                    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.35, shadowRadius: 6, elevation: 6,
+                  }}
+                >
+                  <Text style={{ fontSize: 20, color: "#222", fontWeight: "800" }}>↩</Text>
+                </TouchableOpacity>
 
                 {/* ❤️ Coup de cœur */}
-                <View style={{ alignItems: "center", gap: 5 }}>
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: "rgba(92,184,122,0.9)", letterSpacing: 0.3 }}>coup de cœur</Text>
-                  <TouchableOpacity
-                    onPress={handleKeepPress}
-                    style={{ backgroundColor: "rgba(92,184,122,0.2)", borderWidth: 2, borderColor: "rgba(92,184,122,.5)", borderRadius: S.radiusFull, padding: 18 }}
-                  >
-                    <Text style={{ fontSize: 22 }}>❤️</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  onPress={handleKeepPress}
+                  style={{ backgroundColor: "rgba(92,184,122,0.2)", borderWidth: 2, borderColor: "rgba(92,184,122,.5)", borderRadius: S.radiusFull, padding: 18 }}
+                >
+                  <Text style={{ fontSize: 20 }}>❤️</Text>
+                </TouchableOpacity>
 
               </View>
             </View>

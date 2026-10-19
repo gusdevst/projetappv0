@@ -29,7 +29,9 @@ const labelStyle = {
   textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
 };
 
-export function SwipeEdgeHints({ mappings, isMenage, onPress, onLongPress }) {
+// downBottom : hauteur du libellé du bas (par défaut 118, au-dessus des boutons de SwipeScreen).
+// Un écran avec une barre basse plus haute (ex. Même instant) passe une valeur plus grande.
+export function SwipeEdgeHints({ mappings, isMenage, onPress, onLongPress, downBottom = 118 }) {
   const up    = labelFor(mappings?.up, isMenage);
   const down  = labelFor(mappings?.down, isMenage);
   const left  = labelFor(mappings?.left, isMenage);
@@ -77,7 +79,7 @@ export function SwipeEdgeHints({ mappings, isMenage, onPress, onLongPress }) {
       )}
 
       {down && (
-        <View pointerEvents="box-none" style={{ position: "absolute", bottom: 118, left: 0, right: 0, alignItems: "center" }}>
+        <View pointerEvents="box-none" style={{ position: "absolute", bottom: downBottom, left: 0, right: 0, alignItems: "center" }}>
           <TouchableOpacity {...tapProps("down")} accessibilityLabel={down}
             style={{ width: LEN, height: TAP, alignItems: "center", justifyContent: "center" }}>
             <Text style={labelStyle}>{down} ↓</Text>
