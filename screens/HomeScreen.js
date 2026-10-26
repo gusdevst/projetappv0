@@ -15,6 +15,7 @@ import { AlbumFiltersBar } from "../components/AlbumFiltersBar";
 import { RangeCalendarPicker, dateLabel } from "../components/RangeCalendarPicker";
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
 import { cancelReminders } from "../services/notificationService";
+import { SwapIcon } from "../components/SwapIcon";
 
 // C_ALBUM utilise désormais la valeur centralisée dans theme.js
 const C_ALBUM = C.album;
@@ -593,6 +594,28 @@ export function HomeScreen({ navigation, route }) {
               </TouchableOpacity>
             );
           })}
+
+          {/* Pastille ⇄ à cheval entre les 2 modes : indique qu'on peut changer de mode.
+              Un tap bascule vers l'autre mode. Toujours blanche ; flèches à la couleur du mode actif. */}
+          <TouchableOpacity
+            onPress={() => switchMode(isMenage ? "album" : "menage")}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={isMenage ? "Passer en mode Créer un album" : "Passer en mode Tri"}
+            style={{
+              position: "absolute", left: "50%", top: "50%",
+              width: 28, height: 28, marginLeft: -14, marginTop: -14,
+              borderRadius: 14, alignItems: "center", justifyContent: "center",
+              backgroundColor: "#fff",
+              borderWidth: 1, borderColor: C.border,
+              shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.12, shadowRadius: 4, elevation: 3,
+              zIndex: 2,
+            }}
+          >
+            <SwapIcon size={14} color={modeColor} />
+          </TouchableOpacity>
         </View>
 
         {/* ── Mode TRI : carte objectif (avancement + jours restants + bouton) ── */}
@@ -847,6 +870,7 @@ export function HomeScreen({ navigation, route }) {
               <TouchableOpacity
                 onPress={t.onPress}
                 style={{
+                  flex: 1, // remplit toute la hauteur de la case → les 2 briques ont toujours la même taille
                   backgroundColor: t.active ? `${modeColor}15` : C.bgCard,
                   borderRadius: 20, paddingVertical: 20, paddingHorizontal: 12,
                   minHeight: 128, alignItems: "center", justifyContent: "center",
