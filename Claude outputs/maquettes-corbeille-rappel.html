@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Corbeille et rappel</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--border:#c8d0de;--accent:#2e4d7a;--text:#1a2840;--muted:#7a8ea8;--green:#2e7d52;--red:#d9534f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:-apple-system,system-ui,Roboto,sans-serif;color:var(--text);padding:16px}
+.wrap{max-width:380px;margin:0 auto}
+h1{font-size:18px;margin:4px 0 4px}.sub{font-size:12px;color:var(--muted);margin:0 0 18px}
+.m{margin-bottom:30px}.m h2{font-size:14px;margin:0 0 4px}.m p{font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4}
+.c{background:var(--card);border:1px solid var(--border);border-radius:16px}
+.ib{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+.r{background:#f5e8e8}.b{background:#eaf0f8}
+.t{font-size:14px;font-weight:800}.s{font-size:11px;color:var(--muted);margin-top:1px}
+.sw{width:42px;height:25px;border-radius:13px;background:var(--green);position:relative;flex:none}.sw:after{content:"";position:absolute;right:2px;top:2px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.btn{background:var(--red);color:#fff;font-weight:800;font-size:12px;border-radius:10px;padding:8px 12px;flex:none}
+.hr{display:flex;gap:8px}
+.badge{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:10px;font-weight:800;border-radius:9px;padding:1px 6px;border:2px solid #fff}
+.hour{background:#eaf0f8;color:var(--accent);font-weight:800;font-size:12px;border-radius:9px;padding:5px 8px}
+</style></head><body><div class="wrap">
+<h1>Corbeille et rappel sur une seule ligne</h1>
+<p class="sub">Exemple : 12 photos dans la corbeille, rappel actif à 20:00. L'interrupteur du rappel est conservé partout.</p>
+
+<div class="m"><h2>1 · Deux demi-tuiles côte à côte</h2>
+<p>Même logique que les briques « Par date / Même instant ». Chaque tuile garde son action : Vider à gauche, interrupteur à droite.</p>
+<div class="hr">
+ <div class="c" style="flex:1;padding:11px;display:flex;align-items:center;gap:9px">
+  <div class="ib r">🗑</div><div style="flex:1;min-width:0"><div class="t">12 photos</div><div class="s">340 Mo</div></div><div class="btn">Vider</div>
+ </div>
+ <div class="c" style="flex:1;padding:11px;display:flex;align-items:center;gap:9px">
+  <div class="ib b">🔔</div><div style="flex:1;min-width:0"><div class="t">Rappel</div><div class="s">20:00</div></div><div class="sw"></div>
+ </div>
+</div></div>
+
+<div class="m"><h2>2 · Une seule carte coupée en deux</h2>
+<p>Un seul cadre, un trait au milieu. Plus compact et plus calme que deux cartes.</p>
+<div class="c" style="display:flex;align-items:center;padding:11px 12px">
+ <div style="flex:1;display:flex;align-items:center;gap:9px"><div class="ib r">🗑</div><div style="flex:1"><div class="t">12 photos</div><div class="s" style="color:var(--red);font-weight:800">Vider ›</div></div></div>
+ <div style="width:1px;align-self:stretch;background:var(--border);margin:0 10px"></div>
+ <div style="flex:1;display:flex;align-items:center;gap:9px"><div class="ib b">🔔</div><div style="flex:1"><div class="t">Rappel</div><div class="s">20:00</div></div><div class="sw"></div></div>
+</div></div>
+
+<div class="m"><h2>3 · Corbeille compacte + rappel élargi</h2>
+<p>La corbeille devient une simple icône avec une pastille rouge (le nombre de photos). Le rappel garde toute la place pour son texte complet.</p>
+<div class="hr">
+ <div class="c" style="width:62px;display:flex;align-items:center;justify-content:center;position:relative">
+  <div class="ib r" style="position:relative">🗑<span class="badge">12</span></div>
+ </div>
+ <div class="c" style="flex:1;padding:11px 12px;display:flex;align-items:center;gap:10px">
+  <div class="ib b">🔔</div><div style="flex:1"><div class="t">Rappel quotidien</div><div class="s">Pour garder le rythme</div></div><div class="hour">20:00</div><div class="sw"></div>
+ </div>
+</div></div>
+
+<div class="m"><h2>4 · Tuiles verticales</h2>
+<p>Icône en haut, texte au centre, action en bas. Plus haut mais très lisible, cohérent avec les grandes briques au-dessus.</p>
+<div class="hr">
+ <div class="c" style="flex:1;padding:12px;text-align:center"><div class="ib r" style="margin:0 auto 6px">🗑</div><div class="t">12 à supprimer</div><div class="s">340 Mo</div><div class="btn" style="display:inline-block;margin-top:8px">Vider</div></div>
+ <div class="c" style="flex:1;padding:12px;text-align:center"><div class="ib b" style="margin:0 auto 6px">🔔</div><div class="t">Rappel quotidien</div><div class="s">20:00</div><div style="display:flex;justify-content:center;margin-top:8px"><div class="sw"></div></div></div>
+</div></div>
+
+<div class="m"><h2>5 · Pastilles fines (chips)</h2>
+<p>Deux pilules arrondies sur une ligne basse. Le plus discret : laisse la vedette à la carte progression.</p>
+<div class="hr">
+ <div class="c" style="flex:1;border-radius:24px;padding:7px 8px 7px 12px;display:flex;align-items:center;gap:7px">
+  <span>🗑</span><span class="t" style="font-size:13px;flex:1">12 photos</span><span class="btn" style="border-radius:16px;padding:6px 10px">Vider</span>
+ </div>
+ <div class="c" style="flex:1;border-radius:24px;padding:7px 8px 7px 12px;display:flex;align-items:center;gap:7px">
+  <span>🔔</span><span class="t" style="font-size:13px;flex:1">20:00</span><div class="sw"></div>
+ </div>
+</div></div>
+
+</div></body></html>

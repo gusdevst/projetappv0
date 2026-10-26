@@ -20,6 +20,29 @@ const ENABLE_BACKGROUND_GEO_PRELOAD = true;
 // store) : c'est un détail d'implémentation interne, pas un état à observer.
 let geoScanRunning = false;
 
+// ─── Carnet de bord journalier (progression) ──────────────────────────────
+// dailyLog = { "2026-10-26": { sorted: 18, freedMo: 0 }, ... }
+// sorted = photos triées ce jour-là (gardées ✅/❤️ ou supprimées 🗑).
+const LOG_MAX_DAYS = 400; // on garde ~13 mois max, le carnet ne grossit pas à l'infini
+
+// Clé du jour en heure LOCALE (pas UTC, sinon un tri à 1h du matin tombe la veille).
+export function dayKey(d = new Date()) {
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// Ajoute `delta` au champ `field` du jour courant. Ne descend jamais sous 0.
+function bumpLog(log, field, delta) {
+  const k = dayKey();
+  const day = log?.[k] || { sorted: 0, freedMo: 0 };
+  const next = { ...(log || {}), [k]: { ...day, [field]: Math.max(0, (day[field] || 0) + delta) } };
+  const keys = Object.keys(next);
+  if (keys.length > LOG_MAX_DAYS) {
+    keys.sort().slice(0, keys.length - LOG_MAX_DAYS).forEach((old) => delete next[old]);
+  }
+  return next;
+}
+
 export const usePhotoStore = create(
   persist(
     subscribeWithSelector((set, get) => ({
@@ -28,6 +51,7 @@ export const usePhotoStore = create(
       deleted:   [], // Corbeille (décision destructrice prioritaire — vide les autres piles)
       printed:   [], // À imprimer / album souvenirs
       skipped:   [], // MÉNAGE : photos "Conservées" — décision définitive, ne reviennent jamais
+      dailyLog:  {}, // carnet de bord journalier (voir bumpLog en haut du fichier)
       hesitated: [], // "Je déciderai plus tard" — l'user hésite entre garder et supprimer
       // Albums créés par l'utilisateur dans "Album souvenirs".
       // Format : [{ id, name, photoIds: [] }]
@@ -115,6 +139,7 @@ export const usePhotoStore = create(
         return {
           kept:    [...state.kept, photo],
           deleted: state.deleted.filter((p) => p.id !== photo.id),
+          dailyLog: bumpLog(state.dailyLog, "sorted", 1), // ❤️ = photo gardée → triée
         };
       }),
 
@@ -125,6 +150,7 @@ export const usePhotoStore = create(
           deleted: [...state.deleted, photo],
           kept:    state.kept.filter((p) => p.id !== photo.id),
           printed: state.printed.filter((p) => p.id !== photo.id),
+          dailyLog: bumpLog(state.dailyLog, "sorted", 1), // 🗑 = photo supprimée → triée
         };
       }),
 
@@ -142,7 +168,7 @@ export const usePhotoStore = create(
       addSkipped: (photo) => set((state) =>
         state.skipped.some((p) => p.id === photo.id)
           ? state
-          : { skipped: [...state.skipped, photo] }
+          : { skipped: [...state.skipped, photo], dailyLog: bumpLog(state.dailyLog, "sorted", 1) } // ✅ gardée → triée
       ),
 
       // addHesitated = "je déciderai plus tard". L'user n'est pas prêt à choisir.
@@ -201,13 +227,22 @@ export const usePhotoStore = create(
         }
       },
 
-      undoLast: (keptSnap, deletedSnap, printedSnap, skippedSnap, hesitatedSnap) => set((state) => ({
-        kept:      keptSnap,
-        deleted:   deletedSnap,
-        printed:   printedSnap,
-        skipped:   skippedSnap   !== undefined ? skippedSnap   : state.skipped,
-        hesitated: hesitatedSnap !== undefined ? hesitatedSnap : state.hesitated,
-      })),
+      undoLast: (keptSnap, deletedSnap, printedSnap, skippedSnap, hesitatedSnap) => set((state) => {
+        const skippedBack = skippedSnap !== undefined ? skippedSnap : state.skipped;
+        // Annulation : on retire du carnet les photos "triées" qui disparaissent des piles
+        // gardées/supprimées (sinon swiper puis annuler gonflerait les chiffres).
+        const countNow  = state.kept.length + state.deleted.length + state.skipped.length;
+        const countBack = keptSnap.length + deletedSnap.length + skippedBack.length;
+        const removed   = countNow - countBack;
+        return {
+          kept:      keptSnap,
+          deleted:   deletedSnap,
+          printed:   printedSnap,
+          skipped:   skippedBack,
+          hesitated: hesitatedSnap !== undefined ? hesitatedSnap : state.hesitated,
+          ...(removed > 0 ? { dailyLog: bumpLog(state.dailyLog, "sorted", -removed) } : {}),
+        };
+      }),
 
       reset: () => set({ kept: [], deleted: [], printed: [], skipped: [], hesitated: [], albums: [] }),
 
@@ -302,7 +337,12 @@ export const usePhotoStore = create(
           if (ok) {
             // On ajoute la taille des photos supprimées au compteur "Go libérés".
             const freed = deleted.reduce((a, p) => a + (p.size || 0), 0);
-            set({ deleted: [], freedMo: (get().freedMo || 0) + freed });
+            set({
+              deleted: [],
+              freedMo: (get().freedMo || 0) + freed,
+              // Carnet du jour : les Mo comptent le jour où la corbeille est vidée (place réellement libérée).
+              dailyLog: bumpLog(get().dailyLog, "freedMo", freed),
+            });
             // ⚠️ Recharger la photothèque : sans ça, les photos supprimées restent
             // dans libraryPhotos et réapparaissent dans la file de tri (écran noir).
             await get().loadLibrary();
@@ -480,6 +520,7 @@ export const usePhotoStore = create(
         randomCount:             state.randomCount,
         sortPriority:            state.sortPriority,
         freedMo:                 state.freedMo,
+        dailyLog:                state.dailyLog,
       }),
     }
   )

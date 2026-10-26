@@ -16,6 +16,7 @@ import { RangeCalendarPicker, dateLabel } from "../components/RangeCalendarPicke
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
 import { cancelReminders } from "../services/notificationService";
 import { SwapIcon } from "../components/SwapIcon";
+import { ProgressCard } from "../components/ProgressCard";
 
 // C_ALBUM utilise désormais la valeur centralisée dans theme.js
 const C_ALBUM = C.album;
@@ -133,11 +134,6 @@ function AlbumRow({ cover, title, badge, sub, onPress, onMenu }) {
   );
 }
 
-// Titre de la ligne "rappel" selon la fréquence.
-const REMINDER_TITLE = {
-  off: "Rappels désactivés", daily: "Rappel quotidien", twice_daily: "Rappel 2 fois par jour",
-  every2days: "Rappel tous les 2 jours", weekly: "Rappel hebdomadaire",
-};
 // Style commun des lignes corbeille / rappel.
 const rowStyle = {
   flexDirection: "row", alignItems: "center", gap: 11,
@@ -205,7 +201,7 @@ export function HomeScreen({ navigation, route }) {
   const emptyTrash        = usePhotoStore((state) => state.emptyTrash);
   const renameAlbum       = usePhotoStore((state) => state.renameAlbum);
   const deleteAlbum       = usePhotoStore((state) => state.deleteAlbum);
-  const freedMo           = usePhotoStore((state) => state.freedMo);
+  const dailyLog          = usePhotoStore((state) => state.dailyLog); // carnet de bord → carte progression
   const notificationHour   = usePhotoStore((state) => state.notificationHour);
   const notificationMinute = usePhotoStore((state) => state.notificationMinute);
   const setNotificationFrequency = usePhotoStore((state) => state.setNotificationFrequency);
@@ -897,66 +893,68 @@ export function HomeScreen({ navigation, route }) {
           ))}
         </View>
 
-        {/* ── Mode TRI : corbeille + rappel (2 lignes d'action) ──────────── */}
+        {/* ── Mode TRI : corbeille + rappel (1 carte) + progression ──────────── */}
         {isMenage && (
           <View style={{ gap: 8 }}>
-            {/* Corbeille */}
-            <TouchableOpacity
-              onPress={() => navigation.navigate("Gallery", { section: "deleted" })}
-              style={rowStyle}
-            >
-              <View style={[iconBox, { backgroundColor: "#f5e8e8" }]}><Text style={{ fontSize: 17 }}>🗑</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: "800", color: C.text }}>
-                  {deleted.length > 0
-                    ? `${deleted.length} photo${deleted.length > 1 ? "s" : ""} à supprimer`
-                    : "Corbeille vide"}
-                </Text>
-                {deleted.length > 0 && (
-                  <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{formatSize(deletedSize)} à libérer</Text>
-                )}
-                {freedMo > 0 && (
-                  <Text style={{ fontSize: 11, color: C.green, fontWeight: "700", marginTop: 2 }}>
-                    💾 ≈ {formatSize(freedMo)} déjà libérés grâce à Pellicule
+            {/* Corbeille + Rappel : une seule carte coupée en deux (maquette 2) */}
+            <View style={[rowStyle, { gap: 0 }]}>
+              {/* Gauche : Corbeille (tap = ouvrir la corbeille, "Vider ›" = vider) */}
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Gallery", { section: "deleted" })}
+                style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 9 }}
+              >
+                <View style={[iconBox, { backgroundColor: "#f5e8e8" }]}><Text style={{ fontSize: 17 }}>🗑</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "800", color: C.text }} numberOfLines={1}>
+                    {deleted.length > 0
+                      ? `${deleted.length} photo${deleted.length > 1 ? "s" : ""}`
+                      : "Corbeille vide"}
                   </Text>
-                )}
-              </View>
-              {deleted.length > 0 && (
-                <TouchableOpacity
-                  onPress={handleEmptyTrash}
-                  disabled={emptying}
-                  style={{ backgroundColor: C.red, borderRadius: 10, paddingHorizontal: 13, paddingVertical: 9, opacity: emptying ? 0.6 : 1 }}
-                >
-                  {emptying
-                    ? <ActivityIndicator size="small" color="#fff" />
-                    : <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>Vider</Text>}
-                </TouchableOpacity>
-              )}
-            </TouchableOpacity>
+                  {deleted.length > 0 && (
+                    <TouchableOpacity
+                      onPress={handleEmptyTrash}
+                      disabled={emptying}
+                      hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+                      style={{ marginTop: 1, alignSelf: "flex-start" }}
+                    >
+                      {emptying
+                        ? <ActivityIndicator size="small" color={C.red} />
+                        : <Text style={{ fontSize: 11, color: C.textMuted }} numberOfLines={1}>
+                            {formatSize(deletedSize)} · <Text style={{ color: C.red, fontWeight: "800" }}>Vider ›</Text>
+                          </Text>}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </TouchableOpacity>
 
-            {/* Rappel */}
-            <TouchableOpacity onPress={() => navigation.navigate("Rappels")} style={rowStyle}>
-              <View style={[iconBox, { backgroundColor: "#eaf0f8" }]}><Text style={{ fontSize: 17 }}>🔔</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: "800", color: C.text }}>{REMINDER_TITLE[notificationFrequency] ?? "Rappels désactivés"}</Text>
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
-                  {notificationsEnabled ? "Pour garder le rythme" : "Active-les pour garder le rythme"}
-                </Text>
-              </View>
-              {notificationsEnabled && (
-                <View style={{ backgroundColor: "#eaf0f8", borderRadius: 9, paddingHorizontal: 9, paddingVertical: 6 }}>
-                  <Text style={{ color: C.accent, fontWeight: "800", fontSize: 12 }}>
-                    {notificationHour}:{String(notificationMinute).padStart(2, "0")}
+              {/* Séparateur vertical */}
+              <View style={{ width: 1, alignSelf: "stretch", backgroundColor: C.border, marginHorizontal: 10 }} />
+
+              {/* Droite : Rappel (tap = réglages des rappels, interrupteur = activer/désactiver) */}
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Rappels")}
+                style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 9 }}
+              >
+                <View style={[iconBox, { backgroundColor: "#eaf0f8" }]}><Text style={{ fontSize: 17 }}>🔔</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "800", color: C.text }} numberOfLines={1}>Rappel</Text>
+                  <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }} numberOfLines={1}>
+                    {notificationsEnabled
+                      ? `${notificationHour}:${String(notificationMinute).padStart(2, "0")}`
+                      : "Désactivé"}
                   </Text>
                 </View>
-              )}
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={toggleReminder}
-                trackColor={{ true: C.green, false: C.border }}
-                thumbColor="#fff"
-              />
-            </TouchableOpacity>
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={toggleReminder}
+                  trackColor={{ true: C.green, false: C.border }}
+                  thumbColor="#fff"
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Progression de la semaine (maquette 5). onPress → écran détail, à venir. */}
+            <ProgressCard dailyLog={dailyLog} />
           </View>
         )}
 
