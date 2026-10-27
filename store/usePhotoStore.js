@@ -43,6 +43,23 @@ function bumpLog(log, field, delta) {
   return next;
 }
 
+// ─── Chrono de tri ────────────────────────────────────────────────────────
+// On mesure le temps entre deux décisions (garder, supprimer, ❤️, j'hésite).
+// timedCount = nb de décisions chronométrées, activeMs = temps cumulé (ms).
+// → temps moyen pour 20 photos = activeMs / timedCount × 20.
+// Variable de module : c'est un chrono interne, pas un état à afficher ni à sauvegarder.
+let lastDecisionAt = 0;
+const PAUSE_MS = 60 * 1000; // > 60 s entre 2 décisions = pause (téléphone posé) → non compté
+const BULK_MS  = 200;       // < 0,2 s = action groupée ("Tout supprimer") → non comptée
+
+function timeLog(log) {
+  const now = Date.now();
+  const dt  = now - lastDecisionAt;
+  lastDecisionAt = now;
+  if (dt < BULK_MS || dt > PAUSE_MS) return log;
+  return bumpLog(bumpLog(log, "timedCount", 1), "activeMs", dt);
+}
+
 export const usePhotoStore = create(
   persist(
     subscribeWithSelector((set, get) => ({
@@ -139,7 +156,7 @@ export const usePhotoStore = create(
         return {
           kept:    [...state.kept, photo],
           deleted: state.deleted.filter((p) => p.id !== photo.id),
-          dailyLog: bumpLog(state.dailyLog, "sorted", 1), // ❤️ = photo gardée → triée
+          dailyLog: timeLog(bumpLog(state.dailyLog, "sorted", 1)), // ❤️ = photo gardée → triée
         };
       }),
 
@@ -150,7 +167,7 @@ export const usePhotoStore = create(
           deleted: [...state.deleted, photo],
           kept:    state.kept.filter((p) => p.id !== photo.id),
           printed: state.printed.filter((p) => p.id !== photo.id),
-          dailyLog: bumpLog(state.dailyLog, "sorted", 1), // 🗑 = photo supprimée → triée
+          dailyLog: timeLog(bumpLog(state.dailyLog, "sorted", 1)), // 🗑 = photo supprimée → triée
         };
       }),
 
@@ -168,7 +185,7 @@ export const usePhotoStore = create(
       addSkipped: (photo) => set((state) =>
         state.skipped.some((p) => p.id === photo.id)
           ? state
-          : { skipped: [...state.skipped, photo], dailyLog: bumpLog(state.dailyLog, "sorted", 1) } // ✅ gardée → triée
+          : { skipped: [...state.skipped, photo], dailyLog: timeLog(bumpLog(state.dailyLog, "sorted", 1)) } // ✅ gardée → triée
       ),
 
       // addHesitated = "je déciderai plus tard". L'user n'est pas prêt à choisir.
@@ -179,6 +196,7 @@ export const usePhotoStore = create(
           hesitated: [...state.hesitated, photo],
           deleted:   state.deleted.filter((p) => p.id !== photo.id),
           kept:      state.kept.filter((p) => p.id !== photo.id),
+          dailyLog:  timeLog(state.dailyLog), // "j'hésite" compte dans le chrono, pas dans les triées
         };
       }),
 

@@ -7,25 +7,7 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { C } from "../constants/theme";
 import { dayKey } from "../store/usePhotoStore";
-
-// Même format que l'accueil (Mo / Go)
-function formatSize(mo) {
-  if (mo < 1) return "0 Mo";
-  if (mo < 1024) return `${mo.toFixed(0)} Mo`;
-  return `${(mo / 1024).toFixed(1)} Go`;
-}
-
-// Additionne sorted + freedMo entre deux dates incluses.
-function sumRange(log, from, to) {
-  let sorted = 0, freedMo = 0;
-  const d = new Date(from);
-  while (d <= to) {
-    const day = log?.[dayKey(d)];
-    if (day) { sorted += day.sorted || 0; freedMo += day.freedMo || 0; }
-    d.setDate(d.getDate() + 1);
-  }
-  return { sorted, freedMo };
-}
+import { formatSize, sumRange, avgFor20, computeStreak } from "../services/progressStats";
 
 export function ProgressCard({ dailyLog, onPress }) {
   const today = new Date();
@@ -50,6 +32,9 @@ export function ProgressCard({ dailyLog, onPress }) {
   });
   const max = Math.max(1, ...spark);
 
+  const streak = computeStreak(dailyLog); // série 🔥
+  const pace = avgFor20(week); // ex. "1 min 40 s" (null si pas assez de données)
+
   const isEmpty = week.sorted === 0 && week.freedMo === 0 && last.sorted === 0;
 
   return (
@@ -63,7 +48,17 @@ export function ProgressCard({ dailyLog, onPress }) {
       }}
     >
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 11, fontWeight: "800", color: C.textMuted, letterSpacing: 0.4 }}>CETTE SEMAINE</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text style={{ fontSize: 11, fontWeight: "800", color: C.textMuted, letterSpacing: 0.4 }}>CETTE SEMAINE</Text>
+          {/* Série 🔥 : grisée tant que la journée n'est pas validée */}
+          {streak.current > 0 && (
+            <View style={{ backgroundColor: streak.todayDone ? "#fdeee2" : C.bg, borderRadius: 9, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: streak.todayDone ? "#d9641e" : C.textMuted }}>
+                🔥 {streak.current} j
+              </Text>
+            </View>
+          )}
+        </View>
         {isEmpty ? (
           <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 4 }}>
             Trie tes premières photos pour suivre ta progression.
@@ -82,6 +77,11 @@ export function ProgressCard({ dailyLog, onPress }) {
               </Text>
             ) : (
               <Text style={{ fontSize: 11.5, color: C.textMuted }}>triées · libérés</Text>
+            )}
+            {pace && (
+              <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2 }}>
+                ⏱ 20 photos en ≈ <Text style={{ fontWeight: "800", color: C.text }}>{pace}</Text>
+              </Text>
             )}
           </>
         )}

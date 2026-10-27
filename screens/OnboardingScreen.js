@@ -1,6 +1,6 @@
 // screens/OnboardingScreen.js
 // Premier lancement : explique le concept de l'app et déclenche la demande de permission.
-// Trois slides simples — pas de carousel complexe, juste un index local.
+// Slides simples — pas de carousel complexe, juste un index local.
 
 import { useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, Image, Alert } from "react-native";
@@ -32,6 +32,11 @@ const SLIDES = [
     notif: true, // slide qui déclenche la demande d'autorisation des notifications
     title: "Des rappels pour avancer",
     desc: "Configure la fréquence (quotidien, 2x/jour, hebdo…) et l'heure de tes rappels. Choisis ton rythme de session — Rapide (10 photos), Normal (30) ou Sérieux (50) — et Pellicule t'indique combien de sessions il reste pour tout trier.",
+  },
+  {
+    emoji: "🔥",
+    title: "Fais grimper ta série",
+    desc: "Trie au moins 10 photos par jour pour faire grimper ta série 🔥. Un joker par semaine te pardonne un oubli. Suis ta progression et ton temps de tri depuis l'accueil.",
   },
   {
     emoji: "🗂️",

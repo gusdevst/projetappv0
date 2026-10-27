@@ -953,8 +953,8 @@ export function HomeScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
 
-            {/* Progression de la semaine (maquette 5). onPress → écran détail, à venir. */}
-            <ProgressCard dailyLog={dailyLog} />
+            {/* Progression de la semaine (maquette 5). Tap → écran détail (maquette 1). */}
+            <ProgressCard dailyLog={dailyLog} onPress={() => navigation.navigate("Progress")} />
           </View>
         )}
 

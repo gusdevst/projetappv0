@@ -9,6 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
 import { AppNavigator } from "./navigation/AppNavigator";
 import { usePhotoStore } from "./store/usePhotoStore";
+import { refreshReminders } from "./services/notificationService";
 
 // Import défensif : avant le rebuild incluant react-native-gesture-handler dans
 // le binaire natif, on tombe sur un View standard sans gestures. Une fois le rebuild
@@ -152,6 +153,15 @@ export default function App() {
   // relancer le process) apparaissent sans avoir à redémarrer l'app.
   // loadLibrary() déclenche lui-même le scan GPS en arrière-plan (étape 3),
   // donc les nouvelles photos sont aussi géolocalisées automatiquement.
+  // Quand l'app passe en arrière-plan : on reprogramme les rappels pour que
+  // le prochain porte la série 🔥 à jour (et soit sauté si la journée est validée).
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "background") refreshReminders();
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
       if (nextState !== "active") return;
