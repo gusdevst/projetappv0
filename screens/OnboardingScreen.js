@@ -39,7 +39,7 @@ const SLIDES = [
     desc: "Trie au moins 10 photos par jour pour faire grimper ta série 🔥. Un joker par semaine te pardonne un oubli. Suis ta progression et ton temps de tri depuis l'accueil.",
   },
   {
-    emoji: "🗂️",
+    emoji: "📕",
     title: "Créer un album",
     desc: "Choisis le mode Album pour sélectionner des photos et les regrouper dans un album souvenir.",
   },

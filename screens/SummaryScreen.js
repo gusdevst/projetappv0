@@ -9,6 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
+import { BadgeUnlockBanner, RankUnlockModal } from "../components/AchievementUnlocks";
 
 const { width: SW } = Dimensions.get("window");
 
@@ -93,7 +94,7 @@ export function SummaryScreen({ navigation, route }) {
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
       <ScrollView contentContainerStyle={{ padding: 24 }}>
 
-        <Text style={{ fontSize: 56, textAlign: "center", marginBottom: 8 }}>{isAlbum ? "📔" : "🎉"}</Text>
+        <Text style={{ fontSize: 56, textAlign: "center", marginBottom: 8 }}>{isAlbum ? "📕" : "🎉"}</Text>
         <Text style={{ fontSize: 26, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 4 }}>
           {isAlbum ? "Album mis à jour !" : "Tri terminé !"}
         </Text>
@@ -158,7 +159,7 @@ export function SummaryScreen({ navigation, route }) {
             marginBottom: 16,
           }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              <Text style={{ fontSize: 26 }}>📔</Text>
+              <Text style={{ fontSize: 26 }}>📕</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: "900", fontSize: 18, color: C.text }}>
                   {createdAlbum.name}
@@ -269,7 +270,7 @@ export function SummaryScreen({ navigation, route }) {
             gap: 14,
           }}
         >
-          <Text style={{ fontSize: 34 }}>📔</Text>
+          <Text style={{ fontSize: 34 }}>📕</Text>
           <View style={{ flex: 1 }}>
             <Text style={{ fontWeight: "900", fontSize: 15, color: C.text, marginBottom: 3 }}>
               Crée un album de tes plus belles photos
@@ -326,6 +327,10 @@ export function SummaryScreen({ navigation, route }) {
         </TouchableOpacity>
 
       </ScrollView>
+
+      {/* Fin de session : c'est ici qu'on fête un nouveau galon */}
+      <BadgeUnlockBanner />
+      <RankUnlockModal />
     </SafeAreaView>
   );
 }

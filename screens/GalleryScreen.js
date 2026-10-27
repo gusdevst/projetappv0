@@ -18,6 +18,8 @@ import { C, S } from "../constants/theme";
 import { PhotoGrid } from "../components/PhotoGrid";
 import { ZoomableImage } from "../components/ZoomableImage";
 import BackButton from "../components/BackButton";
+import { ExitIcon } from "../components/ExitIcon";
+import { BadgeUnlockBanner } from "../components/AchievementUnlocks";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { sharePhoto } from "../services/photoShare";
 import { addPhotosToPelliculeAlbum } from "../services/photoLibrary";
@@ -428,11 +430,11 @@ export function GalleryScreen({ navigation, route }) {
                   <View style={{ width: 52, height: 52, borderRadius: 10, overflow: "hidden", borderWidth: 1, borderColor: C.border, backgroundColor: C.bgMuted, alignItems: "center", justifyContent: "center" }}>
                     {cover
                       ? <Image source={{ uri: cover.url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-                      : <Text style={{ fontSize: 22 }}>📁</Text>
+                      : <Text style={{ fontSize: 22 }}>📕</Text>
                     }
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: "800", fontSize: 14, color: C.text }}>📁 {album.name}</Text>
+                    <Text style={{ fontWeight: "800", fontSize: 14, color: C.text }}>📕 {album.name}</Text>
                     <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{albumPhotos.length} photo{albumPhotos.length !== 1 ? "s" : ""}</Text>
                   </View>
                   <Text style={{ color: C.textMuted, fontSize: 18 }}>›</Text>
@@ -617,7 +619,7 @@ export function GalleryScreen({ navigation, route }) {
               </Text>
 
               <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-                {/* Bouton sortie 🚪 — discret, à gauche */}
+                {/* Bouton sortie (ExitIcon, comme le swipe) — discret, à gauche */}
                 <TouchableOpacity
                   onPress={closePhoto}
                   style={{
@@ -628,7 +630,7 @@ export function GalleryScreen({ navigation, route }) {
                     borderColor: "rgba(255,255,255,0.15)",
                   }}
                 >
-                  <Text style={{ fontSize: 20 }}>🚪</Text>
+                  <ExitIcon size={22} color="#fff" />
                 </TouchableOpacity>
 
                 {section === "deleted" && (
@@ -715,7 +717,7 @@ export function GalleryScreen({ navigation, route }) {
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: C.text }}>📁 {a.name}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: C.text }}>📕 {a.name}</Text>
                       <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
                         {a.photoIds.length} photo{a.photoIds.length > 1 ? "s" : ""}
                       </Text>
@@ -851,6 +853,9 @@ export function GalleryScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* Bandeau "Nouveau badge" (ex. badges ménage après avoir vidé la corbeille) */}
+      <BadgeUnlockBanner />
     </SafeAreaView>
   );
 }

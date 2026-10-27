@@ -338,7 +338,7 @@ export function MapScreen({ navigation, route }) {
               }}
             >
               <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
-                🔀 Trier {selectionCount > 0 ? `ces ${displayedPhotos.length}` : "toutes les"} photos
+                🧹 Trier {selectionCount > 0 ? `ces ${displayedPhotos.length}` : "toutes les"} photos
               </Text>
             </TouchableOpacity>
 

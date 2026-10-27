@@ -27,6 +27,8 @@ import { ZoomableImage } from "../components/ZoomableImage";
 import { SessionTutoOverlay } from "../components/SessionTutoOverlay";
 import { SwipeEdgeHints } from "../components/SwipeEdgeHints";
 import { ExitIcon } from "../components/ExitIcon";
+import { DayValidatedToast } from "../components/DayValidatedToast";
+import { BadgeUnlockBanner } from "../components/AchievementUnlocks";
 import { sharePhoto, getShareableUri } from "../services/photoShare";
 
 function getEdgeContainerStyle(edge) {
@@ -93,7 +95,7 @@ export function SwipeScreen({ navigation, route }) {
   const [sessionKept,          setSessionKept]          = useState([]);   // photos gardées ❤️
   const [sessionDeleted,       setSessionDeleted]        = useState([]);   // photos supprimées 🗑
   const [sessionHesitated,     setSessionHesitated]      = useState([]);   // photos hésitées 🤔
-  const [sessionAlbumPhotos,   setSessionAlbumPhotos]    = useState([]);   // photos ajoutées à l'album 📁
+  const [sessionAlbumPhotos,   setSessionAlbumPhotos]    = useState([]);   // photos ajoutées à l'album 📕
   const [sessionConserved,     setSessionConserved]      = useState([]);   // photos conservées (ménage) 💚
 
   const [showAlbumPicker, setShowAlbumPicker] = useState(false);
@@ -256,7 +258,7 @@ export function SwipeScreen({ navigation, route }) {
     if (actionKey === "share") { handleShare(dir); return; } // partage : la photo reste
     zoomableRef.current?.flyOff(dir, () => performAction(actionKey, dir));
   };
-  // Appui long sur le bord "album" = choisir l'album (comme l'appui long sur 📁).
+  // Appui long sur le bord "album" = choisir l'album (comme l'appui long sur 📕).
   const handleEdgeLongPress = (dir) => {
     if (isAlbum && swipeMappings?.[dir] === "album") setShowAlbumPicker(true);
   };
@@ -374,7 +376,7 @@ export function SwipeScreen({ navigation, route }) {
                 }}
               >
                 <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }} numberOfLines={1}>
-                  📁 {albumName}
+                  📕 {albumName}
                 </Text>
                 <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800", opacity: 0.85 }}>
                   {albumPreviewPhotos.length} ›
@@ -483,7 +485,7 @@ export function SwipeScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Mode ALBUM : 📁 ajouter à l'album (appui long = choisir l'album) */}
+        {/* Mode ALBUM : 📕 ajouter à l'album (appui long = choisir l'album) */}
         {isAlbum && albumDir && (
           <View style={{ alignItems: "center", gap: 5 }}>
             <TouchableOpacity
@@ -495,7 +497,7 @@ export function SwipeScreen({ navigation, route }) {
                 borderRadius: S.radiusFull, padding: 18,
               }}
             >
-              <Text style={{ fontSize: 20 }}>📁</Text>
+              <Text style={{ fontSize: 20 }}>📕</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -505,7 +507,7 @@ export function SwipeScreen({ navigation, route }) {
 
       </View>
 
-      {/* Modal picker d'album (long-press sur 📁) */}
+      {/* Modal picker d'album (long-press sur 📕) */}
       <Modal
         visible={showAlbumPicker}
         transparent
@@ -605,7 +607,7 @@ export function SwipeScreen({ navigation, route }) {
           }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }} numberOfLines={1}>
-                📁 {albumName}
+                📕 {albumName}
               </Text>
               <TouchableOpacity onPress={() => setShowAlbumPreview(false)}>
                 <Text style={{ fontSize: 22, color: C.textMuted }}>✕</Text>
@@ -645,6 +647,13 @@ export function SwipeScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* Bandeau "🔥 Journée validée !" au passage des 10 photos du jour.
+          Placé en dernier = dessiné au-dessus de tout le reste. */}
+      <DayValidatedToast />
+
+      {/* Bandeau "Nouveau badge" (le nouveau galon, lui, attend le Bilan) */}
+      <BadgeUnlockBanner />
     </View>
   );
 }

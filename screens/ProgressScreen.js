@@ -2,13 +2,17 @@
 // Détail de la progression (maquette 1) : barres par jour (Semaine) ou par
 // semaine (Mois), navigation ‹ › dans les périodes passées, 2 chiffres clés.
 // Données : carnet de bord dailyLog du store. Barres = simples View.
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { View, Text, TouchableOpacity, StatusBar, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore, dayKey } from "../store/usePhotoStore";
 import { formatSize, noon, addDays, mondayOf, dayStats, sumRange, avgFor20, computeStreak, STREAK_MIN } from "../services/progressStats";
 import BackButton from "../components/BackButton";
+import { RankCard } from "../components/RankCard";
+import { BadgesGrid } from "../components/BadgesGrid";
+import { buildContext } from "../services/achievements";
 
 const CHART_H   = 150;        // hauteur max d'une barre
 const BAR_LIGHT = "#b9c8de";  // barres passées
@@ -63,6 +67,14 @@ export function ProgressScreen({ navigation }) {
   }), { sorted: 0, freedMo: 0, timedCount: 0, activeMs: 0 });
   const pace = avgFor20(total); // temps moyen pour 20 photos sur la période
   const streak = useMemo(() => computeStreak(dailyLog), [dailyLog]);
+
+  // Galons & badges : on vérifie les déblocages à chaque ouverture de l'écran.
+  const achievements      = usePhotoStore((s) => s.achievements);
+  const checkAchievements = usePhotoStore((s) => s.checkAchievements);
+  useFocusEffect(useCallback(() => { checkAchievements(); }, [checkAchievements]));
+  // Mesures actuelles (photos triées, Go, coups de cœur…).
+  // Calcul direct à chaque affichage (léger) : toujours à jour au retour sur l'écran.
+  const ctx = buildContext(usePhotoStore.getState());
   const max   = Math.max(1, ...bars.map((b) => b.sorted));
 
   const switchMode = (m) => { setMode(m); setOffset(0); };
@@ -119,6 +131,9 @@ export function ProgressScreen({ navigation }) {
               : "Joker dispo : un jour raté cette semaine ne cassera pas ta série."}
           </Text>
         </View>
+
+        {/* ── Galon ── */}
+        <RankCard totalSorted={ctx.totalSorted} achievements={achievements} />
 
         <View style={{ backgroundColor: C.bgCard, borderRadius: 18, borderWidth: 1, borderColor: C.border, padding: 14 }}>
 
@@ -209,6 +224,9 @@ export function ProgressScreen({ navigation }) {
             </Text>
           )}
         </View>
+
+        {/* ── Badges ── */}
+        <BadgesGrid ctx={ctx} achievements={achievements} />
       </ScrollView>
     </SafeAreaView>
   );

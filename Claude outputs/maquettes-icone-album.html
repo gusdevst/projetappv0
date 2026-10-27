@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Icône album</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--border:#c8d0de;--text:#1a2840;--muted:#7a8ea8;--album:#1e7268}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,system-ui,Roboto,sans-serif;color:var(--text);padding:16px}
+.wrap{max-width:390px;margin:0 auto}h1{font-size:18px;margin:4px 0}.sub{font-size:12px;color:var(--muted);margin:0 0 18px}
+.m{margin-bottom:26px}.m h2{font-size:14px;margin:0 0 4px}.m p{font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4}
+.row{display:flex;gap:10px;align-items:center}
+.tog{flex:1;display:flex;gap:4px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:4px}
+.seg{flex:1;padding:10px 4px;border-radius:11px;text-align:center;font-weight:800;font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:5px}
+.seg.on{background:var(--album);color:#fff}
+.btn{width:58px;height:58px;border-radius:50%;background:rgba(30,114,104,.18);border:2px solid rgba(30,114,104,.5);display:flex;align-items:center;justify-content:center;font-size:24px;flex:none}
+.big{font-size:30px;width:44px;text-align:center}
+</style></head><body><div class="wrap">
+<h1>Icône « album » — options</h1>
+<p class="sub">Aujourd'hui l'app mélange 📔, 📁 et 🗂️. Chaque option montre : le gros pictogramme · le bouton « Créer un album » · le bouton rond du swipe album.</p>
+
+<div class="m"><h2>A · Icône dessinée maison (recommandé)</h2>
+<p>Un livre ouvert avec une photo (montagne + soleil) collée dessus. Identique sur iPhone et Android, à la couleur de l'app. Même technique que l'icône de sortie.</p>
+<div class="row">
+ <svg class="big" viewBox="0 0 32 32" width="40" height="40"><rect x="3" y="5" width="26" height="22" rx="3" fill="#1e7268"/><line x1="16" y1="5" x2="16" y2="27" stroke="#fff" stroke-width="1.4" opacity=".6"/><rect x="6" y="9" width="8" height="10" rx="1.2" fill="#fff"/><path d="M6.8 17.6 L9.2 14.4 L10.8 16 L12 14.8 L13.2 17.6Z" fill="#1e7268"/><circle cx="11.6" cy="11.6" r="1.1" fill="#e8bf45"/><rect x="18" y="12" width="8" height="10" rx="1.2" fill="#fff" opacity=".85"/></svg>
+ <div class="tog"><div class="seg">🔀 Tri</div><div class="seg on"><svg viewBox="0 0 32 32" width="18" height="18"><rect x="3" y="5" width="26" height="22" rx="3" fill="#fff"/><line x1="16" y1="5" x2="16" y2="27" stroke="#1e7268" stroke-width="1.6"/><rect x="6" y="9" width="8" height="10" rx="1.2" fill="#1e7268"/><rect x="18" y="12" width="8" height="10" rx="1.2" fill="#1e7268" opacity=".7"/></svg>Créer un album</div></div>
+ <div class="btn"><svg viewBox="0 0 32 32" width="26" height="26"><rect x="3" y="5" width="26" height="22" rx="3" fill="#1e7268"/><line x1="16" y1="5" x2="16" y2="27" stroke="#fff" stroke-width="1.4" opacity=".6"/><rect x="6" y="9" width="8" height="10" rx="1.2" fill="#fff"/><rect x="18" y="12" width="8" height="10" rx="1.2" fill="#fff" opacity=".85"/></svg></div>
+</div></div>
+
+<div class="m"><h2>B · Emoji 🖼️ (cadre photo)</h2>
+<p>Évoque directement la photo. Rendu un peu différent entre iPhone et Android.</p>
+<div class="row"><div class="big">🖼️</div><div class="tog"><div class="seg">🔀 Tri</div><div class="seg on">🖼️ Créer un album</div></div><div class="btn">🖼️</div></div></div>
+
+<div class="m"><h2>C · Emoji 📸 (appareil + flash)</h2>
+<p>Très « photo », mais proche du 📷 déjà utilisé pour « Même instant » → risque de confusion.</p>
+<div class="row"><div class="big">📸</div><div class="tog"><div class="seg">🔀 Tri</div><div class="seg on">📸 Créer un album</div></div><div class="btn">📸</div></div></div>
+
+<div class="m"><h2>D · Emoji 📕 (livre fermé)</h2>
+<p>Fait « livre / album », mais rien de « photo ».</p>
+<div class="row"><div class="big">📕</div><div class="tog"><div class="seg">🔀 Tri</div><div class="seg on">📕 Créer un album</div></div><div class="btn">📕</div></div></div>
+
+</div></body></html>

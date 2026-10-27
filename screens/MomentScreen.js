@@ -152,8 +152,8 @@ export function MomentScreen({ navigation, route }) {
           >
             <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
               {selected
-                ? `🔀 Trier les ${selected.photos.length} photo${selected.photos.length > 1 ? "s" : ""} de ce moment`
-                : `🔀 Trier toute la période · ${filteredPhotos.length} photo${filteredPhotos.length > 1 ? "s" : ""}`}
+                ? `🧹 Trier les ${selected.photos.length} photo${selected.photos.length > 1 ? "s" : ""} de ce moment`
+                : `🧹 Trier toute la période · ${filteredPhotos.length} photo${filteredPhotos.length > 1 ? "s" : ""}`}
             </Text>
           </TouchableOpacity>
 

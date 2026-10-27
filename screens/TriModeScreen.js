@@ -358,7 +358,7 @@ export function TriModeScreen({ navigation, route }) {
                       gap: 12,
                     }}
                   >
-                    <Text style={{ fontSize: 22 }}>📁</Text>
+                    <Text style={{ fontSize: 22 }}>📕</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>{a.name}</Text>
                       <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>

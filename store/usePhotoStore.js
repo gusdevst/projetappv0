@@ -5,6 +5,8 @@ import { InteractionManager } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as PhotoLibrary from "../services/photoLibrary";
 import { loadGpsCache, saveGpsCache } from "../services/gpsCache";
+import { buildContext, reachedIds } from "../services/achievements";
+import { dayKey } from "../services/dateKey";
 
 // Petits lots + vraie pause entre chaque (voir plus bas) : sur une grosse
 // photothèque (plusieurs milliers de photos), scanner par lots trop gros
@@ -25,11 +27,8 @@ let geoScanRunning = false;
 // sorted = photos triées ce jour-là (gardées ✅/❤️ ou supprimées 🗑).
 const LOG_MAX_DAYS = 400; // on garde ~13 mois max, le carnet ne grossit pas à l'infini
 
-// Clé du jour en heure LOCALE (pas UTC, sinon un tri à 1h du matin tombe la veille).
-export function dayKey(d = new Date()) {
-  const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
+// dayKey vit dans services/dateKey.js ; ré-exporté ici pour les écrans qui l'importent depuis le store.
+export { dayKey };
 
 // Ajoute `delta` au champ `field` du jour courant. Ne descend jamais sous 0.
 function bumpLog(log, field, delta) {
@@ -41,6 +40,17 @@ function bumpLog(log, field, delta) {
     keys.sort().slice(0, keys.length - LOG_MAX_DAYS).forEach((old) => delete next[old]);
   }
   return next;
+}
+
+// Compteur "à vie" des photos triées (pour les galons). Le carnet est limité à
+// 400 jours, ce compteur non. S'il n'existe pas encore (anciennes installs),
+// on part de la somme du carnet.
+function sumSorted(log) {
+  return Object.values(log || {}).reduce((a, d) => a + (d.sorted || 0), 0);
+}
+function bumpTotal(state, delta) {
+  const base = state.lifetimeSorted ?? sumSorted(state.dailyLog);
+  return Math.max(0, base + delta);
 }
 
 // ─── Chrono de tri ────────────────────────────────────────────────────────
@@ -69,6 +79,8 @@ export const usePhotoStore = create(
       printed:   [], // À imprimer / album souvenirs
       skipped:   [], // MÉNAGE : photos "Conservées" — décision définitive, ne reviennent jamais
       dailyLog:  {}, // carnet de bord journalier (voir bumpLog en haut du fichier)
+      lifetimeSorted: null, // total des photos triées depuis toujours (galons) — null = pas encore initialisé
+      achievements:   {},   // galons + badges débloqués : { "rank-3": timestamp, "clean-1": timestamp }
       hesitated: [], // "Je déciderai plus tard" — l'user hésite entre garder et supprimer
       // Albums créés par l'utilisateur dans "Album souvenirs".
       // Format : [{ id, name, photoIds: [] }]
@@ -156,6 +168,7 @@ export const usePhotoStore = create(
         return {
           kept:    [...state.kept, photo],
           deleted: state.deleted.filter((p) => p.id !== photo.id),
+          lifetimeSorted: bumpTotal(state, 1),
           dailyLog: timeLog(bumpLog(state.dailyLog, "sorted", 1)), // ❤️ = photo gardée → triée
         };
       }),
@@ -167,6 +180,7 @@ export const usePhotoStore = create(
           deleted: [...state.deleted, photo],
           kept:    state.kept.filter((p) => p.id !== photo.id),
           printed: state.printed.filter((p) => p.id !== photo.id),
+          lifetimeSorted: bumpTotal(state, 1),
           dailyLog: timeLog(bumpLog(state.dailyLog, "sorted", 1)), // 🗑 = photo supprimée → triée
         };
       }),
@@ -185,7 +199,7 @@ export const usePhotoStore = create(
       addSkipped: (photo) => set((state) =>
         state.skipped.some((p) => p.id === photo.id)
           ? state
-          : { skipped: [...state.skipped, photo], dailyLog: timeLog(bumpLog(state.dailyLog, "sorted", 1)) } // ✅ gardée → triée
+          : { skipped: [...state.skipped, photo], lifetimeSorted: bumpTotal(state, 1), dailyLog: timeLog(bumpLog(state.dailyLog, "sorted", 1)) } // ✅ gardée → triée
       ),
 
       // addHesitated = "je déciderai plus tard". L'user n'est pas prêt à choisir.
@@ -258,7 +272,7 @@ export const usePhotoStore = create(
           printed:   printedSnap,
           skipped:   skippedBack,
           hesitated: hesitatedSnap !== undefined ? hesitatedSnap : state.hesitated,
-          ...(removed > 0 ? { dailyLog: bumpLog(state.dailyLog, "sorted", -removed) } : {}),
+          ...(removed > 0 ? { dailyLog: bumpLog(state.dailyLog, "sorted", -removed), lifetimeSorted: bumpTotal(state, -removed) } : {}),
         };
       }),
 
@@ -347,6 +361,35 @@ export const usePhotoStore = create(
       // Total estimé (en Mo) des photos supprimées définitivement via Pellicule. Persisté.
       freedMo: 0,
 
+      // ─── Galons & badges ────────────────────────────────────────────────
+      // Compare ce qui est atteint avec ce qui est déjà débloqué, mémorise les
+      // nouveautés (avec la date) et les RETOURNE (pour afficher une animation).
+      // Les nouveautés sont aussi mises dans la file pendingUnlocks (animations).
+      // 1re vérification de l'install : on enregistre sans animer (sinon avalanche
+      // de badges d'un coup pour un user qui avait déjà beaucoup trié).
+      checkAchievements: () => {
+        const state = get();
+        const have  = state.achievements || {};
+        const fresh = reachedIds(buildContext(state)).filter((id) => !have[id]);
+        if (fresh.length === 0) {
+          if (!state.achievementsInit) set({ achievementsInit: true });
+          return [];
+        }
+        const now = Date.now();
+        set({
+          achievements:     { ...have, ...Object.fromEntries(fresh.map((id) => [id, now])) },
+          pendingUnlocks:   state.achievementsInit ? [...state.pendingUnlocks, ...fresh] : state.pendingUnlocks,
+          achievementsInit: true,
+        });
+        return fresh;
+      },
+      // File des déblocages à animer (NON persistée) + retrait une fois affichés.
+      pendingUnlocks:   [],
+      achievementsInit: false, // la 1re vérification (silencieuse) a-t-elle eu lieu ?
+      consumeUnlocks: (ids) => set((state) => ({
+        pendingUnlocks: state.pendingUnlocks.filter((id) => !ids.includes(id)),
+      })),
+
       emptyTrash: async () => {
         const { deleted } = get();
         if (deleted.length === 0) return true;
@@ -361,6 +404,7 @@ export const usePhotoStore = create(
               // Carnet du jour : les Mo comptent le jour où la corbeille est vidée (place réellement libérée).
               dailyLog: bumpLog(get().dailyLog, "freedMo", freed),
             });
+            get().checkAchievements(); // badges ménage (Go libérés)
             // ⚠️ Recharger la photothèque : sans ça, les photos supprimées restent
             // dans libraryPhotos et réapparaissent dans la file de tri (écran noir).
             await get().loadLibrary();
@@ -539,6 +583,9 @@ export const usePhotoStore = create(
         sortPriority:            state.sortPriority,
         freedMo:                 state.freedMo,
         dailyLog:                state.dailyLog,
+        lifetimeSorted:          state.lifetimeSorted,
+        achievements:            state.achievements,
+        achievementsInit:        state.achievementsInit,
       }),
     }
   )

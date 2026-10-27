@@ -24,11 +24,11 @@ const CONTENT = {
   },
   album: {
     accent: C.album,
-    title: "Créons ton album 📁",
+    title: "Créons ton album 📕",
     steps: [
       { icon: "👆", text: "Swipe vers le haut pour ajouter la photo à l'album. Bas ou droite pour passer, gauche si tu hésites." },
       { icon: "🔤", text: "Pas envie de swiper ? Appuie sur le mot écrit au bord de l'écran : même effet." },
-      { icon: "📁", text: "Appui long sur 📁 pour choisir un autre album. ⚙️ en haut à droite pour changer chaque direction." },
+      { icon: "📕", text: "Appui long sur 📕 pour choisir un autre album. ⚙️ en haut à droite pour changer chaque direction." },
     ],
   },
 };

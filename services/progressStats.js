@@ -1,7 +1,7 @@
 // services/progressStats.js
 // Calculs purs sur le carnet de bord dailyLog (pas d'UI, pas d'I/O).
 // Partagés par la carte d'accueil (ProgressCard) et l'écran détail (ProgressScreen).
-import { dayKey } from "../store/usePhotoStore";
+import { dayKey } from "./dateKey";
 
 // Mo → "340 Mo" / "1.4 Go" (même format que l'accueil)
 export function formatSize(mo) {

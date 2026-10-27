@@ -48,7 +48,7 @@ const TUTORIAL_SLIDES = [
     title: "Tes photos restent privées",
     desc: "Tout se passe sur ton téléphone. Pellicule n'envoie aucune photo sur un serveur.",
   },  {
-    emoji: "🗂️",
+    emoji: "📕",
     title: "Créer un album",
     desc: "Choisis le mode Album pour sélectionner des photos et les regrouper dans un album souvenir.",
   },
@@ -65,7 +65,7 @@ const SWIPE_ACTIONS_MENAGE = [
 
 // Actions proposées en mode ALBUM (suppression possible pour faire le ménage en même temps).
 const SWIPE_ACTIONS_ALBUM = [
-  { key: "album",    label: "Envoyer dans l'album",        desc: "Ajouter cette photo à l'album",                       emoji: "📁" },
+  { key: "album",    label: "Envoyer dans l'album",        desc: "Ajouter cette photo à l'album",                       emoji: "📕" },
   { key: "skip",     label: "Ne pas envoyer dans l'album", desc: "Photo conservée, elle pourra revenir pour un autre album", emoji: "⏭️" },
   { key: "delete",   label: "Supprimer",                   desc: "Envoyer dans la corbeille (tri en même temps)",       emoji: "🗑" },
   { key: "hesitate", label: "Je déciderai plus tard",      desc: "Mettre de côté pour décider ensuite",                 emoji: "🤔" },
@@ -249,7 +249,7 @@ export function SettingsScreen({ navigation, route }) {
         )}
 
         {/* ── Section Tri par swipe — Mode Album ───────────────────────────── */}
-        <Section title="📁 Swipe — Mode Album" />
+        <Section title="📕 Swipe — Mode Album" />
         <TouchableOpacity
           onPress={() => setAlbumExpanded(!albumExpanded)}
           style={{

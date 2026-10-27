@@ -157,7 +157,10 @@ export default function App() {
   // le prochain porte la série 🔥 à jour (et soit sauté si la journée est validée).
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "background") refreshReminders();
+      if (nextState === "background") {
+        usePhotoStore.getState().checkAchievements(); // mémorise les galons / badges atteints
+        refreshReminders();
+      }
     });
     return () => sub.remove();
   }, []);

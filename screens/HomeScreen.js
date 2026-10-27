@@ -17,6 +17,7 @@ import { useNotificationReminder } from "../hooks/useNotificationReminder";
 import { cancelReminders } from "../services/notificationService";
 import { SwapIcon } from "../components/SwapIcon";
 import { ProgressCard } from "../components/ProgressCard";
+import { BadgeUnlockBanner, RankUnlockModal } from "../components/AchievementUnlocks";
 
 // C_ALBUM utilise désormais la valeur centralisée dans theme.js
 const C_ALBUM = C.album;
@@ -181,7 +182,7 @@ function applyFilter(photos, filter) {
 // - Ménage : toutes les périodes
 // - Album  : seulement "Toutes" et l'année en cours (ligne unique avec "Dossiers")
 const MENAGE_DATE_FILTERS = FILTERS.filter((f) => f !== "Screenshots");
-const ALBUM_DATE_FILTERS  = ["Toutes", "2026", "2025"];
+const ALBUM_DATE_FILTERS  = ["Toutes", "2026"]; // 2025 retiré : filtres sur une seule ligne
 
 export function HomeScreen({ navigation, route }) {
   const kept              = usePhotoStore((state) => state.kept);
@@ -318,11 +319,7 @@ export function HomeScreen({ navigation, route }) {
   function clearAlbum() { setSelectedAlbum(null); setAlbumPhotoIds(null); }
 
   // Filtre "coups de cœur" : raccourci pour ajouter/retirer les favoris des filtres combinés.
-  const coeurActive = albumFilters.some((f) => f.id === "coeur");
-  function toggleCoeurFilter() {
-    if (coeurActive) removeAlbumFilter("coeur");
-    else addAlbumFilter({ id: "coeur", type: "coeur", label: "Coups de cœur", photoIds: kept.map((p) => p.id) });
-  }
+
 
   function toggleRandomFifty(filteredPool) {
     if (randomFiftyActive) {
@@ -564,8 +561,8 @@ export function HomeScreen({ navigation, route }) {
           gap: 4,
         }}>
           {[
-            { key: "menage", label: "🔀 Tri",            color: C.accent },
-            { key: "album",  label: "📔 Créer un album",  color: C_ALBUM },
+            { key: "menage", label: "🧹 Tri",            color: C.accent },
+            { key: "album",  label: "📕 Créer un album",  color: C_ALBUM },
           ].map((m) => {
             const active = activeMode === m.key;
             return (
@@ -741,7 +738,7 @@ export function HomeScreen({ navigation, route }) {
                   opacity: busy || queue.length === 0 ? 0.6 : 1 }}
               >
                 <Text style={{ fontSize: 16, fontWeight: "900", color: C_ALBUM }}>
-                  {busy ? "Chargement…" : queue.length === 0 ? "Ajuste tes filtres" : `📔 Créer l'album · ${queue.length} photo${queue.length > 1 ? "s" : ""}`}
+                  {busy ? "Chargement…" : queue.length === 0 ? "Ajuste tes filtres" : `📕 Créer l'album · ${queue.length} photo${queue.length > 1 ? "s" : ""}`}
                 </Text>
               </TouchableOpacity>
             </LinearGradient>
@@ -773,23 +770,6 @@ export function HomeScreen({ navigation, route }) {
               </Text>
             </TouchableOpacity>
           ))}
-
-          {/* Mode Album : filtre Coups de cœur (on pioche dans l'album Coups de cœur) */}
-          {!isMenage && (
-            <TouchableOpacity
-              onPress={toggleCoeurFilter}
-              style={{
-                flexDirection: "row", alignItems: "center", gap: 5,
-                paddingHorizontal: 9, paddingVertical: 6, borderRadius: 99,
-                borderWidth: 1.5,
-                borderColor: coeurActive ? C_PINK : C.border,
-                backgroundColor: coeurActive ? C_PINK : C.bgCard,
-              }}
-            >
-              <Text style={{ fontSize: 12 }}>❤️</Text>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: coeurActive ? "#fff" : C.textMuted }}>Coups de cœur</Text>
-            </TouchableOpacity>
-          )}
 
           <TouchableOpacity
             onPress={openAlbumPicker}
@@ -1268,6 +1248,10 @@ export function HomeScreen({ navigation, route }) {
         </TouchableOpacity>
       </Modal>
 
+
+      {/* Galons & badges : bandeau badge + fenêtre nouveau galon */}
+      <BadgeUnlockBanner />
+      <RankUnlockModal />
     </SafeAreaView>
   );
 }
