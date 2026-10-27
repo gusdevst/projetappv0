@@ -2,7 +2,7 @@
 
 > Fichier de passation. Lu en début de session pour retrouver l'état du projet
 > sans re-scanner tout le code. **À maintenir à jour** à chaque étape importante.
-> Dernière mise à jour : 2026-10-13.
+> Dernière mise à jour : 2026-10-27.
 
 ---
 
@@ -19,14 +19,12 @@ trop-plein de photos sans y passer des heures.
 
 ---
 
-## 2. État actuel (au 2026-09-21)
+## 2. État actuel (au 2026-10-27)
 
-- Dernière vraie activité de code : **7 juillet 2026** (~2 mois de pause).
-- Dernier commit : `57779fe "notifs"` — a branché la **demande d'autorisation
-  des notifications dans l'onboarding** (`screens/OnboardingScreen.js`).
-- **Travail en cours NON commité** sur la branche `check-swipe-tutorial-coherence` :
-  7 fichiers modifiés (tutoriel + onboarding + carte + réglages + store).
-  → à sécuriser en priorité, risque de perte.
+- Branche de travail : **`feature/progression`** (créée depuis `main` le 26 oct.).
+  Tout est commité. À fusionner dans `main` après test TestFlight.
+- `main` = fin de la session d'octobre (`ab35958 vdefversionoctobre`).
+- Chantier en cours : **progression + gamification** (voir §11).
 
 Tous les gros bugs de la phase proto sont **réglés** :
 NavigationContainer unique · écrans câblés au navigateur · vraies photos
@@ -59,30 +57,44 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 - `eas.json` — profils de build EAS (development / preview / production).
 
 **navigation/**
-- `AppNavigator.js` — déclare les 13 écrans. Un seul NavigationContainer (dans App.js).
+- `AppNavigator.js` — déclare les 14 écrans (dont `Progress`). Un seul NavigationContainer (dans App.js).
 
 **store/**
-- `usePhotoStore.js` (~474 l.) — **cerveau de l'app**. État du tri, filtres albums,
+- `usePhotoStore.js` (~600 l.) — **cerveau de l'app**. État du tri, filtres albums,
   réglages de rappels, flags "vu une fois". Persisté via AsyncStorage.
+  Contient aussi le **carnet de bord** `dailyLog`, le chrono de tri, `lifetimeSorted`,
+  `achievements` (galons/badges datés) et la file `pendingUnlocks` (non persistée).
 
 **screens/** (13)
 - `OnboardingScreen` · `PermissionDeniedScreen` — arrivée + permissions.
 - `HomeScreen` (~906 l.) · `TriModeScreen` — accueil + choix du mode de tri.
 - `SwipeScreen` (~668 l.) — le tri par swipe (cœur de l'app).
 - `GalleryScreen` (~864 l.) · `MomentScreen` — galerie / albums / moments.
-- `DuplicatesScreen` (~668 l.) — détection et tri des doublons.
+- `DuplicatesScreen` — « Même instant » : photos prises à quelques secondes d'écart
+  (ex-Doublons). CTA sur les bords (`SwipeEdgeHints`), comme le swipe.
+- `ProgressScreen` — progression : série 🔥, galon, graphe semaine/mois, chrono, badges.
 - `MapScreen` — tri par lieu (GPS).
 - `RappelsScreen` — réglage des notifications de rappel.
 - `SummaryScreen` — bilan de session.
 - `SettingsScreen` · `PartenairesScreen` — réglages + partenaires impression.
 
 **components/** — briques UI réutilisables : `BackButton`, `Toggle`, `PhotoGrid`,
-`ZoomableImage`, `RowSetting`, `AlbumFiltersBar`, `SessionTutoOverlay` (overlay tuto).
+`ZoomableImage`, `RowSetting`, `AlbumFiltersBar`, `SessionTutoOverlay` (overlay tuto),
+`SwipeEdgeHints` (actions sur les bords), icônes dessinées `ExitIcon` / `SwapIcon` / `RankShield`,
+`ProgressCard` (carte accueil), `RankCard` + `BadgesGrid` (écran Progression),
+`DayValidatedToast` + `AchievementUnlocks` (bandeaux / fenêtre de déblocage).
 
 **services/** — logique métier, pas d'UI :
 - `photoLibrary.js` — wrapper expo-media-library (permission, chargement, suppression).
 - `photoAnalysis.js` — calculs purs sur les photos (pas d'I/O).
-- `notificationService.js` — rappels locaux "pense à trier".
+- `notificationService.js` — rappels locaux. Quotidien / 2x par jour = **rappels datés
+  sur 30 j** (1er = message série 🔥), reprogrammés par `refreshReminders()` à chaque
+  passage en arrière-plan (App.js).
+- `progressStats.js` — calculs purs sur `dailyLog` : sommes, série 🔥 (`computeStreak`,
+  seuil `STREAK_MIN` = 10, joker 1/semaine), chrono (`avgFor20`).
+- `achievements.js` — **liste des 10 galons + 14 badges** (noms, seuils) et leurs règles.
+- `dateKey.js` — `dayKey()` (date locale "AAAA-MM-JJ"). Fichier sans dépendance pour
+  éviter une boucle d'imports store ↔ services. Le store le ré-exporte.
 - `gpsCache.js` — cache persistant des coordonnées GPS.
 
 **hooks/** — `useAndroidBack` (bouton retour Android), `useNotificationReminder`
@@ -105,7 +117,7 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 
 - Repo : `https://github.com/gusdevst/projetappv0` (public, handle `gusdevst`).
 - **Branche de référence = `main`** (la plus à jour ; `retourbeta` y est déjà intégrée).
-- Branche de travail actuelle : `check-swipe-tutorial-coherence` (= main + 7 fichiers WIP).
+- Branche de travail actuelle : `feature/progression`.
 - Branches plus anciennes (juin) probablement abandonnées : `fix/stabilisation-beta`,
   `feature/notifications`, `feature/couleurs`. À nettoyer un jour.
 - **Augustin commit et push lui-même depuis VS Code.** Ne pas push depuis le shell.
@@ -117,22 +129,24 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 
 1. **Repo pollué** : des dossiers d'outils IA sont suivis par Git alors qu'ils ne
    devraient pas — `claude-code/` (41 Mo, avec son propre `.git`), `.gemini/`,
-   `.qoder/`, `.kiro/`. À sortir du suivi Git (`git rm -r --cached` + `.gitignore`).
+   `.qoder/`, `.kiro/`, et les maquettes `Claude outputs/` (ajouté au `.gitignore`
+   le 27 oct.). À sortir du suivi Git (`git rm -r --cached` + `.gitignore`).
 2. **6 branches** : clarifier / supprimer les mortes.
 3. **RevenueCat installé mais pas configuré** (`Purchases.configure` absent) → le
    Premium payant n'est pas encore actif.
-4. **Écrans très longs** (`HomeScreen` 906 l., `GalleryScreen` 864 l.) → à découper
+4. **Écrans très longs** (`HomeScreen` ~1250 l., `GalleryScreen` ~860 l.) → à découper
    en composants quand on y retouchera.
 
 ---
 
 ## 8. Prochaines étapes probables
 
-1. Sécuriser le WIP (commit des 7 fichiers).
-2. Relancer l'app sur téléphone pour confirmer que rien n'a bougé après 2 mois.
-3. Nettoyer le repo (dossiers pollués) et les branches.
-4. Finir le tutoriel / onboarding (le chantier en cours).
-5. Plus tard : brancher RevenueCat (Premium), backend pour l'IA "Album IA".
+1. Build TestFlight de `feature/progression` et test sur plusieurs jours
+   (rappels datés, série, déblocages).
+2. Fusionner `feature/progression` dans `main` (`git merge --ff-only`).
+3. Nettoyer le repo (dossiers pollués, `Claude outputs/`) et les branches mortes.
+4. Gamification étape D : points + récompenses partenaires → **nécessite un serveur**.
+5. Brancher RevenueCat (Premium), backend pour l'IA "Album IA".
 
 ---
 
@@ -149,7 +163,7 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 
 ---
 
-## 10. Session 12-13 oct. 2026 (branche `octobre27`, non commité)
+## 10. Session 12-13 oct. 2026 (branche `octobre27`, fusionnée dans `main`)
 
 - Partage HD par swipe (action "share" réglable) → `services/photoShare.js`, `ZoomableImage` prop `bounceDirs`.
 - Dates 1970 : repli sur `modificationTime` dans `services/photoLibrary.js`.
@@ -159,3 +173,35 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 - Accueil Album : carte "Ton prochain album" (mosaïque), filtre ❤️ en pastille, liste "Mes albums"
   (Coups de cœur = album auto en tête, menu ··· renommer/supprimer), partenaires réduits à un bandeau.
 - Par lieu (🌍) revenu en mode Album uniquement (carte agrandie). Écran orphelin : `MomentScreen`.
+
+---
+
+## 11. Sessions 16-27 oct. 2026 (branche `feature/progression`)
+
+**Même instant** : sortie `ExitIcon`, CTA GARDER/SUPPRIMER sur les bords (cliquables,
+`SwipeEdgeHints` prop `downBottom`), groupes renommés « N photos du même instant ».
+
+**Accueil**
+- Toggle 🧹 Tri / 📕 Créer un album + pastille ⇄ au centre (`SwapIcon`), fond blanc,
+  flèches à la couleur du mode. Briques de même hauteur (`flex: 1`, bug iOS).
+- Corbeille + Rappel sur **une seule carte coupée en deux** (« Vider › » + interrupteur).
+- Carte **« Cette semaine »** (`ProgressCard`) : photos · Mo, % vs même période semaine
+  passée, mini-barres 7 j, pastille 🔥, chrono. Tap → `ProgressScreen`.
+- Mode Album : filtres sur une ligne (2025 et ❤️ Coups de cœur retirés).
+- **Icône album unifiée = 📕** partout. 📁 gardé uniquement pour les dossiers du téléphone.
+
+**Progression / gamification** (tout se calcule depuis `dailyLog`, source unique)
+- `dailyLog[jour] = { sorted, freedMo, timedCount, activeMs }`.
+  Triée = gardée (✅/❤️) ou supprimée ; pas "j'hésite" ni album. ↩ annuler décompte.
+  Mo comptés quand on **vide la corbeille**. Chrono : pauses > 60 s et actions < 0,2 s ignorées.
+- **Série 🔥** : journée validée à 10 photos, joker 1 jour raté/semaine, record.
+  Bandeau « 🔥 Journée validée ! » pendant le tri (1 fois/jour).
+- **10 galons** (Recrue 25 → Légende vivante 10 000), écusson bronze/argent/or + chevrons.
+- **14 badges** : ménage Go (Coup de balai 1 Go, Coup d'aspirateur 3, Grand ménage de
+  printemps 5, Nickel chrome 10), Éclair, Cœur d'or (50 ❤️), Premier album, Galerie nette,
+  Étincelle / Flamme / Volcan (3/7/30 j d'affilée), Habitué / Assidu / Fidèle (10/30/100 j validés).
+- Déblocages : bandeau badge (pas de blocage du swipe) ; fenêtre « Nouveau galon »
+  seulement sur Bilan / accueil. 1re vérification de l'install = silencieuse.
+- Onboarding : slide 🔥 « Fais grimper ta série » (entre Rappels et Album).
+- Préférences d'Augustin : il valide les maquettes (HTML) avant chaque UI, et
+  **on ne change pas ses textes sans son accord**.

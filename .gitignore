@@ -41,3 +41,6 @@ yarn-error.*
 /android
 # Added by code-review-graph
 .code-review-graph/
+
+# Maquettes HTML générées par Claude (pas du code)
+Claude outputs/
