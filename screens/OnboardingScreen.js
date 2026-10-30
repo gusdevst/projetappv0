@@ -3,9 +3,10 @@
 // Slides simples — pas de carousel complexe, juste un index local.
 
 import { useState } from "react";
-import { View, TouchableOpacity, ActivityIndicator, Image, Alert } from "react-native";
+import { View, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import Text from "../components/AppText";
 import Logo from "../components/Logo";
+import Icon from "../components/Icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
@@ -25,32 +26,47 @@ const SLIDES = [
     desc: "Swipe la photo vers une action, ou clique directement sur l'action écrite au bord. Comme pendant le tri.",
   },
   {
-    emoji: "❤️",
+    tile: { icon: "heart", bg: C.redSoft, color: C.red, filled: true },
     title: "Coup de cœur",
-    desc: "Appuie sur le bouton ❤️ pendant le tri pour ajouter une photo à tes coups de cœur. Retrouve-les dans le menu principal.",
+    desc: "Appuie sur le bouton ❤️ pendant le tri pour ajouter une photo à tes coups de cœur. Retrouve-les dans l'onglet Galerie.",
   },
   {
-    emoji: "🔔",
+    tile: { icon: "bell", bg: C.sage, color: C.accent },
     notif: true, // slide qui déclenche la demande d'autorisation des notifications
     title: "Des rappels pour avancer",
     desc: "Configure la fréquence (quotidien, 2x/jour, hebdo…) et l'heure de tes rappels. Choisis ton rythme de session — Rapide (10 photos), Normal (30) ou Sérieux (50) — et Pellicule t'indique combien de sessions il reste pour tout trier.",
   },
   {
-    emoji: "🔥",
+    tile: { icon: "flame", bg: "#fbe9da", color: "#c4621c", filled: true }, // orange de la série 🔥 (hors palette)
     title: "Fais grimper ta série",
-    desc: "Trie au moins 10 photos par jour pour faire grimper ta série 🔥. Un joker par semaine te pardonne un oubli. Suis ta progression et ton temps de tri depuis l'accueil.",
+    desc: "Trie au moins 10 photos par jour pour faire grimper ta série 🔥. Un joker par semaine te pardonne un oubli. Suis ta progression et ton temps de tri dans l'onglet Progression.",
   },
   {
-    emoji: "📕",
+    tile: { icon: "album", bg: C.albumSoft, color: C.album },
     title: "Créer un album",
-    desc: "Choisis le mode Album pour sélectionner des photos et les regrouper dans un album souvenir.",
+    desc: "Touche le bouton central pour passer en mode Album, sélectionne des photos et regroupe-les dans un album souvenir.",
   },
   {
-    emoji: "🔒",
+    tile: { icon: "lock", bg: C.sage, color: C.accent },
     title: "Tes photos restent privées",
     desc: "Tout se passe sur ton téléphone. Pellicule n'envoie aucune photo sur un serveur.",
   },
 ];
+
+// Tuile illustrée : icône au trait sur fond doux + quelques confettis.
+function SlideTile({ icon, bg, color, filled }) {
+  const dot = (size, style, op) => (
+    <View style={[{ position: "absolute", width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity: op }, style]} />
+  );
+  return (
+    <View style={{ width: 130, height: 130, borderRadius: 38, backgroundColor: bg, alignItems: "center", justifyContent: "center", marginBottom: 24 }}>
+      {dot(11, { top: 16, right: 20 }, 0.25)}
+      {dot(8, { bottom: 20, left: 18 }, 0.2)}
+      {dot(6, { top: 28, left: 24 }, 0.3)}
+      <Icon name={icon} size={62} color={color} strokeWidth={1.8} filled={filled} />
+    </View>
+  );
+}
 
 export function OnboardingScreen() {
   const [idx, setIdx] = useState(0);
@@ -103,9 +119,9 @@ export function OnboardingScreen() {
         ) : slide.demo === "swipe" ? (
           <SwipeDemo style={{ marginBottom: 24 }} />
         ) : (
-          <Text style={{ fontSize: 88, marginBottom: 24 }}>{slide.emoji}</Text>
+          <SlideTile {...slide.tile} />
         )}
-        <Text style={{ fontSize: 28, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 12 }}>
+        <Text style={{ fontSize: 26, fontWeight: "600", color: C.text, textAlign: "center", marginBottom: 10 }}>
           {slide.title}
         </Text>
         <Text style={{ fontSize: 15, color: C.textMuted, textAlign: "center", lineHeight: 22 }}>
@@ -122,7 +138,7 @@ export function OnboardingScreen() {
               width: i === idx ? 24 : 8,
               height: 8,
               borderRadius: 4,
-              backgroundColor: i === idx ? C.accent : C.border,
+              backgroundColor: i === idx ? C.accent : C.sage2,
             }}
           />
         ))}
@@ -134,16 +150,17 @@ export function OnboardingScreen() {
           disabled={loading}
           style={{
             backgroundColor: C.accent,
-            borderRadius: S.radius,
-            padding: 18,
+            borderRadius: 16,
+            padding: 17,
             alignItems: "center",
             opacity: loading ? 0.6 : 1,
+            shadowColor: C.accent, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 4,
           }}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>
+            <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>
               {isLast ? "Autoriser l'accès aux photos" : slide.notif ? "Activer les rappels" : "Continuer"}
             </Text>
           )}

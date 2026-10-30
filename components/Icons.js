@@ -79,6 +79,12 @@ const ICONS = {
   </>),
   chart: (c) => <Path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
   export: (c) => <Path d="M12 15V3M7 8l5-5 5 5M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" />,
+  flame: (c) => <Path d="M12 3c2 3 5 5 5 9.5A5 5 0 0 1 7 12.5c0-2.3 1.2-3.6 2.2-4.8.3 1.8 1 2.6 1.9 3C10.6 8 11 5.6 12 3z" />,
+  lock: (c) => (<>
+    <Rect x="5" y="10.5" width="14" height="10" rx="2.5" />
+    <Path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+    <Circle cx="12" cy="15.5" r="1.3" />
+  </>),
   filter: (c) => <Path d="M4 5h16l-6 8v6l-4-2v-4z" />,
   chevronRight: (c) => <Path d="M9 5l7 7-7 7" />,
   close: (c) => <Path d="M6 6l12 12M18 6L6 18" />,
