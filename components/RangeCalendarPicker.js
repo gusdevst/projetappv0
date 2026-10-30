@@ -2,7 +2,8 @@
 // Calendrier de sélection d'une période (1er tap = début, 2e tap = fin).
 // Partagé par l'écran d'accueil (brique "Par date") et MomentScreen.
 import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Modal, ScrollView } from "react-native";
+import { View, TouchableOpacity, Modal, ScrollView } from "react-native";
+import Text from "./AppText";
 import { C } from "../constants/theme";
 
 // ─── Calendrier ───────────────────────────────────────────────────────────────

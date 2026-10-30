@@ -9,7 +9,8 @@
 // est au premier plan (useIsFocused) → pas de doublon quand plusieurs écrans sont empilés.
 // Ils déclenchent aussi la vérification (checkAchievements) quand les chiffres bougent.
 import { useEffect, useRef, useState } from "react";
-import { Animated, Modal, View, Text, TouchableOpacity, Platform } from "react-native";
+import { Animated, Modal, View, TouchableOpacity, Platform } from "react-native";
+import Text from "./AppText";
 import { useIsFocused } from "@react-navigation/native";
 import { C } from "../constants/theme";
 import { usePhotoStore, dayKey } from "../store/usePhotoStore";

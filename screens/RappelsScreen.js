@@ -4,9 +4,15 @@
 
 import { useState, useEffect, useMemo } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StatusBar, Alert, Modal, Platform,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+  Alert,
+  Modal,
+  Platform,
 } from "react-native";
+import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";

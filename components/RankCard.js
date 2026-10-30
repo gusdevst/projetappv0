@@ -1,7 +1,8 @@
 // Bloc "Ton galon" de l'écran Progression (maquette 2) + échelle des 10 grades
 // dépliable (maquette 3).
 import { useState } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity } from "react-native";
+import Text from "./AppText";
 import { C } from "../constants/theme";
 import { RankShield, METALS } from "./RankShield";
 import { RANKS, rankInfo } from "../services/achievements";

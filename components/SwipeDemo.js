@@ -1,7 +1,8 @@
 // Mini-écran de tri pour les tutos : une "photo" avec les actions écrites
 // sur les 4 bords, exactement comme pendant une vraie session.
 // Les libellés suivent les réglages de swipe de l'utilisateur (mode Tri).
-import { View, Text } from "react-native";
+import { View } from "react-native";
+import Text from "./AppText";
 import { LinearGradient } from "expo-linear-gradient";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { labelFor } from "./SwipeEdgeHints";

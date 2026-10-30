@@ -1,9 +1,14 @@
 // screens/MomentScreen.js
 import { useMemo, useState, useEffect } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StatusBar, Dimensions, Modal,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+  Dimensions,
+  Modal,
 } from "react-native";
+import Text from "../components/AppText";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";

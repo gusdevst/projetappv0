@@ -2,7 +2,8 @@
 // Ligne de réglage réutilisable dans les paramètres
 // Usage : <RowSetting emoji="🔔" label="Notifs" desc="..." right={<Toggle />} />
 
-import { TouchableOpacity, View, Text } from "react-native";
+import { TouchableOpacity, View } from "react-native";
+import Text from "./AppText";
 import { C, S } from "../constants/theme";
 
 export function RowSetting({ emoji, label, desc, right, onPress }) {

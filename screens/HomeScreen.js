@@ -1,9 +1,20 @@
 // screens/HomeScreen.js
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
-  ScrollView, StatusBar, View, Text, Image,
-  TouchableOpacity, Alert, Modal, ActivityIndicator, Linking, PanResponder, Switch, TextInput,
+  ScrollView,
+  StatusBar,
+  View,
+  Image,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  ActivityIndicator,
+  Linking,
+  PanResponder,
+  Switch,
+  TextInput,
 } from "react-native";
+import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";

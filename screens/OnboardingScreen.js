@@ -3,7 +3,8 @@
 // Slides simples — pas de carousel complexe, juste un index local.
 
 import { useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, Image, Alert } from "react-native";
+import { View, TouchableOpacity, ActivityIndicator, Image, Alert } from "react-native";
+import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";

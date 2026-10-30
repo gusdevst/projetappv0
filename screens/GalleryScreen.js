@@ -5,9 +5,17 @@
 
 import { useState, useEffect } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity, Modal,
-  Dimensions, StatusBar, Alert, TextInput, Platform,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  Dimensions,
+  StatusBar,
+  Alert,
+  TextInput,
+  Platform,
 } from "react-native";
+import Text from "../components/AppText";
 import { Image } from "expo-image";
 
 let NavigationBar = null;

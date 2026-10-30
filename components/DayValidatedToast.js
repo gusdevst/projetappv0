@@ -4,7 +4,8 @@
 // compteur du jour dans le store et réagit au passage du seuil.
 // pointerEvents="none" : ne bloque jamais le swipe.
 import { useEffect, useRef, useState } from "react";
-import { Animated, Text, View, Platform } from "react-native";
+import { Animated, View, Platform } from "react-native";
+import Text from "./AppText";
 import { usePhotoStore, dayKey } from "../store/usePhotoStore";
 import { computeStreak, STREAK_MIN } from "../services/progressStats";
 

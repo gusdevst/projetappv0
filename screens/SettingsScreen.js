@@ -2,7 +2,8 @@
 // screens/SettingsScreen.js
 // ─────────────────────────────────────────────
 import { useState, useMemo } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Modal, StatusBar, Alert } from "react-native";
+import { View, ScrollView, TouchableOpacity, Modal, StatusBar, Alert } from "react-native";
+import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { RowSetting } from "../components/RowSetting";

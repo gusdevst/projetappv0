@@ -9,9 +9,16 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
-  View, Text, TouchableOpacity, TextInput, ScrollView,
-  StatusBar, KeyboardAvoidingView, Platform, PanResponder,
+  View,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
+  PanResponder,
 } from "react-native";
+import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";

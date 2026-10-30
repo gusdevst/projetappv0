@@ -4,7 +4,8 @@
 // Données : carnet de bord dailyLog du store. Barres = simples View.
 import { useState, useMemo, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { View, Text, TouchableOpacity, StatusBar, ScrollView } from "react-native";
+import { View, TouchableOpacity, StatusBar, ScrollView } from "react-native";
+import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore, dayKey } from "../store/usePhotoStore";

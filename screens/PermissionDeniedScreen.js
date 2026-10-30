@@ -2,7 +2,8 @@
 // Affiché si l'utilisateur a refusé l'accès aux photos.
 // iOS ne re-déclenche pas le prompt système après un refus — il faut passer par les Réglages.
 
-import { View, Text, TouchableOpacity, Linking, Platform } from "react-native";
+import { View, TouchableOpacity, Linking, Platform } from "react-native";
+import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";

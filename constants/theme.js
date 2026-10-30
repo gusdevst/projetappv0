@@ -64,6 +64,9 @@ export const THEME_ACTIF = "sauge"; // ← l'interrupteur : "sauge" ou "ardoise"
 export const C = PALETTES[THEME_ACTIF];
 export { PALETTES };
 
+// Police de l'app (intégrée au build via app.json → expo-font)
+export const FONT = "Outfit";
+
 export const FILTERS = [
   "Toutes",
   "7 derniers jours",

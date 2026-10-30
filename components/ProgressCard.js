@@ -4,7 +4,8 @@
 //   - l'évolution vs la même période la semaine dernière,
 //   - une mini-tendance des 7 derniers jours (petites barres).
 // Pas de librairie de graphe : les barres sont de simples View.
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity } from "react-native";
+import Text from "./AppText";
 import { C } from "../constants/theme";
 import { dayKey } from "../store/usePhotoStore";
 import { formatSize, sumRange, avgFor20, computeStreak } from "../services/progressStats";

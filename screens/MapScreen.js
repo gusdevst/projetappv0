@@ -14,7 +14,8 @@
 //   3. Ce composant se contente d'afficher geoPhotos, filtré des photos supprimées.
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator } from "react-native";
+import { View, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator } from "react-native";
+import Text from "../components/AppText";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";

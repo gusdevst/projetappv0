@@ -3,7 +3,8 @@
 // un appui = même effet que le swipe dans cette direction.
 // pointerEvents="box-none" : le calque laisse passer les gestes partout,
 // sauf sur les 4 zones d'appui.
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity } from "react-native";
+import Text from "./AppText";
 
 // action → libellé affiché sur le bord
 export function labelFor(action, isMenage) {

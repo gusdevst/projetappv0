@@ -8,7 +8,8 @@
 //   mode     → "menage" (tri) | "album" — change le texte et la couleur d'accent
 //   onClose  → appelé quand l'utilisateur tape "J'ai compris"
 
-import { View, Text, TouchableOpacity, Modal } from "react-native";
+import { View, TouchableOpacity, Modal } from "react-native";
+import Text from "./AppText";
 import { C, S } from "../constants/theme";
 
 // Contenu selon le mode. On garde 3 lignes max : court = lu.

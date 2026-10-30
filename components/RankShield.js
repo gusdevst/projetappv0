@@ -1,6 +1,7 @@
 // Écusson de galon : fond métal (bronze / argent / or) + 1 à 3 chevrons "^",
 // ou une étoile pour le grade ultime. Dessiné avec de simples View.
-import { View, Text } from "react-native";
+import { View } from "react-native";
+import Text from "./AppText";
 import { LinearGradient } from "expo-linear-gradient";
 
 export const METALS = {

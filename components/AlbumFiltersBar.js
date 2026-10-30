@@ -3,7 +3,8 @@
 // Affiche un chip par filtre actif (date / lieu / coup de cœur) avec une croix
 // pour le retirer. Les filtres se cumulent en INTERSECTION (ET).
 
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, TouchableOpacity, ScrollView } from "react-native";
+import Text from "./AppText";
 import { C } from "../constants/theme";
 
 const TYPE_EMOJI = { date: "📅", lieu: "🌍", coeur: "❤️", visage: "👤" };

@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import {
   View,
-  Text,
   TouchableOpacity,
   Animated,
   ActivityIndicator,
@@ -14,6 +13,7 @@ import {
   Image,
   Alert,
 } from "react-native";
+import Text from "../components/AppText";
 
 let NavigationBar = null;
 try {

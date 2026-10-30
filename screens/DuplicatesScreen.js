@@ -1,9 +1,18 @@
 // screens/DuplicatesScreen.js
 import { useMemo, useState, useRef, useEffect } from "react";
 import {
-  View, Text, TouchableOpacity,
-  StatusBar, Dimensions, Modal, FlatList, Platform, Animated, ActivityIndicator, Alert,
+  View,
+  TouchableOpacity,
+  StatusBar,
+  Dimensions,
+  Modal,
+  FlatList,
+  Platform,
+  Animated,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
+import Text from "../components/AppText";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";

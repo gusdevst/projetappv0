@@ -1,6 +1,7 @@
 // Grille des badges de l'écran Progression (maquette 4).
 // Gagnés : en couleur + date. À gagner : grisés + mini-barre + ce qu'il reste.
-import { View, Text } from "react-native";
+import { View } from "react-native";
+import Text from "./AppText";
 import { C } from "../constants/theme";
 import { BADGES } from "../services/achievements";
 

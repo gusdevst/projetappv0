@@ -1,5 +1,6 @@
 // screens/PartenairesScreen.js
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, Alert, Linking } from "react-native";
+import { View, ScrollView, TouchableOpacity, StatusBar, Alert, Linking } from "react-native";
+import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import BackButton from "../components/BackButton";
