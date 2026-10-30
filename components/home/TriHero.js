@@ -106,9 +106,6 @@ export default function TriHero({
               );
             })}
           </View>
-          <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginTop: 9 }}>
-            Le nombre de jours se met à jour en direct
-          </Text>
         </View>
       )}
 

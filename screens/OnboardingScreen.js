@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { View, TouchableOpacity, ActivityIndicator, Image, Alert } from "react-native";
 import Text from "../components/AppText";
+import Logo from "../components/Logo";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
@@ -98,10 +99,7 @@ export function OnboardingScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
         {slide.logo ? (
-          <Image
-            source={require("../assets/icon.png")}
-            style={{ width: 110, height: 110, borderRadius: 25, marginBottom: 24 }}
-          />
+          <View style={{ marginBottom: 24 }}><Logo size={110} /></View>
         ) : slide.demo === "swipe" ? (
           <SwipeDemo style={{ marginBottom: 24 }} />
         ) : (

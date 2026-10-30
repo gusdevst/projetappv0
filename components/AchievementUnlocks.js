@@ -111,9 +111,9 @@ export function RankUnlockModal() {
 
   return (
     <Modal transparent animationType="fade" visible onRequestClose={() => { shine.stopAnimation(); setRank(null); }}>
-      <View style={{ flex: 1, backgroundColor: "rgba(26,40,64,0.6)", alignItems: "center", justifyContent: "center", padding: 28 }}>
-        <View style={{ backgroundColor: "#fff", borderRadius: 22, padding: 22, width: "100%", maxWidth: 320, alignItems: "center" }}>
-          <Text style={{ fontSize: 11, fontWeight: "800", color: metal.text, letterSpacing: 0.6 }}>NOUVEAU GALON</Text>
+      <View style={{ flex: 1, backgroundColor: "rgba(35,39,31,0.55)", alignItems: "center", justifyContent: "center", padding: 28 }}>
+        <View style={{ backgroundColor: C.bgCard, borderRadius: 24, padding: 22, width: "100%", maxWidth: 320, alignItems: "center" }}>
+          <Text style={{ fontSize: 11, fontWeight: "600", color: metal.text, letterSpacing: 1 }}>NOUVEAU GALON</Text>
 
           <View style={{ marginVertical: 18, alignItems: "center", justifyContent: "center" }}>
             {/* Halo qui pulse derrière l'écusson */}
@@ -127,7 +127,7 @@ export function RankUnlockModal() {
             </Animated.View>
           </View>
 
-          <Text style={{ fontSize: 22, fontWeight: "900", color: C.text, textAlign: "center" }}>{rank.name}</Text>
+          <Text style={{ fontSize: 22, fontWeight: "600", color: C.text, textAlign: "center" }}>{rank.name}</Text>
           <Text style={{ fontSize: 13, color: C.textMuted, textAlign: "center", marginTop: 4 }}>
             {rank.min.toLocaleString("fr-FR")} photos triées.
             {next ? ` Prochain grade : ${next.name} (${next.min.toLocaleString("fr-FR")}).` : " Grade maximum atteint ⭐"}
@@ -135,9 +135,9 @@ export function RankUnlockModal() {
 
           <TouchableOpacity
             onPress={() => { shine.stopAnimation(); setRank(null); }}
-            style={{ backgroundColor: C.accent, borderRadius: 12, paddingVertical: 12, alignSelf: "stretch", alignItems: "center", marginTop: 18 }}
+            style={{ backgroundColor: C.accent, borderRadius: 14, paddingVertical: 13, alignSelf: "stretch", alignItems: "center", marginTop: 18 }}
           >
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>Continuer</Text>
+            <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Continuer</Text>
           </TouchableOpacity>
         </View>
       </View>

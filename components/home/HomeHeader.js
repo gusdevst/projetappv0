@@ -2,7 +2,8 @@
 // Haut de l'accueil : logo + « Pellicule » à gauche, ⚙️ à droite,
 // puis la bascule Tri / Créer un album avec la pastille ⇄ au centre.
 
-import { View, Image, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity } from "react-native";
+import Logo from "../Logo";
 import Text from "../AppText";
 import Icon from "../Icons";
 import { C } from "../../constants/theme";
@@ -25,7 +26,7 @@ export default function HomeHeader({ activeMode, onSwitchMode, onOpenSettings })
     <View>
       {/* ── Logo + nom (gauche) · Réglages (droite) ── */}
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
-        <Image source={require("../../assets/icon.png")} style={{ width: 34, height: 34, borderRadius: 10 }} />
+        <Logo size={34} />
         <Text style={{ flex: 1, marginLeft: 10, fontSize: 22, fontWeight: "600", color: C.text }}>Pellicule</Text>
         <TouchableOpacity
           onPress={onOpenSettings}
