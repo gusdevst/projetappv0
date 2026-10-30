@@ -237,6 +237,11 @@ export const usePhotoStore = create(
       randomCount: 30,
       setRandomCount: (n) => set({ randomCount: n }),
 
+      // Bouton 🔀 de l'accueil (façon Spotify) : allumé = « Lancer un tri » pioche
+      // randomCount photos au hasard. Mémorisé entre deux ouvertures de l'app.
+      shuffleOn: false,
+      setShuffleOn: (on) => set({ shuffleOn: on }),
+
       // Priorité de tri pour les sessions déclenchées par la notification.
       // type: "random" | "native_album" | "duplicates"
       // nativeAlbumId / nativeAlbumTitle : dossier natif sélectionné
@@ -580,6 +585,7 @@ export const usePhotoStore = create(
         swipeTutoSeen:           state.swipeTutoSeen,
         albumTutoSeen:           state.albumTutoSeen,
         randomCount:             state.randomCount,
+        shuffleOn:               state.shuffleOn,
         sortPriority:            state.sortPriority,
         freedMo:                 state.freedMo,
         dailyLog:                state.dailyLog,
