@@ -476,7 +476,7 @@ export function SwipeScreen({ navigation, route }) {
               style={{
                 backgroundColor: heartedThisPhoto ? "rgba(92,184,122,0.85)" : "rgba(92,184,122,0.2)",
                 borderWidth: 2,
-                borderColor: heartedThisPhoto ? "#5cb87a" : "rgba(92,184,122,.5)",
+                borderColor: heartedThisPhoto ? C.accent2 : "rgba(92,184,122,.5)",
                 borderRadius: S.radiusFull, padding: 18,
               }}
             >

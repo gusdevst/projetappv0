@@ -12,6 +12,7 @@
 import { View, TouchableOpacity, Text, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
 
+import { C } from "../constants/theme";
 export function PhotoGrid({
   photos,
   onPress,
@@ -46,7 +47,7 @@ export function PhotoGrid({
               width: size, height: size, borderRadius: 12, overflow: "hidden",
               // Bordure bleue sur les photos sélectionnées
               borderWidth: isSelected ? 3 : 0,
-              borderColor: isSelected ? "#3B82F6" : "transparent",
+              borderColor: isSelected ? C.accent : "transparent",
             }}
           >
             <Image
@@ -63,7 +64,7 @@ export function PhotoGrid({
               <View style={{
                 position: "absolute", top: 6, right: 6,
                 width: 22, height: 22, borderRadius: 11,
-                backgroundColor: "#3B82F6",
+                backgroundColor: C.accent,
                 alignItems: "center", justifyContent: "center",
                 borderWidth: 2, borderColor: "#fff",
               }}>

@@ -58,7 +58,7 @@ export function RankCard({ totalSorted, achievements }) {
               <View key={r.id} style={{
                 flexDirection: "row", alignItems: "center", gap: 10,
                 paddingVertical: 7, paddingHorizontal: isCurrent ? 8 : 0,
-                backgroundColor: isCurrent ? "#eef3fa" : "transparent", borderRadius: 10,
+                backgroundColor: isCurrent ? C.sage : "transparent", borderRadius: 10,
                 opacity: got || isCurrent ? 1 : 0.45,
               }}>
                 <RankShield metal={r.metal} chevrons={r.chevrons} size={24} locked={!got && !isCurrent} />

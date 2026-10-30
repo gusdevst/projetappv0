@@ -15,7 +15,7 @@ import { BadgesGrid } from "../components/BadgesGrid";
 import { buildContext } from "../services/achievements";
 
 const CHART_H   = 150;        // hauteur max d'une barre
-const BAR_LIGHT = "#b9c8de";  // barres passées
+const BAR_LIGHT = C.sage2;  // barres passées
 const DAY_LETTERS = ["L", "M", "M", "J", "V", "S", "D"];
 const MAX_BACK  = { week: 52, month: 12 }; // on remonte 1 an max
 

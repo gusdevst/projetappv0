@@ -95,7 +95,7 @@ export function ProgressCard({ dailyLog, onPress }) {
             style={{
               width: 7, borderRadius: 2,
               height: Math.max(3, (v / max) * 36),
-              backgroundColor: i === 6 ? C.accent : "#b9c8de",
+              backgroundColor: i === 6 ? C.accent : C.sage2,
             }}
           />
         ))}

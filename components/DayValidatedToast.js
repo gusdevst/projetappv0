@@ -8,6 +8,7 @@ import { Animated, Text, View, Platform } from "react-native";
 import { usePhotoStore, dayKey } from "../store/usePhotoStore";
 import { computeStreak, STREAK_MIN } from "../services/progressStats";
 
+import { C } from "../constants/theme";
 // Déjà affiché aujourd'hui ? (variable de module : survit au changement d'écran,
 // évite de ré-afficher après un ↩ annuler puis re-trier)
 let shownForDay = null;
@@ -48,7 +49,7 @@ export function DayValidatedToast() {
           { scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) },
         ],
         flexDirection: "row", alignItems: "center", gap: 10,
-        backgroundColor: "#1a2840", borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14,
+        backgroundColor: C.text, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14,
         shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 10,
       }}>
         <Text style={{ fontSize: 26 }}>🔥</Text>

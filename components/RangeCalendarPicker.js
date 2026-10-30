@@ -246,7 +246,7 @@ export function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm
                       <Text style={{
                         fontSize: 14,
                         fontWeight: isEndpoint || isToday ? "800" : "400",
-                        color: isEndpoint ? "#fff" : isFuture ? "#d0c0b0" : isToday ? accent : C.text,
+                        color: isEndpoint ? "#fff" : isFuture ? C.border : isToday ? accent : C.text,
                       }}>
                         {day}
                       </Text>
@@ -282,11 +282,11 @@ export function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm
 }
 
 const styles = {
-  navBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: "#f5f0eb", alignItems: "center", justifyContent: "center" },
+  navBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: C.bgMuted, alignItems: "center", justifyContent: "center" },
   navTxt: { fontSize: 20, color: C.text },
   headerChip: {
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
-    borderWidth: 1.5, borderColor: "transparent", backgroundColor: "#f5f0eb",
+    borderWidth: 1.5, borderColor: "transparent", backgroundColor: C.bgMuted,
   },
 };
 

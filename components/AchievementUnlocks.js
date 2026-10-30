@@ -63,7 +63,7 @@ export function BadgeUnlockBanner() {
           { scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) },
         ],
         flexDirection: "row", alignItems: "center", gap: 10, maxWidth: "100%",
-        backgroundColor: "#1a2840", borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14,
+        backgroundColor: C.text, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14,
         shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 12,
       }}>
         <Text style={{ fontSize: 26 }}>{badge.emoji}</Text>
