@@ -180,7 +180,7 @@ function applyFilter(photos, filter) {
 // - Tri   : pas de pastilles (dates → calendrier « Par date »), seulement Screenshots via « Dossiers »
 // - Album : "Toutes" et l'année en cours, en pastilles
 const MENAGE_FILTERS = ["Toutes", "Screenshots"];
-const ALBUM_DATE_FILTERS  = ["Toutes", "2026"]; // 2025 retiré : filtres sur une seule ligne
+const ALBUM_DATE_FILTERS  = ["Toutes"]; // plus de pastilles en mode Album (30 oct.)
 
 export function HomeScreen({ navigation, route }) {
   const kept              = usePhotoStore((state) => state.kept);
@@ -557,40 +557,10 @@ export function HomeScreen({ navigation, route }) {
           return (
             <View>
               <View style={{ alignItems: "center", marginTop: 6 }}>
-                <Text style={{ fontSize: 17, fontWeight: "500", color: C.text }}>Ton prochain album</Text>
-                <Text style={{ color: C.album, marginTop: 2 }}>
+                <Text style={{ color: C.album }}>
                   <Text style={{ fontSize: 38, fontWeight: "600" }}>{queue.length} </Text>
                   <Text style={{ fontSize: 20, fontWeight: "600" }}>photo{queue.length > 1 ? "s" : ""}</Text>
                 </Text>
-                <Text style={{ fontSize: 12.5, color: C.textMuted, marginTop: 2 }}>sélectionnée{queue.length > 1 ? "s" : ""}</Text>
-              </View>
-
-              {/* Filtres : Toutes · 2026 · Dossier */}
-              <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: 7, marginTop: 14 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <Icon name="filter" size={13} color={C.album} strokeWidth={2.4} />
-                  <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.album }}>Filtres</Text>
-                </View>
-                {dateFilters.map((f) => {
-                  const on = activeFilter === f;
-                  return (
-                    <TouchableOpacity key={f} onPress={() => { setActiveFilter(f); setDateRange(null); }}
-                      style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: on ? C.album : C.bgMuted }}>
-                      <Text style={{ fontSize: 12.5, fontWeight: "500", color: on ? "#fff" : C.textMid }}>{f}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-                <TouchableOpacity onPress={openAlbumPicker}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: selectedAlbum ? C.albumSoft : C.bgMuted }}>
-                  <Icon name="folder" size={13} color={selectedAlbum ? C.album : C.textMid} />
-                  <Text style={{ fontSize: 12.5, fontWeight: "500", color: selectedAlbum ? C.album : C.textMid, maxWidth: 100 }} numberOfLines={1}>
-                    {selectedAlbum ? selectedAlbum.title : "Dossier"}
-                  </Text>
-                  {selectedAlbum
-                    ? <TouchableOpacity onPress={clearAlbum} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Icon name="close" size={11} color={C.album} strokeWidth={2.6} /></TouchableOpacity>
-                    : <Text style={{ fontSize: 11, color: C.textMuted }}>▾</Text>}
-                </TouchableOpacity>
-                {albumFiltering && <ActivityIndicator size="small" color={C.album} />}
               </View>
 
               {/* Filtres combinés (dates, lieux ajoutés) */}
@@ -642,6 +612,15 @@ export function HomeScreen({ navigation, route }) {
               <View style={{ gap: 9 }}>
                 <ListRow icon="calendar" iconColor={C.album} iconBg={C.albumSoft} title="Par date" sub="Choisis une période" onPress={() => setShowCalendar(true)} />
                 <ListRow icon="pin" iconColor={C.album} iconBg={C.albumSoft} title="Par lieu" sub="Choisis sur la carte" onPress={() => navigation.navigate("Map", { mode: "album" })} />
+                <ListRow
+                  icon="folder" iconColor={C.album} iconBg={C.albumSoft} title="Dossiers"
+                  sub={selectedAlbum ? selectedAlbum.title : "Dossiers du téléphone"}
+                  subColor={selectedAlbum ? C.album : undefined}
+                  active={!!selectedAlbum} activeColor={C.album}
+                  right={selectedAlbum ? "close" : (albumFiltering ? <ActivityIndicator size="small" color={C.album} /> : "chevron")}
+                  onClear={clearAlbum}
+                  onPress={openAlbumPicker}
+                />
               </View>
             </View>
           );
@@ -684,53 +663,8 @@ export function HomeScreen({ navigation, route }) {
           );
         })()}
 
-        {/* ── Mode ALBUM : Mes albums (Coups de cœur = album auto) ─────────── */}
-        {!isMenage && (
-          <View>
-            <SectionTitle
-              title="Mes albums"
-              right={
-                <View style={{ flexDirection: "row", gap: 14 }}>
-                  <TouchableOpacity onPress={() => (queue.length > 0
-                    ? handleCTA()
-                    : Alert.alert("Aucune photo sélectionnée", "Choisis d'abord des photos avec les filtres au-dessus."))}>
-                    <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.album }}>+ Nouvel album</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => navigation.navigate("Gallery", { section: "album" })}>
-                    <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.textMuted }}>Tout voir ›</Text>
-                  </TouchableOpacity>
-                </View>
-              }
-            />
-            <View style={{ gap: 9 }}>
-              <AlbumRow
-                heart
-                title="Coups de cœur"
-                sub={`${kept.length} photo${kept.length > 1 ? "s" : ""} · rempli avec le ❤️`}
-                onPress={() => navigation.navigate("Gallery", { section: "kept" })}
-                onMenu={() => openAlbumMenu(null)}
-              />
-              {recentAlbums.map((a) => (
-                <AlbumRow
-                  key={a.id}
-                  cover={albumCover(a)}
-                  title={a.name}
-                  sub={`${a.photoIds.length} photo${a.photoIds.length > 1 ? "s" : ""}${a.updatedAt ? ` · ${timeAgo(a.updatedAt)}` : ""}`}
-                  onPress={() => navigation.navigate("Gallery", { section: "album", albumId: a.id })}
-                  onMenu={() => openAlbumMenu(a)}
-                />
-              ))}
-
-              {/* Impression : bientôt */}
-              <ListRow
-                icon="printer" iconColor={C.textMuted} iconBg={C.bgMuted}
-                title="Imprimer tes albums"
-                right={<Text style={{ fontSize: 10, fontWeight: "700", color: C.textMuted, backgroundColor: C.bgMuted, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, overflow: "hidden" }}>BIENTÔT</Text>}
-                onPress={() => Alert.alert("Bientôt disponible", "L'impression de tes albums arrive bientôt 🌸")}
-              />
-            </View>
-          </View>
-        )}
+        {/* « Mes albums » (Coups de cœur, albums, impression) : déplacé dans l'onglet Galerie.
+            AlbumRow / openAlbumMenu / renommage restent ici en attendant la refonte de la Galerie. */}
 
       </ScrollView>
 
