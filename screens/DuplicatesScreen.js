@@ -347,7 +347,7 @@ export function DuplicatesScreen({ navigation, route }) {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
         <BackButton mode="menage" onPress={() => navigation.goBack()} />
         <View>
-          <Text style={{ fontWeight: "800", fontSize: 18, color: C.text }}>
+          <Text style={{ fontWeight: "600", fontSize: 18, color: C.text }}>
             {maxGroups ? "Même instant · du jour" : "Même instant"}
           </Text>
           <Text style={{ fontSize: 11, color: C.textMuted }}>
@@ -379,7 +379,7 @@ export function DuplicatesScreen({ navigation, route }) {
                 }}
               >
                 <Text style={{ fontSize: 12 }}>{opt.icon}</Text>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: isActive ? "#fff" : C.textMuted }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: isActive ? "#fff" : C.textMuted }}>
                   {opt.label}
                 </Text>
               </TouchableOpacity>
@@ -399,7 +399,7 @@ export function DuplicatesScreen({ navigation, route }) {
       ) : groups.length === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 40 }}>
           <Text style={{ fontSize: 56, marginBottom: 12 }}>📷</Text>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: C.text, textAlign: "center" }}>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: C.text, textAlign: "center" }}>
             Aucune photo du même instant
           </Text>
           <Text style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 8, lineHeight: 18 }}>
@@ -427,10 +427,11 @@ export function DuplicatesScreen({ navigation, route }) {
                 onPress={() => setSelectedGroupIdx(isSelected ? null : idx)}
                 activeOpacity={isSelected ? 1 : 0.75}
                 style={{
-                  backgroundColor: isSelected ? `${C.accent}10` : C.bgCard,
+                  backgroundColor: isSelected ? C.sage : C.bgCard,
                   borderRadius: S.radius, padding: 14, marginBottom: 10,
                   borderWidth: isSelected ? 2 : 1,
-                  borderColor: isSelected ? C.accent : C.border,
+                  borderColor: isSelected ? C.accent : "transparent",
+                  shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -438,12 +439,12 @@ export function DuplicatesScreen({ navigation, route }) {
                     <Image source={{ uri: first.url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: "800", fontSize: 14, color: C.text }}>
+                    <Text style={{ fontWeight: "600", fontSize: 14, color: C.text }}>
                       {g.photos.length} photos du même instant
                     </Text>
                     <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{dateStr}</Text>
                   </View>
-                  <Text style={{ color: isSelected ? C.accent : C.textMuted, fontSize: 18, fontWeight: "800" }}>
+                  <Text style={{ color: isSelected ? C.accent : C.textMuted, fontSize: 18, fontWeight: "600" }}>
                     {isSelected ? "▾" : "›"}
                   </Text>
                 </View>
@@ -459,7 +460,7 @@ export function DuplicatesScreen({ navigation, route }) {
                       >
                         <Image source={{ uri: p.url }} style={{ width: PHOTO_SIZE, height: PHOTO_SIZE }} resizeMode="cover" />
                         <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.4)", paddingVertical: 5, alignItems: "center" }}>
-                          <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>Voir en plein écran</Text>
+                          <Text style={{ color: "#fff", fontSize: 10, fontWeight: "600" }}>Voir en plein écran</Text>
                         </View>
                       </TouchableOpacity>
                     ))}
@@ -544,7 +545,7 @@ export function DuplicatesScreen({ navigation, route }) {
               alignItems: "center",
             }}>
               <View style={{ backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
-                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
+                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 13 }}>
                   {groupSize > 1 ? `‹  ${fullscreen.idx + 1} / ${groupSize}  ›` : "1 / 1"}
                 </Text>
               </View>
@@ -563,7 +564,7 @@ export function DuplicatesScreen({ navigation, route }) {
                 shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.25, shadowRadius: 10, elevation: 10,
               }}>
-                <Text style={{ fontSize: 15, fontWeight: "800", color: "#111" }}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: "#111" }}>
                   Instant suivant →
                 </Text>
               </View>
@@ -614,7 +615,7 @@ export function DuplicatesScreen({ navigation, route }) {
                     }}
                   >
                     <Text style={{ fontSize: 18 }}>🗑</Text>
-                    <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>Tout supprimer</Text>
+                    <Text style={{ color: "#fff", fontWeight: "600", fontSize: 12 }}>Tout supprimer</Text>
                   </TouchableOpacity>
                 }
               />
@@ -647,7 +648,7 @@ export function DuplicatesScreen({ navigation, route }) {
                     shadowOpacity: 0.35, shadowRadius: 6, elevation: 6,
                   }}
                 >
-                  <Text style={{ fontSize: 20, color: "#222", fontWeight: "800" }}>↩</Text>
+                  <Text style={{ fontSize: 20, color: "#222", fontWeight: "600" }}>↩</Text>
                 </TouchableOpacity>
 
                 {/* ❤️ Coup de cœur */}

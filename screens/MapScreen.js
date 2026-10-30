@@ -234,7 +234,7 @@ export function MapScreen({ navigation, route }) {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
         <BackButton mode={mode} onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
-          <Text style={{ fontWeight: "800", fontSize: 18, color: C.text }}>Tri par lieu</Text>
+          <Text style={{ fontWeight: "600", fontSize: 18, color: C.text }}>Tri par lieu</Text>
           <Text style={{ fontSize: 11, color: C.textMuted }}>
             {loading
               ? "Chargement du cache GPS…"
@@ -246,7 +246,7 @@ export function MapScreen({ navigation, route }) {
         {selectionCount > 0 && (
           <TouchableOpacity
             onPress={() => setSelectedKeys(new Set())}
-            style={{ backgroundColor: C.bgCard, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: C.border }}
+            style={{ backgroundColor: C.bgCard, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 6, shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 }}
           >
             <Text style={{ fontSize: 12, color: C.textMuted }}>Tout désélectionner</Text>
           </TouchableOpacity>
@@ -255,7 +255,7 @@ export function MapScreen({ navigation, route }) {
 
       {/* Bandeau de progression du scan arrière-plan */}
       {geoScanProgress && (
-        <View style={{ marginHorizontal: S.pad, marginBottom: 8, backgroundColor: C.bgCard, borderRadius: S.radius, padding: 10, flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: C.border }}>
+        <View style={{ marginHorizontal: S.pad, marginBottom: 8, backgroundColor: C.bgCard, borderRadius: S.radius, padding: 10, flexDirection: "row", alignItems: "center", gap: 8, shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 }}>
           <ActivityIndicator size="small" color={accent} />
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 12, color: C.text, fontWeight: "600" }}>
@@ -279,7 +279,7 @@ export function MapScreen({ navigation, route }) {
       ) : photosWithGeo.length === 0 && !geoScanProgress ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
           <Text style={{ fontSize: 56, marginBottom: 12 }}>🌍</Text>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: C.text, textAlign: "center" }}>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: C.text, textAlign: "center" }}>
             Aucune photo géolocalisée
           </Text>
           <Text style={{ fontSize: 13, color: C.textMuted, textAlign: "center", marginTop: 8 }}>
@@ -290,7 +290,7 @@ export function MapScreen({ navigation, route }) {
         <>
           {/* Carte */}
           {/* La carte prend toute la place disponible : plus facile de zoomer et de toucher les lieux */}
-          <View style={{ flex: 1, minHeight: 380, marginHorizontal: S.pad, borderRadius: S.radius, overflow: "hidden", borderWidth: 1, borderColor: C.border }}>
+          <View style={{ flex: 1, minHeight: 380, marginHorizontal: S.pad, borderRadius: S.radius, overflow: "hidden", backgroundColor: C.bgCard, shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 }}>
             <WebView
               ref={webviewRef}
               source={webSource}
@@ -311,7 +311,7 @@ export function MapScreen({ navigation, route }) {
           <View style={{ padding: S.pad, paddingTop: 12 }}>
             {displayedPhotos.length > 0 && (
               <>
-                <Text style={{ fontWeight: "700", fontSize: 14, color: C.text, marginBottom: 10 }}>
+                <Text style={{ fontWeight: "600", fontSize: 14, color: C.text, marginBottom: 10 }}>
                   {selectionCount > 0
                     ? `${displayedPhotos.length} photo(s) dans ${selectionCount} lieu${selectionCount > 1 ? "x" : ""}`
                     : `${displayedPhotos.length} photos visibles`}
@@ -338,7 +338,7 @@ export function MapScreen({ navigation, route }) {
                 opacity: displayedPhotos.length === 0 ? 0.4 : 1,
               }}
             >
-              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
+              <Text style={{ color: "#fff", fontWeight: "600", fontSize: 15 }}>
                 🧹 Trier {selectionCount > 0 ? `ces ${displayedPhotos.length}` : "toutes les"} photos
               </Text>
             </TouchableOpacity>
@@ -348,7 +348,7 @@ export function MapScreen({ navigation, route }) {
                 onPress={addAsFilter}
                 style={{ marginTop: 8, borderRadius: S.radius, padding: 14, alignItems: "center", borderWidth: 1.5, borderColor: accent }}
               >
-                <Text style={{ color: accent, fontWeight: "800", fontSize: 14 }}>➕ Ajouter comme filtre</Text>
+                <Text style={{ color: accent, fontWeight: "600", fontSize: 14 }}>➕ Ajouter comme filtre</Text>
               </TouchableOpacity>
             )}
           </View>

@@ -63,11 +63,11 @@ export function PartenairesScreen({ navigation }) {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.border }}>
         <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
-          <Text style={{ fontWeight: "900", fontSize: 20, color: C.text }}>Mes partenaires</Text>
+          <Text style={{ fontWeight: "600", fontSize: 20, color: C.text }}>Mes partenaires</Text>
           <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>Codes exclusifs Pellicule</Text>
         </View>
         <View style={{ backgroundColor: `${C.accent}18`, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5 }}>
-          <Text style={{ fontSize: 11, fontWeight: "800", color: C.accent }}>3 offres</Text>
+          <Text style={{ fontSize: 11, fontWeight: "600", color: C.accent }}>3 offres</Text>
         </View>
       </View>
 
@@ -82,7 +82,7 @@ export function PartenairesScreen({ navigation }) {
         }}>
           <Text style={{ fontSize: 32 }}>🤝</Text>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "900", fontSize: 15, color: C.text, marginBottom: 3 }}>
+            <Text style={{ fontWeight: "600", fontSize: 15, color: C.text, marginBottom: 3 }}>
               Partenaires sélectionnés pour toi
             </Text>
             <Text style={{ fontSize: 12, color: C.textMuted, lineHeight: 17 }}>
@@ -97,7 +97,7 @@ export function PartenairesScreen({ navigation }) {
             key={p.name}
             style={{
               backgroundColor: C.bgCard, borderRadius: 18,
-              borderWidth: 1, borderColor: C.border,
+              shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
               marginBottom: 16, overflow: "hidden",
             }}
           >
@@ -107,11 +107,11 @@ export function PartenairesScreen({ navigation }) {
                 <Text style={{ fontSize: 26 }}>{p.emoji}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: "900", fontSize: 18, color: p.color }}>{p.name}</Text>
+                <Text style={{ fontWeight: "600", fontSize: 18, color: p.color }}>{p.name}</Text>
                 <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>{p.tagline}</Text>
               </View>
               <View style={{ backgroundColor: p.color, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5 }}>
-                <Text style={{ fontSize: 12, fontWeight: "900", color: "#fff" }}>-{p.discount}%</Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: "#fff" }}>-{p.discount}%</Text>
               </View>
             </View>
 
@@ -122,13 +122,13 @@ export function PartenairesScreen({ navigation }) {
               </Text>
 
               {/* Spécialités */}
-              <Text style={{ fontSize: 10, fontWeight: "800", color: C.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+              <Text style={{ fontSize: 10, fontWeight: "600", color: C.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
                 Spécialités
               </Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
                 {p.specialties.map((s) => (
                   <View key={s} style={{ backgroundColor: `${p.color}12`, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: `${p.color}30` }}>
-                    <Text style={{ fontSize: 11, fontWeight: "700", color: p.color }}>{s}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: p.color }}>{s}</Text>
                   </View>
                 ))}
               </View>
@@ -136,7 +136,7 @@ export function PartenairesScreen({ navigation }) {
               {/* Code promo */}
               <View style={{ backgroundColor: `${p.color}10`, borderRadius: 12, borderWidth: 1.5, borderColor: `${p.color}30`, padding: 12, alignItems: "center", marginBottom: 14 }}>
                 <Text style={{ fontSize: 10, color: C.textMuted, marginBottom: 3 }}>Ton code exclusif</Text>
-                <Text style={{ fontSize: 20, fontWeight: "900", color: p.color, letterSpacing: 2 }}>{p.code}</Text>
+                <Text style={{ fontSize: 20, fontWeight: "600", color: p.color, letterSpacing: 2 }}>{p.code}</Text>
                 <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>{p.discount}% de réduction sur ta commande</Text>
               </View>
 
@@ -149,7 +149,7 @@ export function PartenairesScreen({ navigation }) {
                   flexDirection: "row", justifyContent: "center", gap: 8,
                 }}
               >
-                <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>
+                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>
                   Commander sur {p.name}
                 </Text>
                 <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 14 }}>→</Text>
@@ -159,14 +159,14 @@ export function PartenairesScreen({ navigation }) {
         ))}
 
         {/* ── Bientôt disponible ───────────────────────────────────────── */}
-        <Text style={{ fontSize: 10, fontWeight: "800", color: C.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
+        <Text style={{ fontSize: 10, fontWeight: "600", color: C.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
           Bientôt disponible
         </Text>
         <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
           {COMING_SOON.map((p) => (
-            <View key={p.name} style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: C.border, alignItems: "center", opacity: 0.6 }}>
+            <View key={p.name} style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 14, padding: 14, shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2, alignItems: "center", opacity: 0.6 }}>
               <Text style={{ fontSize: 24, marginBottom: 6 }}>{p.emoji}</Text>
-              <Text style={{ fontWeight: "800", fontSize: 13, color: C.text }}>{p.name}</Text>
+              <Text style={{ fontWeight: "600", fontSize: 13, color: C.text }}>{p.name}</Text>
               <Text style={{ fontSize: 10, color: C.textMuted, textAlign: "center", marginTop: 3 }}>{p.desc}</Text>
             </View>
           ))}

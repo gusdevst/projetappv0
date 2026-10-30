@@ -27,7 +27,7 @@ export function PermissionDeniedScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
         <Text style={{ fontSize: 88, marginBottom: 24 }}>📷</Text>
-        <Text style={{ fontSize: 24, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 12 }}>
+        <Text style={{ fontSize: 24, fontWeight: "600", color: C.text, textAlign: "center", marginBottom: 12 }}>
           Accès aux photos refusé
         </Text>
         <Text style={{ fontSize: 15, color: C.textMuted, textAlign: "center", lineHeight: 22, marginBottom: 8 }}>
@@ -45,13 +45,13 @@ export function PermissionDeniedScreen() {
           onPress={openSettings}
           style={{ backgroundColor: C.accent, borderRadius: S.radius, padding: 18, alignItems: "center" }}
         >
-          <Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>Ouvrir les réglages</Text>
+          <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>Ouvrir les réglages</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={recheck}
-          style={{ backgroundColor: C.bgCard, borderRadius: S.radius, padding: 16, alignItems: "center", borderWidth: 1, borderColor: C.border }}
+          style={{ backgroundColor: C.bgCard, borderRadius: S.radius, padding: 16, alignItems: "center", shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 }}
         >
-          <Text style={{ color: C.text, fontWeight: "700", fontSize: 14 }}>J'ai activé l'accès, revérifier</Text>
+          <Text style={{ color: C.text, fontWeight: "600", fontSize: 14 }}>J'ai activé l'accès, revérifier</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

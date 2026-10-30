@@ -57,7 +57,7 @@ export function SessionTutoOverlay({ visible, mode = "menage", onClose }) {
           <Text
             style={{
               fontSize: 20,
-              fontWeight: "900",
+              fontWeight: "600",
               color: C.text,
               textAlign: "center",
               marginBottom: 20,
@@ -93,7 +93,7 @@ export function SessionTutoOverlay({ visible, mode = "menage", onClose }) {
               alignItems: "center",
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>J'ai compris</Text>
+            <Text style={{ color: "#fff", fontWeight: "600", fontSize: 15 }}>J'ai compris</Text>
           </TouchableOpacity>
         </View>
       </View>

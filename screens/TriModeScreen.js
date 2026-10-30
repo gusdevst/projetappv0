@@ -188,7 +188,7 @@ export function TriModeScreen({ navigation, route }) {
         </TouchableOpacity>
 
         <View style={{ flex: 1, padding: S.pad, justifyContent: "center" }}>
-          <Text style={{ fontSize: 26, fontWeight: "900", color: C.text, marginBottom: 6, textAlign: "center" }}>
+          <Text style={{ fontSize: 26, fontWeight: "600", color: C.text, marginBottom: 6, textAlign: "center" }}>
             Que veux-tu faire ?
           </Text>
           <Text style={{ fontSize: 14, color: C.textMuted, marginBottom: 36, textAlign: "center" }}>
@@ -203,16 +203,16 @@ export function TriModeScreen({ navigation, route }) {
               padding: 24,
               marginBottom: 16,
               alignItems: "center",
-              backgroundColor: "#1a1a1a",
+              backgroundColor: C.accent,
               elevation: 4,
-              shadowColor: "#000",
+              shadowColor: C.accent,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.18,
               shadowRadius: 10,
             }}
           >
             <Text style={{ fontSize: 42, marginBottom: 10 }}>🧹</Text>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", marginBottom: 6, textAlign: "center" }}>
+            <Text style={{ fontSize: 18, fontWeight: "600", color: "#fff", marginBottom: 6, textAlign: "center" }}>
               Faire le tri
             </Text>
             <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 19, textAlign: "center" }}>
@@ -236,7 +236,7 @@ export function TriModeScreen({ navigation, route }) {
             }}
           >
             <Text style={{ fontSize: 42, marginBottom: 10 }}>🖼️</Text>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", marginBottom: 6, textAlign: "center" }}>
+            <Text style={{ fontSize: 18, fontWeight: "600", color: "#fff", marginBottom: 6, textAlign: "center" }}>
               Créer / compléter un album
             </Text>
             <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.82)", lineHeight: 19, textAlign: "center" }}>
@@ -257,7 +257,7 @@ export function TriModeScreen({ navigation, route }) {
         <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 8 }}>
           <BackButton mode="album" onPress={() => skipToAlbum ? navigation.goBack() : setStep(0)} />
-          <Text style={{ fontWeight: "900", fontSize: 20, color: C.album }}>Album</Text>
+          <Text style={{ fontWeight: "600", fontSize: 20, color: C.album }}>Album</Text>
         </View>
 
         <View style={{ flex: 1, padding: S.pad, justifyContent: "center" }}>
@@ -277,7 +277,7 @@ export function TriModeScreen({ navigation, route }) {
             }}
           >
             <Text style={{ fontSize: 38, marginBottom: 10 }}>✨</Text>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", marginBottom: 6 }}>
+            <Text style={{ fontSize: 18, fontWeight: "600", color: "#fff", marginBottom: 6 }}>
               Créer un nouvel album
             </Text>
             <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.82)", lineHeight: 19 }}>
@@ -299,7 +299,7 @@ export function TriModeScreen({ navigation, route }) {
             }}
           >
             <Text style={{ fontSize: 38, marginBottom: 10 }}>📂</Text>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 6 }}>
+            <Text style={{ fontSize: 18, fontWeight: "600", color: C.text, marginBottom: 6 }}>
               Continuer un album existant
             </Text>
             <Text style={{ fontSize: 13, color: C.textMuted, lineHeight: 19 }}>
@@ -314,9 +314,9 @@ export function TriModeScreen({ navigation, route }) {
         <View style={{ padding: S.pad, paddingTop: 0 }}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={{ padding: 16, alignItems: "center", borderRadius: S.radius, borderWidth: 1.5, borderColor: C.border }}
+            style={{ padding: 16, alignItems: "center", borderRadius: S.radius, backgroundColor: C.bgCard, shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 }}
           >
-            <Text style={{ color: C.textMuted, fontWeight: "800", fontSize: 14 }}>← Revenir à l'accueil</Text>
+            <Text style={{ color: C.textMuted, fontWeight: "600", fontSize: 14 }}>← Revenir à l'accueil</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -333,7 +333,7 @@ export function TriModeScreen({ navigation, route }) {
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 8 }}>
           <BackButton mode="album" onPress={() => setStep(1)} />
-          <Text style={{ fontWeight: "900", fontSize: 20, color: C.album }}>
+          <Text style={{ fontWeight: "600", fontSize: 20, color: C.album }}>
             {albumSubStep === "new" ? "Nouvel album" : "Continuer un album"}
           </Text>
         </View>
@@ -354,10 +354,11 @@ export function TriModeScreen({ navigation, route }) {
                     key={a.id}
                     onPress={() => setSelectedExistingAlbum(a)}
                     style={{
-                      backgroundColor: isActive ? `${C.album}15` : C.bgCard,
+                      backgroundColor: isActive ? C.albumSoft : C.bgCard,
                       borderRadius: S.radius,
                       borderWidth: 1.5,
-                      borderColor: isActive ? C.album : C.border,
+                      borderColor: isActive ? C.album : "transparent",
+                      shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
                       padding: 14,
                       marginBottom: 8,
                       flexDirection: "row",
@@ -367,7 +368,7 @@ export function TriModeScreen({ navigation, route }) {
                   >
                     <Text style={{ fontSize: 22 }}>📕</Text>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>{a.name}</Text>
+                      <Text style={{ fontWeight: "600", fontSize: 14, color: C.text }}>{a.name}</Text>
                       <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
                         {a.photoIds.length} photo{a.photoIds.length > 1 ? "s" : ""}
                       </Text>
@@ -390,7 +391,7 @@ export function TriModeScreen({ navigation, route }) {
             }}>
               <Text style={{ fontSize: 22 }}>✅</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: "800", color: C.album }}>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: C.album }}>
                   {preQueue.length} photo{preQueue.length > 1 ? "s" : ""} déjà sélectionnée{preQueue.length > 1 ? "s" : ""}
                 </Text>
                 <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
@@ -432,10 +433,10 @@ export function TriModeScreen({ navigation, route }) {
               <View style={{
                 flexDirection: "row", alignItems: "center", gap: 10,
                 backgroundColor: C.bgCard, borderRadius: S.radius,
-                padding: 14, borderWidth: 1, borderColor: C.border, marginBottom: 28,
+                padding: 14, shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2, marginBottom: 28,
               }}>
                 <Text style={{ fontSize: 22 }}>📸</Text>
-                <Text style={{ fontSize: 15, fontWeight: "800", color: C.text }}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>
                   {filteredPhotos.length} photo{filteredPhotos.length > 1 ? "s" : ""} sélectionnée{filteredPhotos.length > 1 ? "s" : ""}
                 </Text>
                 {selectedKeys.length > 0 && (
@@ -461,7 +462,8 @@ export function TriModeScreen({ navigation, route }) {
                   backgroundColor: C.bgCard,
                   borderRadius: S.radius,
                   borderWidth: 1.5,
-                  borderColor: albumName.trim() ? C.album : C.border,
+                  borderColor: albumName.trim() ? C.album : "transparent",
+                  shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
                   paddingHorizontal: 16,
                   paddingVertical: 14,
                   fontSize: 15,
@@ -492,7 +494,7 @@ export function TriModeScreen({ navigation, route }) {
                 shadowOpacity: canLaunchNew ? 0.3 : 0, shadowRadius: 8,
               }}
             >
-              <Text style={{ color: "#fff", fontWeight: "900", fontSize: 15 }}>
+              <Text style={{ color: "#fff", fontWeight: "600", fontSize: 15 }}>
                 {filteredPhotos.length === 0
                   ? "Aucune photo dans cette période"
                   : albumName.trim() === ""
@@ -512,7 +514,7 @@ export function TriModeScreen({ navigation, route }) {
                 shadowOpacity: canLaunchExisting ? 0.3 : 0, shadowRadius: 8,
               }}
             >
-              <Text style={{ color: "#fff", fontWeight: "900", fontSize: 15 }}>
+              <Text style={{ color: "#fff", fontWeight: "600", fontSize: 15 }}>
                 {!selectedExistingAlbum
                   ? "Choisis un album pour continuer"
                   : filteredPhotos.length === 0
@@ -527,7 +529,7 @@ export function TriModeScreen({ navigation, route }) {
             onPress={() => navigation.goBack()}
             style={{ paddingVertical: 12, alignItems: "center", marginTop: 6 }}
           >
-            <Text style={{ color: C.textMuted, fontWeight: "800", fontSize: 14 }}>← Revenir à l'accueil</Text>
+            <Text style={{ color: C.textMuted, fontWeight: "600", fontSize: 14 }}>← Revenir à l'accueil</Text>
           </TouchableOpacity>
         </View>
 
@@ -538,7 +540,7 @@ export function TriModeScreen({ navigation, route }) {
 
 // ── Styles réutilisables ───────────────────────────────────────────────────────
 const sectionLabel = {
-  fontSize: 11, fontWeight: "800", color: C.textMuted,
+  fontSize: 11, fontWeight: "600", color: C.textMuted,
   textTransform: "uppercase", letterSpacing: 1.5,
   marginBottom: 10,
 };
@@ -548,4 +550,4 @@ const chip = {
 };
 const chipOn  = { borderColor: C.album, backgroundColor: `${C.album}15` };
 const chipOff = { borderColor: C.border, backgroundColor: C.bgCard };
-const chipText = { fontSize: 13, fontWeight: "700" };
+const chipText = { fontSize: 13, fontWeight: "600" };
