@@ -21,14 +21,18 @@ trop-plein de photos sans y passer des heures.
 
 ## 2. État actuel (au 2026-10-30)
 
-- Branche de travail : **`feature/themes`** (créée depuis `feature/progression` le 30 oct.).
-  Chantier : **refonte visuelle « sauge »** (voir §12). Accueil fait, reste les autres écrans.
+- Branche de travail : **`feature/barre-menu`** (créée depuis `feature/themes` le 30 oct.) :
+  barre de menu en bas (§12). À fusionner dans `feature/themes` une fois validée.
+- `feature/themes` : **refonte visuelle « sauge »** (§12). Faits : Accueil, Progression, Swipe, Bilan.
+  Reste : Galerie, Onboarding (maquettes) puis Réglages, Rappels, Même instant, Carte,
+  Partenaires, Permission refusée, Choix du mode (repeinture directe).
 - `feature/progression` : terminée, commitée, **pas encore fusionnée** dans `main`
   (attend son test TestFlight). C'est aussi le **retour arrière** si le thème casse tout.
 - `main` = fin de la session d'octobre (`ab35958 vdefversionoctobre`).
 - Ordre de fusion prévu : `feature/progression` → `main`, puis `feature/themes`.
 - Test au quotidien : **simulateur iOS du Mac** (`npx expo start --dev-client`, Fast Refresh).
-  Test sur vrai téléphone : TestFlight sur l'iPhone de sa femme (Augustin n'a pas d'iPhone).
+  Test sur vrai téléphone : **app de dev Android** sur le téléphone d'Augustin (build EAS
+  `development`, Metro en Wi-Fi) ; TestFlight sur l'iPhone de sa femme pour les versions beta.
 
 Tous les gros bugs de la phase proto sont **réglés** :
 NavigationContainer unique · écrans câblés au navigateur · vraies photos
@@ -65,7 +69,12 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 - `eas.json` — profils de build EAS (development / preview / production).
 
 **navigation/**
-- `AppNavigator.js` — déclare les 14 écrans (dont `Progress`). Un seul NavigationContainer (dans App.js).
+- `AppNavigator.js` — une pile (stack). Son 1er écran `Main` = **barre d'onglets** (bottom-tabs) :
+  `Home`, `ProgressTab`, `GalleryTab` (section albums), `SettingsTab` (params `inTab: true` →
+  pas de bouton retour). Progress, Gallery, Settings existent AUSSI dans la pile (ouverts depuis un
+  autre écran, avec bouton retour). Swipe, Bilan… passent par-dessus la barre.
+  Depuis un écran de la pile, aller sur l'accueil = `navigate("Main", { screen: "Home", params })`.
+  Un seul NavigationContainer (dans App.js).
 
 **store/**
 - `usePhotoStore.js` (~600 l.) — **cerveau de l'app**. État du tri, filtres albums,
@@ -91,8 +100,10 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
   fichier : `import Text from "../components/AppText";` (jamais `Text` depuis "react-native").
 - `Icons` — icônes au trait (react-native-svg) : `<Icon name="shuffle" color={C.accent} />`.
   `IconsBoard` = planche de toutes les icônes en bas de Réglages (`__DEV__` seulement).
-- `home/` — morceaux de l'accueil : `HomeHeader` (logo + nom, ⚙️, bascule Tri/Album),
-  `TriHero` (jours restants, pastille photos/session, bouton 🔀, Lancer un tri),
+- `TabBar` — barre du bas : Accueil · Progression · [⇄ bouton central Tri/Album] · Galerie · Réglages.
+- `Logo` — logo dessiné (piste B) aux couleurs du thème (cœur : moitié `accent`, moitié `album`).
+- `home/` — morceaux de l'accueil : `HomeHeader` (logo + nom, pastille « Mode Tri / Mode Album »),
+  `TriHero` (phrase des jours, pastille photos/session, barre, pastille corbeille, bouton 🔀, Lancer un tri),
   `FolderSheet` (Toute la photothèque / Screenshots / dossiers), `ui` (`SHADOW`, `SectionTitle`, `ListRow`).
 - Autres : `BackButton`, `Toggle`, `PhotoGrid`,
 `ZoomableImage`, `RowSetting`, `AlbumFiltersBar`, `SessionTutoOverlay` (overlay tuto),
@@ -246,9 +257,16 @@ Aussi `FONT` ("Outfit"), styles `S`. Ne jamais écrire une couleur en dur : pass
 le store → accueil refait (en-tête, héros Tri, Trier autrement, Au quotidien, mode Album) + nettoyage.
 
 **Accueil — décisions d'Augustin**
-- En-tête : logo + « Pellicule » à **gauche**, ⚙️ à **droite**. Sous-titre « Tes souvenirs méritent mieux » supprimé.
-- Héros Tri : « Ta galerie est triée dans ≈ X jours » ; « à raison d'une session de [30 ▾] photos par jour »
-  → la pastille ouvre 10/20/30/40/50 (même réglage `randomCount` que Réglages, défaut **30**).
+- En-tête : logo dessiné + « Pellicule » à **gauche**, pastille « Mode Tri / Mode Album » à droite
+  (touchable). Sous-titre « Tes souvenirs méritent mieux » supprimé. ⚙️ = onglet Réglages.
+- Héros Tri, **sur une ligne** : « Ta galerie sera triée dans ≈ X jours » (futur, demandé par Augustin) ;
+  « à raison d'une session de [30 ▾] photos par jour » → la pastille ouvre 10/20/30/40/50
+  (même réglage `randomCount` que Réglages, défaut **30**). Pas de phrase d'aide sous le choix.
+- **Corbeille** : petite pastille blanche sous le pourcentage (« 🗑 12 dans la corbeille · 340 Mo [Vider] »),
+  **seulement si la corbeille contient des photos**. Section « Au quotidien » supprimée.
+- **Rappel** : déplacé dans l'onglet **Progression** (carte sous l'objectif du jour).
+- **Barre de menu en bas** (option « bouton de mode au centre ») : le mode Tri/Album est dans le store
+  (`homeMode`, non persisté) pour que le bouton central puisse le changer. Barre agrandie à la demande.
 - Bouton principal : « Lancer un tri » (+ nombre de photos dessous).
 - **Bouton 🔀 façon Spotify** à gauche du bouton : éteint = gris ; allumé = vert (pas de point,
   pas de bandeau) et le bouton devient « Lancer un tri aléatoire · N photos au hasard ».
@@ -257,4 +275,9 @@ le store → accueil refait (en-tête, héros Tri, Trier autrement, Au quotidien
   7 derniers jours / Mois dernier / année en cours). Screenshots + dossiers → « Dossiers »
   (sous-titre « Screenshots et dossiers du téléphone »).
 - Mode Album : filtres Toutes / 2026 / Dossier gardés, mosaïque 1+2, « + Nouvel album », menu ···.
+
+**Autres écrans faits** : Progression (série en héros, semaine L→D avec ✓/🃏, galon restylé ;
+**badges : couleurs gardées telles quelles**, demandé par Augustin), Swipe (icônes au trait, ❤️ plein
+vert, halos aux couleurs du thème), Bilan + fenêtre « Nouveau galon ». Maquettes correspondantes dans
+`Claude outputs/` (swipe, bilan, logo, barre-menu, accueil-compact, corbeille-discrete).
 
