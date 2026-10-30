@@ -21,12 +21,12 @@ try {
 } catch (e) {}
 
 import { LinearGradient } from "expo-linear-gradient";
-import { C, S } from "../constants/theme";
+import { C, S, FONT } from "../constants/theme";
+import Icon from "../components/Icons";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { SessionTutoOverlay } from "../components/SessionTutoOverlay";
 import { SwipeEdgeHints } from "../components/SwipeEdgeHints";
-import { ExitIcon } from "../components/ExitIcon";
 import { DayValidatedToast } from "../components/DayValidatedToast";
 import { BadgeUnlockBanner } from "../components/AchievementUnlocks";
 import { sharePhoto, getShareableUri } from "../services/photoShare";
@@ -47,6 +47,23 @@ function getEdgeGradient(edge, color) {
 }
 
 const { width: SW, height: SH } = Dimensions.get("window");
+
+// "#4c7a2b" + 0.7 → "rgba(76,122,43,0.7)" : les halos suivent la palette du thème.
+function rgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+// Couleur du flash au moment du swipe, par action.
+const HALO = {
+  keep:     rgba(C.accent2, 0.75), // garder / coup de cœur
+  delete:   rgba(C.red, 0.72),
+  hesitate: "rgba(224,160,58,0.7)", // ambre (neutre, hors palette)
+  album:    rgba(C.album, 0.72),
+  share:    "rgba(125,155,179,0.7)", // bleu-gris (neutre, hors palette)
+};
+
+// Bouton rond « verre dépoli » posé sur la photo.
+const GLASS = { backgroundColor: "rgba(255,255,255,0.18)", borderWidth: 1, borderColor: "rgba(255,255,255,0.22)" };
 
 export function SwipeScreen({ navigation, route }) {
   const queue     = route.params?.queue     ?? [];
@@ -119,7 +136,7 @@ export function SwipeScreen({ navigation, route }) {
   const zoomableRef = useRef(null);
 
   const feedbackOpacity = useRef(new Animated.Value(0)).current;
-  const [feedbackColor, setFeedbackColor] = useState("rgba(232,99,122,0.7)");
+  const [feedbackColor, setFeedbackColor] = useState(HALO.delete);
   const [feedbackEdge, setFeedbackEdge]   = useState(null);
 
   useEffect(() => {
@@ -157,7 +174,7 @@ export function SwipeScreen({ navigation, route }) {
   const handleShare = async (dir) => {
     if (!photo || sharingRef.current) return;
     sharingRef.current = true;
-    flashFeedback("rgba(90,150,255,0.6)", dir);
+    flashFeedback(HALO.share, dir);
     const ok = await sharePhoto(photo.id);
     sharingRef.current = false;
     if (!ok) Alert.alert("Partage impossible", "Cette photo n'a pas pu être préparée pour le partage.");
@@ -202,12 +219,12 @@ export function SwipeScreen({ navigation, route }) {
       },
     ]);
 
-    if (actionKey === "delete")            flashFeedback("rgba(232,99,122,0.7)",  animDir);
+    if (actionKey === "delete")            flashFeedback(HALO.delete, animDir);
     // "skip" en album = "ne pas envoyer" → pas de halo (feedback serait trompeur)
-    if (actionKey === "skip" && isMenage) flashFeedback("rgba(92,184,122,0.7)",  animDir);
-    if (actionKey === "hesitate")         flashFeedback("rgba(255,165,0,0.65)",  animDir);
-    if (actionKey === "album")    flashFeedback("rgba(176,122,216,0.7)", animDir);
-    if (actionKey === "favorite") flashFeedback("rgba(92,184,122,0.7)", animDir);
+    if (actionKey === "skip" && isMenage) flashFeedback(HALO.keep, animDir);
+    if (actionKey === "hesitate")         flashFeedback(HALO.hesitate, animDir);
+    if (actionKey === "album")    flashFeedback(HALO.album, animDir);
+    if (actionKey === "favorite") flashFeedback(HALO.keep, animDir);
 
     if (actionKey === "delete")   { addDeleted(photo);   setSessionDeleted((p) => [...p, photo]); }
     if (actionKey === "album")    {
@@ -330,8 +347,8 @@ export function SwipeScreen({ navigation, route }) {
       )}
 
       {/* Barre de progression */}
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, zIndex: 20, backgroundColor: "#333" }}>
-        <View style={{ height: 3, width: `${pct}%`, backgroundColor: isAlbum ? C.album : C.accent }} />
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, zIndex: 20, backgroundColor: "rgba(255,255,255,0.18)" }}>
+        <View style={{ height: 3, width: `${pct}%`, backgroundColor: isAlbum ? C.albumSoft : C.sage2 }} />
       </View>
 
       {/* Header */}
@@ -349,18 +366,15 @@ export function SwipeScreen({ navigation, route }) {
           ) : (
             <TouchableOpacity
               onPress={() => navigation.goBack()}
-              style={{
-                backgroundColor: "rgba(255,255,255,0.2)", borderRadius: S.radiusFull,
-                paddingHorizontal: 14, paddingVertical: 8,
-              }}
+              style={[GLASS, { borderRadius: S.radiusFull, paddingHorizontal: 12, paddingVertical: 7 }]}
             >
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>← Retour</Text>
+              <Text style={{ color: "#fff", fontWeight: "500", fontSize: 12.5 }}>← Retour</Text>
             </TouchableOpacity>
           )}
 
           <View style={{ alignItems: "center" }}>
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>{photo.location}</Text>
-            <Text style={{ color: "rgba(255,255,255,.6)", fontSize: 11 }}>{photo.year}</Text>
+            <Text style={{ color: "#fff", fontWeight: "600", fontSize: 13, textShadowColor: "rgba(0,0,0,0.4)", textShadowRadius: 4 }}>{photo.location}</Text>
+            <Text style={{ color: "rgba(255,255,255,.7)", fontSize: 11, textShadowColor: "rgba(0,0,0,0.4)", textShadowRadius: 4 }}>{photo.year}</Text>
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -370,25 +384,22 @@ export function SwipeScreen({ navigation, route }) {
                 onPress={() => setShowAlbumPreview(true)}
                 style={{
                   flexDirection: "row", alignItems: "center", gap: 5,
-                  paddingHorizontal: 12, paddingVertical: 8,
-                  backgroundColor: `${C.album}59`,
+                  paddingHorizontal: 11, paddingVertical: 7,
+                  backgroundColor: rgba(C.album, 0.55), borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
                   borderRadius: S.radiusFull, maxWidth: 150,
                 }}
               >
-                <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }} numberOfLines={1}>
-                  📕 {albumName}
+                <Icon name="album" size={13} color="#fff" strokeWidth={2.2} />
+                <Text style={{ color: "#fff", fontSize: 11.5, fontWeight: "500", flexShrink: 1 }} numberOfLines={1}>
+                  {albumName}
                 </Text>
-                <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800", opacity: 0.85 }}>
+                <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600", opacity: 0.85 }}>
                   {albumPreviewPhotos.length} ›
                 </Text>
               </TouchableOpacity>
             ) : (
-              <View style={{
-                paddingHorizontal: 12, paddingVertical: 8,
-                backgroundColor: "rgba(255,255,255,0.2)",
-                borderRadius: S.radiusFull, maxWidth: 110,
-              }}>
-                <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>
+              <View style={[GLASS, { paddingHorizontal: 12, paddingVertical: 7, borderRadius: S.radiusFull, maxWidth: 110 }]}>
+                <Text style={{ color: "#fff", fontSize: 12, fontWeight: "500" }}>
                   {idx + 1} / {queue.length}
                 </Text>
               </View>
@@ -397,14 +408,9 @@ export function SwipeScreen({ navigation, route }) {
             {/* ⚙️ Paramètres — ouvre la section swipe du mode courant */}
             <TouchableOpacity
               onPress={() => navigation.navigate("Settings", { focusSection: mode })}
-              style={{
-                backgroundColor: "rgba(255,255,255,0.2)",
-                borderRadius: S.radiusFull,
-                width: 34, height: 34,
-                alignItems: "center", justifyContent: "center",
-              }}
+              style={[GLASS, { borderRadius: S.radiusFull, width: 34, height: 34, alignItems: "center", justifyContent: "center" }]}
             >
-              <Text style={{ fontSize: 15 }}>⚙️</Text>
+              <Icon name="gear" size={17} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -441,13 +447,9 @@ export function SwipeScreen({ navigation, route }) {
         <View style={{ alignItems: "center", gap: 5 }}>
           <TouchableOpacity
             onPress={handleFinDeTri}
-            style={{
-              backgroundColor: "rgba(255,255,255,0.12)",
-              borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
-              borderRadius: S.radiusFull, padding: 11,
-            }}
+            style={[GLASS, { borderRadius: S.radiusFull, width: 46, height: 46, alignItems: "center", justifyContent: "center" }]}
           >
-            <ExitIcon size={22} color="#fff" />
+            <Icon name="exit" size={21} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -457,14 +459,14 @@ export function SwipeScreen({ navigation, route }) {
             onPress={undo}
             disabled={!history.length}
             style={{
-              backgroundColor: history.length ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.4)",
-              borderWidth: 2, borderColor: "rgba(0,0,0,0.08)",
-              borderRadius: S.radiusFull, padding: 14,
-              shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.35, shadowRadius: 6, elevation: 6,
+              backgroundColor: history.length ? rgba(C.bgCard, 0.96) : rgba(C.bgCard, 0.45),
+              borderRadius: S.radiusFull, width: 54, height: 54,
+              alignItems: "center", justifyContent: "center",
+              shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.35, shadowRadius: 8, elevation: 6,
             }}
           >
-            <Text style={{ fontSize: 20, color: "#222", fontWeight: "800" }}>↩</Text>
+            <Icon name="undo" size={22} color={C.text} strokeWidth={2.2} />
           </TouchableOpacity>
         </View>
 
@@ -474,13 +476,14 @@ export function SwipeScreen({ navigation, route }) {
             <TouchableOpacity
               onPress={handleHeartPress}
               style={{
-                backgroundColor: heartedThisPhoto ? "rgba(92,184,122,0.85)" : "rgba(92,184,122,0.2)",
+                backgroundColor: heartedThisPhoto ? C.accent : rgba(C.accent, 0.28),
                 borderWidth: 2,
-                borderColor: heartedThisPhoto ? C.accent2 : "rgba(92,184,122,.5)",
-                borderRadius: S.radiusFull, padding: 18,
+                borderColor: heartedThisPhoto ? C.sage2 : rgba(C.sage3, 0.75),
+                borderRadius: S.radiusFull, width: 62, height: 62,
+                alignItems: "center", justifyContent: "center",
               }}
             >
-              <Text style={{ fontSize: 20 }}>{heartedThisPhoto ? "❤️✓" : "❤️"}</Text>
+              <Icon name="heart" size={26} color="#fff" strokeWidth={2} filled={heartedThisPhoto} />
             </TouchableOpacity>
           </View>
         )}
@@ -493,11 +496,12 @@ export function SwipeScreen({ navigation, route }) {
               onLongPress={() => setShowAlbumPicker(true)}
               delayLongPress={350}
               style={{
-                backgroundColor: "rgba(176,122,216,0.2)", borderWidth: 2, borderColor: "rgba(176,122,216,.5)",
-                borderRadius: S.radiusFull, padding: 18,
+                backgroundColor: rgba(C.album, 0.3), borderWidth: 2, borderColor: rgba(C.albumSoft, 0.7),
+                borderRadius: S.radiusFull, width: 62, height: 62,
+                alignItems: "center", justifyContent: "center",
               }}
             >
-              <Text style={{ fontSize: 20 }}>📕</Text>
+              <Icon name="album" size={25} color="#fff" strokeWidth={2} />
             </TouchableOpacity>
           </View>
         )}
@@ -514,16 +518,16 @@ export function SwipeScreen({ navigation, route }) {
         animationType="slide"
         onRequestClose={() => setShowAlbumPicker(false)}
       >
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" }}>
+        <View style={{ flex: 1, backgroundColor: "rgba(35,39,31,0.55)", justifyContent: "flex-end" }}>
           <View style={{
             backgroundColor: C.bg,
             borderTopLeftRadius: 28, borderTopRightRadius: 28,
             padding: 22, paddingBottom: 36, maxHeight: SH * 0.75,
           }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }}>Ajouter à un album</Text>
+              <Text style={{ fontSize: 18, fontWeight: "600", color: C.text }}>Ajouter à un album</Text>
               <TouchableOpacity onPress={() => setShowAlbumPicker(false)}>
-                <Text style={{ fontSize: 22, color: C.textMuted }}>✕</Text>
+                <Icon name="close" size={20} color={C.textMuted} />
               </TouchableOpacity>
             </View>
             <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 16 }}>
@@ -541,25 +545,25 @@ export function SwipeScreen({ navigation, route }) {
                     key={a.id}
                     onPress={() => handlePickAlbum(a.id)}
                     style={{
-                      backgroundColor: C.bgCard, borderRadius: 14, padding: 14,
-                      borderWidth: 1, borderColor: C.border, marginBottom: 8,
+                      backgroundColor: C.bgCard, borderRadius: 14, padding: 14, marginBottom: 8,
+                      shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
                       flexDirection: "row", alignItems: "center", justifyContent: "space-between",
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: C.text }}>{a.name}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: "500", color: C.text }}>{a.name}</Text>
                       <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
                         {a.photoIds.length} photo{a.photoIds.length > 1 ? "s" : ""}
                       </Text>
                     </View>
-                    <Text style={{ fontSize: 18, color: C.album }}>＋</Text>
+                    <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center" }}><Text style={{ fontSize: 17, color: C.album }}>＋</Text></View>
                   </TouchableOpacity>
                 ))
               )}
             </ScrollView>
 
             <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: C.border }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: C.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: C.textMuted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
                 Nouvel album
               </Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
@@ -572,7 +576,7 @@ export function SwipeScreen({ navigation, route }) {
                     flex: 1, backgroundColor: C.bgCard, borderRadius: 12,
                     borderWidth: 1, borderColor: C.border,
                     paddingHorizontal: 14, paddingVertical: 10,
-                    fontSize: 14, color: C.text,
+                    fontSize: 14, color: C.text, fontFamily: FONT,
                   }}
                 />
                 <TouchableOpacity
@@ -584,7 +588,7 @@ export function SwipeScreen({ navigation, route }) {
                     opacity: newAlbumName.trim() ? 1 : 0.4,
                   }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>Créer</Text>
+                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: 13 }}>Créer</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -599,18 +603,19 @@ export function SwipeScreen({ navigation, route }) {
         animationType="slide"
         onRequestClose={() => setShowAlbumPreview(false)}
       >
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" }}>
+        <View style={{ flex: 1, backgroundColor: "rgba(35,39,31,0.55)", justifyContent: "flex-end" }}>
           <View style={{
             backgroundColor: C.bg,
             borderTopLeftRadius: 28, borderTopRightRadius: 28,
             padding: 22, paddingBottom: 36, maxHeight: SH * 0.8,
           }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <Text style={{ fontSize: 18, fontWeight: "900", color: C.text }} numberOfLines={1}>
-                📕 {albumName}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                <Icon name="album" size={19} color={C.album} />
+                <Text style={{ fontSize: 18, fontWeight: "600", color: C.text, flexShrink: 1 }} numberOfLines={1}>{albumName}</Text>
+              </View>
               <TouchableOpacity onPress={() => setShowAlbumPreview(false)}>
-                <Text style={{ fontSize: 22, color: C.textMuted }}>✕</Text>
+                <Icon name="close" size={20} color={C.textMuted} />
               </TouchableOpacity>
             </View>
             <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 16 }}>
@@ -642,7 +647,7 @@ export function SwipeScreen({ navigation, route }) {
                 padding: 15, alignItems: "center",
               }}
             >
-              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>Continuer le tri →</Text>
+              <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Continuer le tri →</Text>
             </TouchableOpacity>
           </View>
         </View>

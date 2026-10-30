@@ -26,7 +26,7 @@ const LEN = 180;    // longueur de la zone d'appui
 
 // Ombre portée : garde le texte lisible sur une photo claire, sans fond coloré.
 const labelStyle = {
-  color: "#fff", fontSize: 12, fontWeight: "800", letterSpacing: 1.2, opacity: 0.9,
+  color: "#fff", fontSize: 12, fontWeight: "600", letterSpacing: 1.3, opacity: 0.92,
   textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
 };
 

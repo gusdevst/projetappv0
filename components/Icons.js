@@ -53,6 +53,18 @@ const ICONS = {
     <Rect x="3" y="3" width="8" height="8" rx="2" /><Rect x="13" y="3" width="8" height="8" rx="2" />
     <Rect x="3" y="13" width="8" height="8" rx="2" /><Rect x="13" y="13" width="8" height="8" rx="2" />
   </>),
+  timer: (c) => (<>
+    <Circle cx="12" cy="13" r="8" />
+    <Path d="M12 9v4l2.5 2M9 2h6" />
+  </>),
+  undo: (c) => (<>
+    <Path d="M9 14L4 9l5-5" />
+    <Path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+  </>),
+  exit: (c) => (<>
+    <Path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+    <Path d="M10 16l-4-4 4-4M6 12h10" />
+  </>),
   filter: (c) => <Path d="M4 5h16l-6 8v6l-4-2v-4z" />,
   chevronRight: (c) => <Path d="M9 5l7 7-7 7" />,
   close: (c) => <Path d="M6 6l12 12M18 6L6 18" />,

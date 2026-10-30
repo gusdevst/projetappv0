@@ -2,7 +2,7 @@
 
 > Fichier de passation. Lu en début de session pour retrouver l'état du projet
 > sans re-scanner tout le code. **À maintenir à jour** à chaque étape importante.
-> Dernière mise à jour : 2026-10-27.
+> Dernière mise à jour : 2026-10-30.
 
 ---
 
@@ -19,12 +19,16 @@ trop-plein de photos sans y passer des heures.
 
 ---
 
-## 2. État actuel (au 2026-10-27)
+## 2. État actuel (au 2026-10-30)
 
-- Branche de travail : **`feature/progression`** (créée depuis `main` le 26 oct.).
-  Tout est commité. À fusionner dans `main` après test TestFlight.
+- Branche de travail : **`feature/themes`** (créée depuis `feature/progression` le 30 oct.).
+  Chantier : **refonte visuelle « sauge »** (voir §12). Accueil fait, reste les autres écrans.
+- `feature/progression` : terminée, commitée, **pas encore fusionnée** dans `main`
+  (attend son test TestFlight). C'est aussi le **retour arrière** si le thème casse tout.
 - `main` = fin de la session d'octobre (`ab35958 vdefversionoctobre`).
-- Chantier en cours : **progression + gamification** (voir §11).
+- Ordre de fusion prévu : `feature/progression` → `main`, puis `feature/themes`.
+- Test au quotidien : **simulateur iOS du Mac** (`npx expo start --dev-client`, Fast Refresh).
+  Test sur vrai téléphone : TestFlight sur l'iPhone de sa femme (Augustin n'a pas d'iPhone).
 
 Tous les gros bugs de la phase proto sont **réglés** :
 NavigationContainer unique · écrans câblés au navigateur · vraies photos
@@ -42,7 +46,11 @@ NavigationContainer unique · écrans câblés au navigateur · vraies photos
 - Workflow natif : **dev-client Expo** (dossier `ios/` généré par prebuild, ignoré par Git).
 - Libs clés : expo-media-library, expo-notifications, expo-file-system,
   expo-image, expo-linear-gradient, react-native-reanimated + gesture-handler,
-  react-native-webview, **react-native-purchases (RevenueCat — installé mais PAS encore branché)**.
+  react-native-webview, **react-native-purchases (RevenueCat — installé mais PAS encore branché)**,
+  **react-native-svg** (icônes), **expo-font + @expo-google-fonts/outfit** (police).
+- Police **Outfit** intégrée au build (plugin `expo-font` dans `app.json`, 6 graisses 400→900
+  sous le nom « Outfit ») → `fontWeight` marche tel quel. Ajouter un module natif = rebuild
+  (`npx expo prebuild --platform ios --clean` puis `npx expo run:ios`).
 
 ---
 
@@ -78,7 +86,15 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 - `SummaryScreen` — bilan de session.
 - `SettingsScreen` · `PartenairesScreen` — réglages + partenaires impression.
 
-**components/** — briques UI réutilisables : `BackButton`, `Toggle`, `PhotoGrid`,
+**components/** — briques UI réutilisables :
+- `AppText` — **remplace le `Text` de React Native partout** (applique Outfit). Dans un nouveau
+  fichier : `import Text from "../components/AppText";` (jamais `Text` depuis "react-native").
+- `Icons` — icônes au trait (react-native-svg) : `<Icon name="shuffle" color={C.accent} />`.
+  `IconsBoard` = planche de toutes les icônes en bas de Réglages (`__DEV__` seulement).
+- `home/` — morceaux de l'accueil : `HomeHeader` (logo + nom, ⚙️, bascule Tri/Album),
+  `TriHero` (jours restants, pastille photos/session, bouton 🔀, Lancer un tri),
+  `FolderSheet` (Toute la photothèque / Screenshots / dossiers), `ui` (`SHADOW`, `SectionTitle`, `ListRow`).
+- Autres : `BackButton`, `Toggle`, `PhotoGrid`,
 `ZoomableImage`, `RowSetting`, `AlbumFiltersBar`, `SessionTutoOverlay` (overlay tuto),
 `SwipeEdgeHints` (actions sur les bords), icônes dessinées `ExitIcon` / `SwapIcon` / `RankShield`,
 `ProgressCard` (carte accueil), `RankCard` + `BadgesGrid` (écran Progression),
@@ -100,7 +116,9 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 **hooks/** — `useAndroidBack` (bouton retour Android), `useNotificationReminder`
 (logique d'activation des rappels, partagée).
 
-**constants/** — `theme.js` (couleurs `C`, styles `S`).
+**constants/** — `theme.js` : **plusieurs palettes** (`PALETTES.ardoise` = ancienne bleue,
+`PALETTES.sauge` = nouvelle). L'interrupteur `THEME_ACTIF` choisit celle utilisée → `C`.
+Aussi `FONT` ("Outfit"), styles `S`. Ne jamais écrire une couleur en dur : passer par `C`.
 
 ---
 
@@ -117,7 +135,7 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 
 - Repo : `https://github.com/gusdevst/projetappv0` (public, handle `gusdevst`).
 - **Branche de référence = `main`** (la plus à jour ; `retourbeta` y est déjà intégrée).
-- Branche de travail actuelle : `feature/progression`.
+- Branche de travail actuelle : `feature/themes` (un commit par petite étape = points de sauvegarde).
 - Branches plus anciennes (juin) probablement abandonnées : `fix/stabilisation-beta`,
   `feature/notifications`, `feature/couleurs`. À nettoyer un jour.
 - **Augustin commit et push lui-même depuis VS Code.** Ne pas push depuis le shell.
@@ -134,13 +152,21 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 2. **6 branches** : clarifier / supprimer les mortes.
 3. **RevenueCat installé mais pas configuré** (`Purchases.configure` absent) → le
    Premium payant n'est pas encore actif.
-4. **Écrans très longs** (`HomeScreen` ~1250 l., `GalleryScreen` ~860 l.) → à découper
-   en composants quand on y retouchera.
+4. **Écrans très longs** (`GalleryScreen` ~860 l.) → à découper en composants quand on y
+   retouchera. `HomeScreen` découpé le 30 oct. (~990 l., dont la fenêtre partenaires inutilisée).
+5. **Fenêtre « Nos partenaires impression »** dans `HomeScreen` (PRODUCTS, Cheerz/CEWE/Photobox) :
+   plus aucun bouton ne l'ouvre. À supprimer ou rebrancher (décision d'Augustin).
+6. **Avant TestFlight du thème** : retirer `IconsBoard` de Réglages ; passer la couleur des
+   notifications (`app.json`, `#2e4d7a` ardoise) en vert sauge ; champs `TextInput` hors
+   Accueil pas encore en Outfit.
 
 ---
 
 ## 8. Prochaines étapes probables
 
+0. **Thème sauge** (§12) : écran Progression, puis maquette + code écran par écran
+   (Swipe en priorité, Bilan, Même instant, Galerie, Réglages, Rappels, Carte, Partenaires, Onboarding).
+   Plus tard : choix de la couleur par l'utilisateur (le mécanisme `PALETTES` est prêt).
 1. Build TestFlight de `feature/progression` et test sur plusieurs jours
    (rappels datés, série, déblocages).
 2. Fusionner `feature/progression` dans `main` (`git merge --ff-only`).
@@ -205,3 +231,30 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 - Onboarding : slide 🔥 « Fais grimper ta série » (entre Rappels et Album).
 - Préférences d'Augustin : il valide les maquettes (HTML) avant chaque UI, et
   **on ne change pas ses textes sans son accord**.
+
+---
+
+## 12. Session 30 oct. 2026 (branche `feature/themes`) — thème « sauge »
+
+**Maquettes validées** (dans `Claude outputs/`, hors Git) : `maquette-accueil-sauge-v2.html`
+(accueil complet, feuilles Par date / Dossiers, bouton 🔀, pastille session),
+`maquette-progression-sauge.html`. Palette : fonds blanc cassé chaud, vert forêt `#4c7a2b`
+(Tri), terracotta `#b8653f` (Album), nuances sauge `#dfe8d2 / #c9d9b4 / #a9c48b`.
+
+**Fait (commits dans l'ordre)** : palette sauge + ardoise gardée → couleurs en dur rebranchées
+(hors Accueil) → Outfit + react-native-svg → `AppText` partout → `Icons` → `shuffleOn` dans
+le store → accueil refait (en-tête, héros Tri, Trier autrement, Au quotidien, mode Album) + nettoyage.
+
+**Accueil — décisions d'Augustin**
+- En-tête : logo + « Pellicule » à **gauche**, ⚙️ à **droite**. Sous-titre « Tes souvenirs méritent mieux » supprimé.
+- Héros Tri : « Ta galerie est triée dans ≈ X jours » ; « à raison d'une session de [30 ▾] photos par jour »
+  → la pastille ouvre 10/20/30/40/50 (même réglage `randomCount` que Réglages, défaut **30**).
+- Bouton principal : « Lancer un tri » (+ nombre de photos dessous).
+- **Bouton 🔀 façon Spotify** à gauche du bouton : éteint = gris ; allumé = vert (pas de point,
+  pas de bandeau) et le bouton devient « Lancer un tri aléatoire · N photos au hasard ».
+  État `shuffleOn` persisté. Pas de ligne « Aléatoire » dans la liste (trop lourd).
+- Mode Tri : **plus de pastilles de filtres**. Dates → « Par date » (calendrier + raccourcis
+  7 derniers jours / Mois dernier / année en cours). Screenshots + dossiers → « Dossiers »
+  (sous-titre « Screenshots et dossiers du téléphone »).
+- Mode Album : filtres Toutes / 2026 / Dossier gardés, mosaïque 1+2, « + Nouvel album », menu ···.
+

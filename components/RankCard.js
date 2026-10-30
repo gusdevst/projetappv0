@@ -16,16 +16,17 @@ export function RankCard({ totalSorted, achievements }) {
   const nextMetal = next ? METALS[next.metal] : null;
 
   return (
-    <View style={{ backgroundColor: C.bgCard, borderRadius: 18, borderWidth: 1, borderColor: C.border, padding: 14, marginBottom: 10 }}>
+    <View style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 14, marginBottom: 10,
+      shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
         {current
           ? <RankShield metal={current.metal} chevrons={current.chevrons} size={44} />
           : <RankShield metal="bronze" chevrons={1} size={44} locked />}
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 11, fontWeight: "800", color: C.textMuted, letterSpacing: 0.4 }}>
+          <Text style={{ fontSize: 10.5, fontWeight: "600", color: C.textMuted, letterSpacing: 0.6 }}>
             TON GALON · {level}/{RANKS.length}
           </Text>
-          <Text style={{ fontSize: 20, fontWeight: "900", color: C.text }}>{current ? current.name : "Pas encore de galon"}</Text>
+          <Text style={{ fontSize: 20, fontWeight: "600", color: C.text }}>{current ? current.name : "Pas encore de galon"}</Text>
           <Text style={{ fontSize: 12, color: C.textMuted }}>{fmtNum(totalSorted)} photo{totalSorted > 1 ? "s" : ""} triée{totalSorted > 1 ? "s" : ""}</Text>
         </View>
       </View>
@@ -34,20 +35,20 @@ export function RankCard({ totalSorted, achievements }) {
       {next ? (
         <>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 12 }}>
-            <Text style={{ fontSize: 12, fontWeight: "800", color: C.text }}>Encore {fmtNum(left)} photo{left > 1 ? "s" : ""}</Text>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: C.text }}>Encore {fmtNum(left)} photo{left > 1 ? "s" : ""}</Text>
             <Text style={{ fontSize: 12, color: C.textMuted }}>→ {next.name}</Text>
           </View>
-          <View style={{ height: 7, borderRadius: 4, backgroundColor: C.border, marginTop: 6, overflow: "hidden" }}>
-            <View style={{ height: 7, borderRadius: 4, width: `${Math.round(progress * 100)}%`, backgroundColor: nextMetal.text }} />
+          <View style={{ height: 8, borderRadius: 5, backgroundColor: C.bgMuted, marginTop: 6, overflow: "hidden" }}>
+            <View style={{ height: 8, borderRadius: 5, width: `${Math.round(progress * 100)}%`, backgroundColor: nextMetal.text }} />
           </View>
         </>
       ) : (
-        <Text style={{ fontSize: 12, fontWeight: "800", color: METALS.gold.text, marginTop: 12 }}>Grade maximum atteint ⭐</Text>
+        <Text style={{ fontSize: 12, fontWeight: "600", color: METALS.gold.text, marginTop: 12 }}>Grade maximum atteint ⭐</Text>
       )}
 
       {/* Échelle des grades (dépliable) */}
       <TouchableOpacity onPress={() => setOpen(!open)} style={{ alignItems: "center", marginTop: 12 }} hitSlop={{ top: 8, bottom: 8 }}>
-        <Text style={{ fontSize: 12, fontWeight: "800", color: C.accent }}>{open ? "Masquer les grades ▴" : "Voir tous les grades ▾"}</Text>
+        <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.accent }}>{open ? "Masquer les grades ▴" : "Voir tous les grades ▾"}</Text>
       </TouchableOpacity>
 
       {open && (
@@ -63,7 +64,7 @@ export function RankCard({ totalSorted, achievements }) {
                 opacity: got || isCurrent ? 1 : 0.45,
               }}>
                 <RankShield metal={r.metal} chevrons={r.chevrons} size={24} locked={!got && !isCurrent} />
-                <Text style={{ flex: 1, fontSize: 13, fontWeight: "700", color: C.text }}>
+                <Text style={{ flex: 1, fontSize: 13, fontWeight: "500", color: C.text }}>
                   {r.name}{isCurrent ? <Text style={{ fontSize: 10, color: C.accent }}>  · actuel</Text> : null}
                 </Text>
                 <Text style={{ fontSize: 11, color: C.textMuted }}>

@@ -55,11 +55,12 @@ export const STREAK_MIN = 10;
 export function computeStreak(log) {
   const today = noon(new Date());
   const keys = Object.keys(log || {}).sort();
-  const empty = { current: 0, best: 0, todayDone: false, todayLeft: STREAK_MIN, jokerUsedThisWeek: false };
+  const empty = { current: 0, best: 0, todayDone: false, todayLeft: STREAK_MIN, jokerUsedThisWeek: false, jokerDays: [] };
   if (keys.length === 0) return empty;
 
   const [y, m, d] = keys[0].split("-").map(Number);
   const jokerWeeks = new Set(); // semaines (clé du lundi) où le joker a déjà servi
+  const jokerDays  = new Set(); // jours rattrapés par le joker (affichés 🃏 dans Progression)
   let run = 0, best = 0;
 
   // On parcourt du plus ancien jour jusqu'à hier.
@@ -68,7 +69,7 @@ export function computeStreak(log) {
       run += 1;
     } else {
       const week = dayKey(mondayOf(day));
-      if (run > 0 && !jokerWeeks.has(week)) jokerWeeks.add(week); // joker : la série tient
+      if (run > 0 && !jokerWeeks.has(week)) { jokerWeeks.add(week); jokerDays.add(dayKey(day)); } // joker : la série tient
       else run = 0;                                                // série cassée
     }
     best = Math.max(best, run);
@@ -83,5 +84,6 @@ export function computeStreak(log) {
     todayDone,
     todayLeft: Math.max(0, STREAK_MIN - todaySorted),
     jokerUsedThisWeek: jokerWeeks.has(dayKey(mondayOf(today))),
+    jokerDays: [...jokerDays],
   };
 }
