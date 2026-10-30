@@ -44,17 +44,18 @@ export function ProgressCard({ dailyLog, onPress }) {
       disabled={!onPress}
       activeOpacity={0.8}
       style={{
-        backgroundColor: C.bgCard, borderRadius: 16, borderWidth: 1, borderColor: C.border,
+        backgroundColor: C.bgCard, borderRadius: 16,
         padding: 14, flexDirection: "row", alignItems: "center", gap: 12,
+        shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
       }}
     >
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text style={{ fontSize: 11, fontWeight: "800", color: C.textMuted, letterSpacing: 0.4 }}>CETTE SEMAINE</Text>
+          <Text style={{ fontSize: 10.5, fontWeight: "600", color: C.textMuted, letterSpacing: 0.6 }}>CETTE SEMAINE</Text>
           {/* Série 🔥 : grisée tant que la journée n'est pas validée */}
           {streak.current > 0 && (
             <View style={{ backgroundColor: streak.todayDone ? "#fdeee2" : C.bg, borderRadius: 9, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 11, fontWeight: "800", color: streak.todayDone ? "#d9641e" : C.textMuted }}>
+              <Text style={{ fontSize: 10.5, fontWeight: "600", color: streak.todayDone ? "#d9641e" : C.textMuted }}>
                 🔥 {streak.current} j
               </Text>
             </View>
@@ -66,12 +67,12 @@ export function ProgressCard({ dailyLog, onPress }) {
           </Text>
         ) : (
           <>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginVertical: 2 }}>
+            <Text style={{ fontSize: 17, fontWeight: "600", color: C.text, marginVertical: 2 }}>
               {week.sorted} photo{week.sorted > 1 ? "s" : ""} · {formatSize(week.freedMo)}
             </Text>
             {pct !== null ? (
               <Text style={{ fontSize: 11.5, color: C.textMuted }}>
-                <Text style={{ fontWeight: "800", color: pct >= 0 ? C.green : C.textMuted }}>
+                <Text style={{ fontWeight: "600", color: pct >= 0 ? C.accent : C.textMuted }}>
                   {pct >= 0 ? "▲" : "▼"} {pct >= 0 ? "+" : ""}{pct} %
                 </Text>
                 {"  "}vs semaine dernière
@@ -81,7 +82,7 @@ export function ProgressCard({ dailyLog, onPress }) {
             )}
             {pace && (
               <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2 }}>
-                ⏱ 20 photos en ≈ <Text style={{ fontWeight: "800", color: C.text }}>{pace}</Text>
+                ⏱ 20 photos en ≈ <Text style={{ fontWeight: "600", color: C.text }}>{pace}</Text>
               </Text>
             )}
           </>
@@ -94,7 +95,7 @@ export function ProgressCard({ dailyLog, onPress }) {
           <View
             key={i}
             style={{
-              width: 7, borderRadius: 2,
+              width: 8, borderRadius: 3,
               height: Math.max(3, (v / max) * 36),
               backgroundColor: i === 6 ? C.accent : C.sage2,
             }}
@@ -102,7 +103,7 @@ export function ProgressCard({ dailyLog, onPress }) {
         ))}
       </View>
 
-      {onPress && <Text style={{ color: C.textMuted, fontSize: 18, fontWeight: "800" }}>›</Text>}
+      {onPress && <Text style={{ color: C.textMuted, fontSize: 18 }}>›</Text>}
     </TouchableOpacity>
   );
 }

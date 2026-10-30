@@ -53,6 +53,7 @@ const ICONS = {
     <Rect x="3" y="3" width="8" height="8" rx="2" /><Rect x="13" y="3" width="8" height="8" rx="2" />
     <Rect x="3" y="13" width="8" height="8" rx="2" /><Rect x="13" y="13" width="8" height="8" rx="2" />
   </>),
+  filter: (c) => <Path d="M4 5h16l-6 8v6l-4-2v-4z" />,
   chevronRight: (c) => <Path d="M9 5l7 7-7 7" />,
   close: (c) => <Path d="M6 6l12 12M18 6L6 18" />,
   check: (c) => <Path d="M5 12.5l4.5 4.5L19 7.5" />,

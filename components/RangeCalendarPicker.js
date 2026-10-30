@@ -23,7 +23,9 @@ export function dateLabel(d) {
  * 1er tap = date de début, 2e tap = date de fin.
  * Les jours entre les deux sont surlignés.
  */
-export function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCancel, accent = C.accent, minYear }) {
+// shortcuts (optionnel) : raccourcis de période [{ label, from, to }] affichés au-dessus du calendrier.
+// onConfirm(from, to, label) : label = nom du raccourci choisi (null si période choisie à la main).
+export function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm, onCancel, accent = C.accent, minYear, shortcuts = [] }) {
   const today = new Date();
   const init  = initialFrom || today;
 
@@ -36,7 +38,18 @@ export function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm
   // "header" : null = grille des jours, "month" = choix du mois, "year" = choix de l'année
   const [header, setHeader] = useState(null);
   // À chaque réouverture, on repart sur la grille des jours.
-  useEffect(() => { if (visible) setHeader(null); }, [visible]);
+  useEffect(() => { if (visible) { setHeader(null); setPickedShortcut(null); } }, [visible]);
+  // Raccourci choisi (« 7 derniers jours »…) ; effacé dès qu'on touche un jour.
+  const [pickedShortcut, setPickedShortcut] = useState(null);
+  function pickShortcut(sc) {
+    setRangeFrom(sc.from);
+    setRangeTo(sc.to);
+    setViewYear(sc.to.getFullYear());
+    setViewMonth(sc.to.getMonth());
+    setPicking("from");
+    setHeader(null);
+    setPickedShortcut(sc.label);
+  }
 
   // Bornes de l'année : de la plus vieille photo jusqu'à l'année courante.
   const firstYear = Math.min(minYear ?? today.getFullYear() - 12, today.getFullYear());
@@ -75,6 +88,7 @@ export function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm
 
   function handleDayPress(day) {
     const tapped = new Date(viewYear, viewMonth, day);
+    setPickedShortcut(null);
     if (picking === "from") {
       setRangeFrom(tapped);
       setRangeTo(null);
@@ -118,6 +132,24 @@ export function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm
             <Text style={{ fontWeight: "800", fontSize: 16, color: C.text, textAlign: "center", marginBottom: 6 }}>
               Choisir une période
             </Text>
+
+            {/* Raccourcis de période */}
+            {shortcuts.length > 0 && (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 7, marginBottom: 12 }}>
+                {shortcuts.map((sc) => {
+                  const on = pickedShortcut === sc.label;
+                  return (
+                    <TouchableOpacity
+                      key={sc.label}
+                      onPress={() => pickShortcut(sc)}
+                      style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: on ? accent : C.bgMuted }}
+                    >
+                      <Text style={{ fontSize: 12.5, fontWeight: "500", color: on ? "#fff" : C.textMid }}>{sc.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
 
             {/* Indicateur de l'étape en cours */}
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, justifyContent: "center" }}>
@@ -268,7 +300,7 @@ export function RangeCalendarPicker({ visible, initialFrom, initialTo, onConfirm
                 <Text style={{ color: C.textMuted, fontWeight: "700" }}>Annuler</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => canConfirm && onConfirm(rangeFrom, rangeTo)}
+                onPress={() => canConfirm && onConfirm(rangeFrom, rangeTo, pickedShortcut)}
                 disabled={!canConfirm}
                 style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: canConfirm ? accent : `${accent}40`, alignItems: "center" }}
               >
