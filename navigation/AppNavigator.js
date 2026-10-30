@@ -5,6 +5,8 @@
 
 import { Dimensions } from "react-native";
 import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { TabBar } from "../components/TabBar";
 
 import { OnboardingScreen }       from "../screens/OnboardingScreen";
 import { PermissionDeniedScreen } from "../screens/PermissionDeniedScreen";
@@ -23,6 +25,22 @@ import { ProgressScreen }         from "../screens/ProgressScreen";
 import { usePhotoStore }          from "../store/usePhotoStore";
 
 const Stack = createStackNavigator();
+const Tab   = createBottomTabNavigator();
+
+// Écrans « principaux » accessibles par la barre du bas.
+// inTab: true → ces écrans masquent leur bouton retour (on change d'onglet à la place).
+// Progression, Galerie et Réglages existent AUSSI dans la pile plus bas : ouverts depuis
+// un autre écran (ex. Galerie sur la corbeille), ils gardent leur bouton retour.
+function MainTabs() {
+  return (
+    <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
+      <Tab.Screen name="Home"        component={HomeScreen} />
+      <Tab.Screen name="ProgressTab" component={ProgressScreen} initialParams={{ inTab: true }} />
+      <Tab.Screen name="GalleryTab"  component={GalleryScreen}  initialParams={{ inTab: true, section: "album" }} />
+      <Tab.Screen name="SettingsTab" component={SettingsScreen} initialParams={{ inTab: true }} />
+    </Tab.Navigator>
+  );
+}
 const W     = Dimensions.get("window").width;
 
 // Options communes : transition iOS + swipe-to-go-back sur tout l'écran gauche
@@ -55,7 +73,7 @@ export function AppNavigator() {
 
   return (
     <Stack.Navigator screenOptions={defaultOptions}>
-      <Stack.Screen name="Home"       component={HomeScreen} />
+      <Stack.Screen name="Main"       component={MainTabs} />
       <Stack.Screen name="TriMode"    component={TriModeScreen}
         options={{ cardStyleInterpolator: CardStyleInterpolators.forModalPresentationIOS, gestureDirection: "vertical" }}
       />

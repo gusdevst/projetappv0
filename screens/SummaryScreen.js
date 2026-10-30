@@ -285,7 +285,7 @@ export function SummaryScreen({ navigation, route }) {
         {/* ── CTA création d'album (mode ménage uniquement) ────────────── */}
         {!isAlbum && (
         <TouchableOpacity
-          onPress={() => navigation.navigate("Home", { startMode: "album" })}
+          onPress={() => navigation.navigate("Main", { screen: "Home", params: { startMode: "album" } })}
           style={{
             backgroundColor: C.albumSoft,
             borderRadius: 18,

@@ -94,6 +94,7 @@ const getActionMeta = (key, mode) => {
 export function SettingsScreen({ navigation, route }) {
   // focusSection = "menage" | "album" — passé depuis SwipeScreen via le bouton ⚙️
   const focusSection = route?.params?.focusSection ?? null;
+  const inTab = !!route?.params?.inTab; // onglet de la barre du bas → pas de bouton retour
 
   const [showTutorial, setShowTutorial]         = useState(false);
   const [tutorialIdx, setTutorialIdx]           = useState(0);
@@ -190,7 +191,7 @@ export function SettingsScreen({ navigation, route }) {
   }).join("  ");
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+    <SafeAreaView edges={inTab ? ["top", "left", "right"] : undefined} style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
 
       {/* En-tête */}
@@ -198,7 +199,7 @@ export function SettingsScreen({ navigation, route }) {
         flexDirection: "row", alignItems: "center", gap: 12,
         padding: S.pad, paddingBottom: 8,
       }}>
-        <BackButton accentColor={C.accent} onPress={() => navigation.goBack()} />
+        {!inTab && <BackButton accentColor={C.accent} onPress={() => navigation.goBack()} />}
         <Text style={{ fontWeight: "900", fontSize: 22, color: C.text }}>Paramètres</Text>
       </View>
 

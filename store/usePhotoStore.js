@@ -240,6 +240,13 @@ export const usePhotoStore = create(
       // Bouton 🔀 de l'accueil (façon Spotify) : allumé = « Lancer un tri » pioche
       // randomCount photos au hasard. Mémorisé entre deux ouvertures de l'app.
       shuffleOn: false,
+
+      // Mode affiché sur l'accueil : "menage" (Tri) ou "album".
+      // Dans le store (et pas dans l'écran) pour que le bouton central de la
+      // barre du bas puisse le changer. Non sauvegardé : l'app s'ouvre en Tri.
+      homeMode: "menage",
+      setHomeMode: (m) => set({ homeMode: m }),
+      toggleHomeMode: () => set((st) => ({ homeMode: st.homeMode === "menage" ? "album" : "menage" })),
       setShuffleOn: (on) => set({ shuffleOn: on }),
 
       // Priorité de tri pour les sessions déclenchées par la notification.

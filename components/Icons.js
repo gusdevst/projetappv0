@@ -73,6 +73,11 @@ const ICONS = {
     <Path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
     <Path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" />
   </>),
+  home: (c) => (<>
+    <Path d="M4 11l8-7 8 7v9H4z" />
+    <Path d="M10 20v-6h4v6" />
+  </>),
+  chart: (c) => <Path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
   filter: (c) => <Path d="M4 5h16l-6 8v6l-4-2v-4z" />,
   chevronRight: (c) => <Path d="M9 5l7 7-7 7" />,
   close: (c) => <Path d="M6 6l12 12M18 6L6 18" />,

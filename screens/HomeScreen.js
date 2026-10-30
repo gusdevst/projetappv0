@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Linking,
   PanResponder,
-  Switch,
   TextInput,
 } from "react-native";
 import Text from "../components/AppText";
@@ -28,7 +27,6 @@ import { getAlbums, getAlbumAssetIds } from "../services/photoLibrary";
 import { AlbumFiltersBar } from "../components/AlbumFiltersBar";
 import { RangeCalendarPicker, dateLabel } from "../components/RangeCalendarPicker";
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
-import { cancelReminders } from "../services/notificationService";
 import { ProgressCard } from "../components/ProgressCard";
 import { BadgeUnlockBanner, RankUnlockModal } from "../components/AchievementUnlocks";
 
@@ -206,12 +204,10 @@ export function HomeScreen({ navigation, route }) {
   const renameAlbum       = usePhotoStore((state) => state.renameAlbum);
   const deleteAlbum       = usePhotoStore((state) => state.deleteAlbum);
   const dailyLog          = usePhotoStore((state) => state.dailyLog); // carnet de bord → carte progression
-  const notificationHour   = usePhotoStore((state) => state.notificationHour);
-  const notificationMinute = usePhotoStore((state) => state.notificationMinute);
-  const setNotificationFrequency = usePhotoStore((state) => state.setNotificationFrequency);
 
   // ── Mode actif : ménage (orange) ou album (violet) ──────────────────────
-  const [activeMode, setActiveMode] = useState("menage");
+  const activeMode  = usePhotoStore((state) => state.homeMode);
+  const setHomeMode = usePhotoStore((state) => state.setHomeMode);
   const isMenage = activeMode === "menage";
   const modeColor = isMenage ? C.accent : C_ALBUM;
 
@@ -226,11 +222,16 @@ export function HomeScreen({ navigation, route }) {
 
   // Bascule de mode : réinitialise le filtre s'il n'existe pas dans le nouveau mode
   function switchMode(key) {
-    setActiveMode(key);
-    setDateRange(null);
-    const allowed = key === "menage" ? MENAGE_FILTERS : ALBUM_DATE_FILTERS;
-    setActiveFilter((f) => (allowed.includes(f) ? f : "Toutes"));
+    setHomeMode(key);
   }
+
+  // Quand le mode change (ici ou depuis le bouton central de la barre du bas) :
+  // on efface la période et on remet un filtre valide pour ce mode.
+  useEffect(() => {
+    setDateRange(null);
+    const allowed = activeMode === "menage" ? MENAGE_FILTERS : ALBUM_DATE_FILTERS;
+    setActiveFilter((f) => (allowed.includes(f) ? f : "Toutes"));
+  }, [activeMode]);
 
   const screenPan = useRef(
     PanResponder.create({
@@ -408,19 +409,6 @@ export function HomeScreen({ navigation, route }) {
     );
   }
 
-  // Interrupteur du rappel : ON = rappel quotidien (heure des Réglages), OFF = tout annuler.
-  async function toggleReminder(on) {
-    if (on) {
-      const result = await enableReminders("daily");
-      if (!result?.success) {
-        Alert.alert("Notifications bloquées", "Pour recevoir des rappels, autorise les notifications de Pellicule dans les Réglages de ton téléphone.");
-      }
-    } else {
-      await cancelReminders();
-      setNotificationFrequency("off");
-    }
-  }
-
   // ── Mes albums (mode Album) ──────────────────────────────────────────────
   const photoById = useMemo(() => new Map(libraryPhotos.map((p) => [p.id, p])), [libraryPhotos]);
   // Couverture = dernière photo ajoutée encore présente dans la photothèque.
@@ -513,7 +501,7 @@ export function HomeScreen({ navigation, route }) {
 
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} {...screenPan.panHandlers}>
+    <SafeAreaView edges={["top", "left", "right"]} style={{ flex: 1, backgroundColor: C.bg }} {...screenPan.panHandlers}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
 
       <ScrollView
@@ -521,12 +509,8 @@ export function HomeScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* ── En-tête + bascule Tri / Album ──────────────────────────────── */}
-        <HomeHeader
-          activeMode={activeMode}
-          onSwitchMode={switchMode}
-          onOpenSettings={() => navigation.navigate("Settings")}
-        />
+        {/* ── En-tête : logo + pastille du mode (la bascule est dans la barre du bas) ── */}
+        <HomeHeader activeMode={activeMode} onSwitchMode={switchMode} />
 
         {/* ── Mode TRI : héros (jours restants, session, 🔀, Lancer un tri) ── */}
         {isMenage && (() => {
@@ -553,6 +537,11 @@ export function HomeScreen({ navigation, route }) {
                 : `${count} photo${count > 1 ? "s" : ""}`}
               ctaDisabled={loading || count === 0}
               onLaunch={handleCTA}
+              trashCount={deleted.length}
+              trashSizeLabel={formatSize(deletedSize)}
+              onOpenTrash={() => navigation.navigate("Gallery", { section: "deleted" })}
+              onEmptyTrash={handleEmptyTrash}
+              emptying={emptying}
             />
           );
         })()}
@@ -687,46 +676,9 @@ export function HomeScreen({ navigation, route }) {
                 />
               </View>
 
-              {/* ── Au quotidien : corbeille + rappel (1 carte), puis la semaine ── */}
-              <SectionTitle title="Au quotidien" />
-              <View style={[{ flexDirection: "row", alignItems: "center", backgroundColor: C.bgCard, borderRadius: 16, padding: 12 }, SHADOW]}>
-                {/* Gauche : Corbeille (tap = ouvrir, « Vider › » = vider) */}
-                <TouchableOpacity onPress={() => navigation.navigate("Gallery", { section: "deleted" })} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 9 }}>
-                  <View style={[iconBox, { backgroundColor: C.redSoft }]}><Icon name="trash" size={17} color={C.red} strokeWidth={2} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13.5, fontWeight: "500", color: C.text }} numberOfLines={1}>
-                      {deleted.length > 0 ? `${deleted.length} photo${deleted.length > 1 ? "s" : ""}` : "Corbeille vide"}
-                    </Text>
-                    {deleted.length > 0 && (
-                      <TouchableOpacity onPress={handleEmptyTrash} disabled={emptying} hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }} style={{ marginTop: 1, alignSelf: "flex-start" }}>
-                        {emptying
-                          ? <ActivityIndicator size="small" color={C.red} />
-                          : <Text style={{ fontSize: 11.5, color: C.textMuted }} numberOfLines={1}>
-                              {formatSize(deletedSize)} · <Text style={{ color: C.red, fontWeight: "600" }}>Vider ›</Text>
-                            </Text>}
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </TouchableOpacity>
-
-                <View style={{ width: 1, alignSelf: "stretch", backgroundColor: C.border, marginHorizontal: 8 }} />
-
-                {/* Droite : Rappel (tap = réglages des rappels, interrupteur = activer/désactiver) */}
-                <TouchableOpacity onPress={() => navigation.navigate("Rappels")} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 9 }}>
-                  <View style={[iconBox, { backgroundColor: C.sage }]}><Icon name="bell" size={17} color={C.accent} strokeWidth={2} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13.5, fontWeight: "500", color: C.text }} numberOfLines={1}>Rappel</Text>
-                    <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 1 }} numberOfLines={1}>
-                      {notificationsEnabled ? `${notificationHour}:${String(notificationMinute).padStart(2, "0")}` : "Désactivé"}
-                    </Text>
-                  </View>
-                  <Switch value={notificationsEnabled} onValueChange={toggleReminder} trackColor={{ true: C.accent, false: C.border }} thumbColor="#fff" />
-                </TouchableOpacity>
-              </View>
-
               {/* Progression de la semaine. Tap → écran Progression. */}
-              <View style={{ marginTop: 9 }}>
-                <ProgressCard dailyLog={dailyLog} onPress={() => navigation.navigate("Progress")} />
+              <View style={{ marginTop: 14 }}>
+                <ProgressCard dailyLog={dailyLog} onPress={() => navigation.navigate("ProgressTab")} />
               </View>
             </View>
           );

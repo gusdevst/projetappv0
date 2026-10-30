@@ -71,6 +71,7 @@ const SECTION_CONFIG = {
 
 export function GalleryScreen({ navigation, route }) {
   const section = route?.params?.section ?? "kept";
+  const inTab = !!route?.params?.inTab; // onglet de la barre du bas → retour seulement dans un album
   const config  = SECTION_CONFIG[section] ?? SECTION_CONFIG.kept;
   const { title, accent, showEmpty } = config;
 
@@ -290,18 +291,18 @@ export function GalleryScreen({ navigation, route }) {
 
   // ─── Render ─────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+    <SafeAreaView edges={inTab ? ["top", "left", "right"] : undefined} style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
 
       {/* ── Header ── */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <BackButton
+        {(!inTab || activeAlbumId) && <BackButton
           accentColor={section === "album" ? C.album : config.accent}
           onPress={() => {
             if (activeAlbumId) { setActiveAlbumId(null); }
             else { navigation.goBack(); }
           }}
-        />
+        />}
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: "800", fontSize: 20, color: C.text }}>
             {activeAlbum ? activeAlbum.name : activeAlbumId === "__sans_album__" ? "Sans album" : title}

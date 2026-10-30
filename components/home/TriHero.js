@@ -1,10 +1,10 @@
 // components/home/TriHero.js
-// Mode Tri : illustration, « Ta galerie est triée dans ≈ X jours »,
+// Mode Tri : illustration, « Ta galerie sera triée dans ≈ X jours »,
 // pastille du nombre de photos par session (10 → 50), barre d'avancement,
 // puis bouton 🔀 aléatoire (façon Spotify) + « Lancer un tri ».
 
 import { useState } from "react";
-import { View, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity, ActivityIndicator } from "react-native";
 import Svg, { Defs, LinearGradient, Stop, Ellipse, Rect, Path, G, Circle } from "react-native-svg";
 import Text from "../AppText";
 import Icon from "../Icons";
@@ -49,6 +49,7 @@ export default function TriHero({
   randomCount, onChangeRandomCount,
   shuffleOn, onToggleShuffle,
   ctaTitle, ctaSub, ctaDisabled, onLaunch,
+  trashCount = 0, trashSizeLabel, onOpenTrash, onEmptyTrash, emptying,
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const choices = SESSION_CHOICES.includes(randomCount)
@@ -64,10 +65,10 @@ export default function TriHero({
           <Text style={{ fontSize: 24, fontWeight: "600", color: C.accent, marginTop: 6 }}>🎉 Tout est trié !</Text>
         ) : (
           <>
-            <Text style={{ fontSize: 17, fontWeight: "500", color: C.text, marginTop: 4 }}>Ta galerie est triée dans</Text>
-            <Text style={{ color: C.accent, marginTop: 2 }}>
-              <Text style={{ fontSize: 38, fontWeight: "600" }}>≈ {dureeVal} </Text>
-              <Text style={{ fontSize: 20, fontWeight: "600" }}>{dureeUnit}</Text>
+            {/* Une seule ligne : « Ta galerie sera triée dans ≈ 38 jours » */}
+            <Text style={{ fontSize: 15.5, fontWeight: "500", color: C.text, marginTop: 4, textAlign: "center" }} numberOfLines={1} adjustsFontSizeToFit>
+              Ta galerie sera triée dans{" "}
+              <Text style={{ fontSize: 23, fontWeight: "600", color: C.accent }}>≈ {dureeVal} {dureeUnit}</Text>
             </Text>
 
             {/* Phrase + pastille touchable du nombre de photos par session */}
@@ -117,6 +118,32 @@ export default function TriHero({
         <Text style={{ fontWeight: "600", color: C.text }}>{Math.round(progressPct)} %</Text>
         {" · "}{triees} triées · <Text style={{ fontWeight: "600", color: C.text }}>{trieesSizeLabel}</Text> triés
       </Text>
+
+      {/* Corbeille : petite pastille, seulement s'il y a des photos à supprimer */}
+      {trashCount > 0 && (
+        <View style={{ alignItems: "center", marginTop: 10 }}>
+          <TouchableOpacity
+            onPress={onOpenTrash}
+            activeOpacity={0.8}
+            style={[{ flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: C.bgCard, borderRadius: 20, paddingVertical: 5, paddingLeft: 11, paddingRight: 6 }, SHADOW]}
+          >
+            <Icon name="trash" size={15} color={C.red} strokeWidth={2} />
+            <Text style={{ fontSize: 12, color: C.textMid }}>
+              <Text style={{ fontWeight: "600", color: C.text }}>{trashCount}</Text> dans la corbeille · {trashSizeLabel}
+            </Text>
+            <TouchableOpacity
+              onPress={onEmptyTrash}
+              disabled={emptying}
+              hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
+              style={{ backgroundColor: C.redSoft, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 3 }}
+            >
+              {emptying
+                ? <ActivityIndicator size="small" color={C.red} />
+                : <Text style={{ fontSize: 12, fontWeight: "600", color: C.red }}>Vider</Text>}
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Bouton 🔀 aléatoire + bouton principal */}
       <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>

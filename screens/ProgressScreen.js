@@ -4,7 +4,9 @@
 // Données : carnet de bord dailyLog du store. Barres = simples View.
 import { useState, useMemo, useCallback } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { View, TouchableOpacity, StatusBar, ScrollView } from "react-native";
+import { View, TouchableOpacity, StatusBar, ScrollView, Switch, Alert } from "react-native";
+import { useNotificationReminder } from "../hooks/useNotificationReminder";
+import { cancelReminders } from "../services/notificationService";
 import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Stop, Ellipse, Path } from "react-native-svg";
@@ -79,7 +81,8 @@ function FlameIllustration({ dim }) {
   );
 }
 
-export function ProgressScreen({ navigation }) {
+export function ProgressScreen({ navigation, route }) {
+  const inTab = !!route?.params?.inTab; // onglet de la barre du bas → pas de bouton retour
   const dailyLog = usePhotoStore((s) => s.dailyLog);
   const [mode, setMode]     = useState("week"); // "week" | "month"
   const [offset, setOffset] = useState(0);      // 0 = période actuelle, -1 = précédente…
@@ -91,6 +94,24 @@ export function ProgressScreen({ navigation }) {
   }), { sorted: 0, freedMo: 0, timedCount: 0, activeMs: 0 });
   const pace = avgFor20(total); // temps moyen pour 20 photos sur la période
   const streak = useMemo(() => computeStreak(dailyLog), [dailyLog]);
+
+  // ── Rappel (même logique qu'avant sur l'accueil) ──
+  const notificationHour         = usePhotoStore((s) => s.notificationHour);
+  const notificationMinute       = usePhotoStore((s) => s.notificationMinute);
+  const setNotificationFrequency = usePhotoStore((s) => s.setNotificationFrequency);
+  const { notificationsEnabled, enableReminders } = useNotificationReminder();
+  // ON = rappel quotidien (heure des Réglages), OFF = tout annuler.
+  async function toggleReminder(on) {
+    if (on) {
+      const result = await enableReminders("daily");
+      if (!result?.success) {
+        Alert.alert("Notifications bloquées", "Pour recevoir des rappels, autorise les notifications de Pellicule dans les Réglages de ton téléphone.");
+      }
+    } else {
+      await cancelReminders();
+      setNotificationFrequency("off");
+    }
+  }
 
   // Semaine en cours (lundi → dimanche) pour la rangée de pastilles.
   const weekDays = useMemo(() => {
@@ -123,12 +144,12 @@ export function ProgressScreen({ navigation }) {
   const canNext = offset < 0;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+    <SafeAreaView edges={inTab ? ["top", "left", "right"] : undefined} style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
 
       {/* ── Header ── */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
-        <BackButton mode="menage" onPress={() => navigation.goBack()} />
+        {!inTab && <BackButton mode="menage" onPress={() => navigation.goBack()} />}
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: "600", fontSize: 20, color: C.text }}>Ta progression</Text>
           <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>Photos triées et espace libéré</Text>
@@ -185,6 +206,24 @@ export function ProgressScreen({ navigation }) {
             </Text>
           </View>
         </View>
+
+        {/* ── Rappel (déplacé depuis l'accueil) : tap = réglages, interrupteur = on/off ── */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Rappels")}
+          activeOpacity={0.8}
+          style={[CARD, { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }]}
+        >
+          <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: C.sage, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="bell" size={17} color={C.accent} strokeWidth={2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: "500", color: C.text }}>Rappel</Text>
+            <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 1 }}>
+              {notificationsEnabled ? `${notificationHour}:${String(notificationMinute).padStart(2, "0")}` : "Désactivé"}
+            </Text>
+          </View>
+          <Switch value={notificationsEnabled} onValueChange={toggleReminder} trackColor={{ true: C.accent, false: C.border }} thumbColor="#fff" />
+        </TouchableOpacity>
 
         {/* ── Galon ── */}
         <RankCard totalSorted={ctx.totalSorted} achievements={achievements} />
