@@ -78,6 +78,7 @@ const ICONS = {
     <Path d="M10 20v-6h4v6" />
   </>),
   chart: (c) => <Path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+  export: (c) => <Path d="M12 15V3M7 8l5-5 5 5M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" />,
   filter: (c) => <Path d="M4 5h16l-6 8v6l-4-2v-4z" />,
   chevronRight: (c) => <Path d="M9 5l7 7-7 7" />,
   close: (c) => <Path d="M6 6l12 12M18 6L6 18" />,

@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Linking,
   PanResponder,
-  TextInput,
 } from "react-native";
 import Text from "../components/AppText";
 import HomeHeader from "../components/home/HomeHeader";
@@ -24,7 +23,6 @@ import { Image as ExpoImage } from "expo-image";
 import { C, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { getAlbums, getAlbumAssetIds } from "../services/photoLibrary";
-import { AlbumFiltersBar } from "../components/AlbumFiltersBar";
 import { RangeCalendarPicker, dateLabel } from "../components/RangeCalendarPicker";
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
 import { ProgressCard } from "../components/ProgressCard";
@@ -107,37 +105,6 @@ const RHYTHM_LABEL = {
   every2days: "tous les 2 jours", weekly: "par semaine",
 };
 
-// "aujourd'hui", "hier", "il y a 3 j", "il y a 2 sem.", "il y a 4 mois"
-function timeAgo(ts) {
-  const days = Math.floor((Date.now() - ts) / 86400000);
-  if (days <= 0) return "modifié aujourd'hui";
-  if (days === 1) return "modifié hier";
-  if (days < 7) return `il y a ${days} j`;
-  if (days < 30) return `il y a ${Math.floor(days / 7)} sem.`;
-  return `il y a ${Math.max(1, Math.floor(days / 30))} mois`;
-}
-
-// Ligne d'album : couverture + nom + sous-titre + menu "···".
-function AlbumRow({ cover, heart, title, sub, onPress, onMenu }) {
-  const thumb = heart
-    ? <View style={{ width: 44, height: 44, borderRadius: 11, backgroundColor: C.redSoft, alignItems: "center", justifyContent: "center" }}><Icon name="heart" size={20} color={C.red} filled /></View>
-    : cover
-      ? <ExpoImage source={{ uri: cover }} contentFit="cover" style={{ width: 44, height: 44, borderRadius: 11 }} />
-      : <View style={{ width: 44, height: 44, borderRadius: 11, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center" }}><Icon name="album" size={20} color={C.album} /></View>;
-  return (
-    <ListRow
-      thumb={thumb}
-      title={title}
-      sub={sub}
-      onPress={onPress}
-      right={
-        <TouchableOpacity onPress={onMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Text style={{ fontSize: 18, fontWeight: "600", color: C.textMuted, letterSpacing: 1 }}>···</Text>
-        </TouchableOpacity>
-      }
-    />
-  );
-}
 
 const iconBox = { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" };
 
@@ -201,8 +168,6 @@ export function HomeScreen({ navigation, route }) {
   const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
   const addAlbumFilter    = usePhotoStore((state) => state.addAlbumFilter);
   const emptyTrash        = usePhotoStore((state) => state.emptyTrash);
-  const renameAlbum       = usePhotoStore((state) => state.renameAlbum);
-  const deleteAlbum       = usePhotoStore((state) => state.deleteAlbum);
   const dailyLog          = usePhotoStore((state) => state.dailyLog); // carnet de bord → carte progression
 
   // ── Mode actif : ménage (orange) ou album (violet) ──────────────────────
@@ -218,7 +183,6 @@ export function HomeScreen({ navigation, route }) {
   const [showCalendar, setShowCalendar] = useState(false);
 
   // Filtres date proposés selon le mode actif
-  const dateFilters = ALBUM_DATE_FILTERS; // pastilles du mode Album
 
   // Bascule de mode : réinitialise le filtre s'il n'existe pas dans le nouveau mode
   function switchMode(key) {
@@ -357,6 +321,10 @@ export function HomeScreen({ navigation, route }) {
   const joursRestants = Math.ceil(sessionsRestantes / (SESSIONS_PER_DAY[notificationFrequency] ?? 1));
   const duree = formatDuration(joursRestants);
 
+  // Filtres du mode Album, rangés par ligne : lieux (« Par lieu ») et le reste = périodes (« Par date »).
+  const placeFilters = albumFilters.filter((f) => f.type === "lieu");
+  const dateFilters  = albumFilters.filter((f) => f.type !== "lieu");
+
   // Filtres combinés (mode album, intersection ET) : on précalcule un Set d'ids par filtre.
   const albumFilterSets = useMemo(
     () => albumFilters.map((f) => new Set(f.photoIds)),
@@ -409,49 +377,6 @@ export function HomeScreen({ navigation, route }) {
     );
   }
 
-  // ── Mes albums (mode Album) ──────────────────────────────────────────────
-  const photoById = useMemo(() => new Map(libraryPhotos.map((p) => [p.id, p])), [libraryPhotos]);
-  // Couverture = dernière photo ajoutée encore présente dans la photothèque.
-  const albumCover = (a) => {
-    for (let k = a.photoIds.length - 1; k >= 0; k--) {
-      const p = photoById.get(a.photoIds[k]);
-      if (p) return p.url;
-    }
-    return null;
-  };
-  // Date de modif : updatedAt, sinon la date de création cachée dans l'id ("album-<timestamp>").
-  const albumTime = (a) => a.updatedAt || Number(String(a.id).replace("album-", "")) || 0;
-  const recentAlbums = [...albums].sort((x, y) => albumTime(y) - albumTime(x)).slice(0, 3);
-
-  const [renameTarget, setRenameTarget] = useState(null); // album en cours de renommage
-  const [renameText, setRenameText]     = useState("");
-
-  // Menu "···" d'un album. album = null → Coups de cœur (ni renommable, ni supprimable).
-  function openAlbumMenu(album) {
-    const soon = () => Alert.alert("Bientôt disponible", "L'impression de tes albums arrive bientôt 🌸");
-    if (!album) {
-      Alert.alert("Coups de cœur", "Album automatique : il se remplit quand tu touches ❤️ pendant le tri.", [
-        { text: "Ouvrir", onPress: () => navigation.navigate("Gallery", { section: "kept" }) },
-        { text: "Imprimer (bientôt)", onPress: soon },
-        { text: "Fermer", style: "cancel" },
-      ]);
-      return;
-    }
-    Alert.alert(album.name, `${album.photoIds.length} photo${album.photoIds.length > 1 ? "s" : ""}`, [
-      { text: "Renommer", onPress: () => { setRenameText(album.name); setRenameTarget(album); } },
-      { text: "Imprimer (bientôt)", onPress: soon },
-      {
-        text: "Supprimer", style: "destructive",
-        onPress: () => Alert.alert(
-          "Supprimer l'album ?",
-          `« ${album.name} » sera supprimé. Les photos restent sur ton téléphone.`,
-          [{ text: "Annuler", style: "cancel" }, { text: "Supprimer", style: "destructive", onPress: () => deleteAlbum(album.id) }]
-        ),
-      },
-      { text: "Annuler", style: "cancel" },
-    ]);
-  }
-
   // ── Calendrier "Par date" ────────────────────────────────────────────────
   // Année de la plus vieille photo → borne basse du sélecteur d'année.
   const minYear = useMemo(() => {
@@ -490,6 +415,8 @@ export function HomeScreen({ navigation, route }) {
         Alert.alert("Aucune photo", "Aucune photo n'a été prise sur cette période.");
         return;
       }
+      // Une seule période à la fois (la ✕ de « Par date » l'efface) : on remplace l'ancienne.
+      albumFilters.filter((f) => f.type !== "lieu").forEach((f) => removeAlbumFilter(f.id));
       addAlbumFilter({
         id: `date-${from.getTime()}_${to ? to.getTime() : "now"}`,
         type: "date",
@@ -561,12 +488,14 @@ export function HomeScreen({ navigation, route }) {
                   <Text style={{ fontSize: 38, fontWeight: "600" }}>{queue.length} </Text>
                   <Text style={{ fontSize: 20, fontWeight: "600" }}>photo{queue.length > 1 ? "s" : ""}</Text>
                 </Text>
+                {/* Poids de la sélection (Mo / Go) */}
+                {queue.length > 0 && (
+                  <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 1 }}>
+                    {formatSize(queue.reduce((t, p) => t + (p.size || 0), 0))}
+                  </Text>
+                )}
               </View>
 
-              {/* Filtres combinés (dates, lieux ajoutés) */}
-              <View style={{ marginTop: 8 }}>
-                <AlbumFiltersBar filters={albumFilters} matchCount={queue.length} onRemove={removeAlbumFilter} onClear={clearAlbumFilters} />
-              </View>
 
               {/* Mosaïque : 1 grande photo + 2 petites (la dernière affiche "+N") */}
               {preview.length > 0 ? (
@@ -610,8 +539,25 @@ export function HomeScreen({ navigation, route }) {
               {/* Affiner la sélection */}
               <SectionTitle title="Affiner la sélection" />
               <View style={{ gap: 9 }}>
-                <ListRow icon="calendar" iconColor={C.album} iconBg={C.albumSoft} title="Par date" sub="Choisis une période" onPress={() => setShowCalendar(true)} />
-                <ListRow icon="pin" iconColor={C.album} iconBg={C.albumSoft} title="Par lieu" sub="Choisis sur la carte" onPress={() => navigation.navigate("Map", { mode: "album" })} />
+                {/* Filtres actifs affichés dans leur ligne, avec ✕ (comme en mode Tri) */}
+                <ListRow
+                  icon="calendar" iconColor={C.album} iconBg={C.albumSoft} title="Par date"
+                  sub={dateFilters.length ? dateFilters.map((f) => f.label).join(" · ") : "Choisis une période"}
+                  subColor={dateFilters.length ? C.album : undefined}
+                  active={dateFilters.length > 0} activeColor={C.album}
+                  right={dateFilters.length ? "close" : "chevron"}
+                  onClear={() => dateFilters.forEach((f) => removeAlbumFilter(f.id))}
+                  onPress={() => setShowCalendar(true)}
+                />
+                <ListRow
+                  icon="pin" iconColor={C.album} iconBg={C.albumSoft} title="Par lieu"
+                  sub={placeFilters.length ? placeFilters.map((f) => f.label).join(" · ") : "Choisis sur la carte"}
+                  subColor={placeFilters.length ? C.album : undefined}
+                  active={placeFilters.length > 0} activeColor={C.album}
+                  right={placeFilters.length ? "close" : "chevron"}
+                  onClear={() => placeFilters.forEach((f) => removeAlbumFilter(f.id))}
+                  onPress={() => navigation.navigate("Map", { mode: "album" })}
+                />
                 <ListRow
                   icon="folder" iconColor={C.album} iconBg={C.albumSoft} title="Dossiers"
                   sub={selectedAlbum ? selectedAlbum.title : "Dossiers du téléphone"}
@@ -663,37 +609,8 @@ export function HomeScreen({ navigation, route }) {
           );
         })()}
 
-        {/* « Mes albums » (Coups de cœur, albums, impression) : déplacé dans l'onglet Galerie.
-            AlbumRow / openAlbumMenu / renommage restent ici en attendant la refonte de la Galerie. */}
-
       </ScrollView>
 
-      {/* ── Renommer un album ─────────────────────────────────────── */}
-      <Modal visible={!!renameTarget} transparent animationType="fade" onRequestClose={() => setRenameTarget(null)}>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: 24 }}>
-          <View style={{ backgroundColor: C.bg, borderRadius: 20, padding: 20 }}>
-            <Text style={{ fontSize: 16, fontWeight: "600", color: C.text, marginBottom: 12 }}>Renommer l'album</Text>
-            <TextInput
-              value={renameText}
-              onChangeText={setRenameText}
-              autoFocus
-              placeholder="Nom de l'album"
-              style={{ backgroundColor: C.bgCard, borderWidth: 1.5, borderColor: C.border, borderRadius: 12, padding: 12, fontSize: 15, color: C.text, fontFamily: FONT }}
-            />
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
-              <TouchableOpacity onPress={() => setRenameTarget(null)}
-                style={{ flex: 1, padding: 13, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, alignItems: "center" }}>
-                <Text style={{ color: C.textMuted, fontWeight: "600" }}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => { renameAlbum(renameTarget.id, renameText); setRenameTarget(null); }}
-                style={{ flex: 1, padding: 13, borderRadius: 12, backgroundColor: C_ALBUM, alignItems: "center" }}>
-                <Text style={{ color: "#fff", fontWeight: "600" }}>Valider</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* ── Calendrier de la brique "Par date" ──────────────────────── */}
       <RangeCalendarPicker

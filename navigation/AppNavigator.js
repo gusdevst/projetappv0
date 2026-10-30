@@ -22,6 +22,7 @@ import { SettingsScreen }         from "../screens/SettingsScreen";
 import { PartenairesScreen }      from "../screens/PartenairesScreen";
 import { RappelsScreen }          from "../screens/RappelsScreen";
 import { ProgressScreen }         from "../screens/ProgressScreen";
+import { GalleryHomeScreen }      from "../screens/GalleryHomeScreen";
 import { usePhotoStore }          from "../store/usePhotoStore";
 
 const Stack = createStackNavigator();
@@ -36,7 +37,7 @@ function MainTabs() {
     <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
       <Tab.Screen name="Home"        component={HomeScreen} />
       <Tab.Screen name="ProgressTab" component={ProgressScreen} initialParams={{ inTab: true }} />
-      <Tab.Screen name="GalleryTab"  component={GalleryScreen}  initialParams={{ inTab: true, section: "album" }} />
+      <Tab.Screen name="GalleryTab"  component={GalleryHomeScreen} />
       <Tab.Screen name="SettingsTab" component={SettingsScreen} initialParams={{ inTab: true }} />
     </Tab.Navigator>
   );

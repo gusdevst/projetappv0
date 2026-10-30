@@ -26,6 +26,7 @@ import { C, S } from "../constants/theme";
 import { PhotoGrid } from "../components/PhotoGrid";
 import { ZoomableImage } from "../components/ZoomableImage";
 import BackButton from "../components/BackButton";
+import Icon from "../components/Icons";
 import { ExitIcon } from "../components/ExitIcon";
 import { BadgeUnlockBanner } from "../components/AchievementUnlocks";
 import { usePhotoStore } from "../store/usePhotoStore";
@@ -64,7 +65,7 @@ function ShareIcon({ color = "#fff", size = 20 }) {
 }
 
 const SECTION_CONFIG = {
-  kept:    { title: "Photos coup de cœur", accent: C.green,  storeKey: "kept",    showEmpty: false },
+  kept:    { title: "Coups de cœur", accent: C.green,  storeKey: "kept",    showEmpty: false },
   deleted: { title: "Corbeille",           accent: C.red,    storeKey: "deleted", showEmpty: true  },
   album:   { title: "Album souvenirs",     accent: C.purple, storeKey: "printed", showEmpty: false },
 };
@@ -299,14 +300,20 @@ export function GalleryScreen({ navigation, route }) {
         {(!inTab || activeAlbumId) && <BackButton
           accentColor={section === "album" ? C.album : config.accent}
           onPress={() => {
-            if (activeAlbumId) { setActiveAlbumId(null); }
+            // Ouvert directement sur un album (Galerie, Bilan) → retour à l'écran précédent.
+            if (activeAlbumId && !route?.params?.albumId) { setActiveAlbumId(null); }
             else { navigation.goBack(); }
           }}
         />}
         <View style={{ flex: 1 }}>
-          <Text style={{ fontWeight: "800", fontSize: 20, color: C.text }}>
+          <Text style={{ fontWeight: "600", fontSize: 20, color: C.text }} numberOfLines={1}>
             {activeAlbum ? activeAlbum.name : activeAlbumId === "__sans_album__" ? "Sans album" : title}
           </Text>
+          {!activeAlbumId && section !== "album" && (
+            <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 1 }}>
+              {photos.length} photo{photos.length !== 1 ? "s" : ""}
+            </Text>
+          )}
           {(activeAlbum || activeAlbumId === "__sans_album__") && (
             <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
               {activeAlbum ? activeAlbumPhotos.length : photosSansAlbum.length} photo{(activeAlbum ? activeAlbumPhotos.length : photosSansAlbum.length) !== 1 ? "s" : ""}
@@ -319,12 +326,13 @@ export function GalleryScreen({ navigation, route }) {
             {section === "kept" && photos.length > 0 && (
               <TouchableOpacity
                 onPress={() => { setSyncDone(false); setShowExport(true); }}
-                style={{ backgroundColor: `${accent}15`, borderRadius: S.radiusFull, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: accent }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 12, paddingVertical: 7,
+                  shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 }}
               >
-                <Text style={{ fontSize: 13, color: accent, fontWeight: "800" }}>📤 Exporter</Text>
+                <Icon name="export" size={14} color={section === "album" ? C.album : C.accent} strokeWidth={2.2} />
+                <Text style={{ fontSize: 13, color: section === "album" ? C.album : C.accent, fontWeight: "600" }}>Exporter</Text>
               </TouchableOpacity>
             )}
-            <Text style={{ fontSize: 13, color: accent, fontWeight: "800" }}>{photos.length} photos</Text>
           </View>
         )}
         {activeAlbum && (
@@ -333,13 +341,15 @@ export function GalleryScreen({ navigation, route }) {
             {activeAlbumPhotos.length > 0 && (
               <TouchableOpacity
                 onPress={() => { setSyncDone(false); setShowExport(true); }}
-                style={{ backgroundColor: `${accent}15`, borderRadius: S.radiusFull, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: accent }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 12, paddingVertical: 7,
+                  shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 }}
               >
-                <Text style={{ fontSize: 13, color: accent, fontWeight: "800" }}>📤 Exporter</Text>
+                <Icon name="export" size={14} color={section === "album" ? C.album : C.accent} strokeWidth={2.2} />
+                <Text style={{ fontSize: 13, color: section === "album" ? C.album : C.accent, fontWeight: "600" }}>Exporter</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={() => confirmDeleteAlbum(activeAlbum)}>
-              <Text style={{ fontSize: 20 }}>🗑</Text>
+              <Icon name="trash" size={20} color={C.textMuted} />
             </TouchableOpacity>
           </View>
         )}
@@ -352,25 +362,29 @@ export function GalleryScreen({ navigation, route }) {
           disabled={deleting}
           style={{
             marginHorizontal: S.pad,
-            marginBottom: 10,
-            backgroundColor: `${C.red}12`,
-            borderRadius: S.radius,
-            padding: 12,
+            backgroundColor: C.bgCard,
+            borderRadius: 15,
+            paddingVertical: 10, paddingHorizontal: 12,
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "space-between",
-            borderWidth: 1.5,
-            borderColor: `${C.red}40`,
+            gap: 10,
             opacity: deleting ? 0.6 : 1,
+            shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
           }}
         >
-          <Text style={{ color: C.red, fontWeight: "700", fontSize: 13 }}>
-            🗑 {deleting ? "Suppression…" : "Vider la corbeille"}
+          <Icon name="trash" size={18} color={C.red} strokeWidth={2} />
+          <Text style={{ flex: 1, color: C.text, fontSize: 12.5 }}>
+            <Text style={{ fontWeight: "600" }}>{photos.length} photo{photos.length > 1 ? "s" : ""}</Text> · {photos.reduce((a, p) => a + p.size, 0).toFixed(1)} Mo
           </Text>
-          <Text style={{ color: C.red, fontSize: 12 }}>
-            {photos.reduce((a, p) => a + p.size, 0).toFixed(1)} Mo · {photos.length} photo{photos.length > 1 ? "s" : ""}
-          </Text>
+          <View style={{ backgroundColor: C.red, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7 }}>
+            <Text style={{ color: "#fff", fontWeight: "600", fontSize: 12.5 }}>{deleting ? "Suppression…" : "Vider la corbeille"}</Text>
+          </View>
         </TouchableOpacity>
+      )}
+      {showEmpty && photos.length > 0 && (
+        <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginTop: 8, marginBottom: 2 }}>
+          Touche une photo pour la restaurer
+        </Text>
       )}
 
       {/* ── Contenu ── */}
@@ -410,7 +424,7 @@ export function GalleryScreen({ navigation, route }) {
                   <Image source={{ uri: photosSansAlbum[0].url }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "800", fontSize: 14, color: C.text }}>📦 Sans album</Text>
+                  <Text style={{ fontWeight: "500", fontSize: 14, color: C.text }}>Sans album</Text>
                   <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{photosSansAlbum.length} photo{photosSansAlbum.length > 1 ? "s" : ""}</Text>
                 </View>
                 <Text style={{ color: C.textMuted, fontSize: 18 }}>›</Text>
