@@ -9,6 +9,7 @@ import { C, S } from "../constants/theme";
 import { RowSetting } from "../components/RowSetting";
 import { SwipeDemo } from "../components/SwipeDemo";
 import BackButton from "../components/BackButton";
+import IconsBoard from "../components/IconsBoard"; // DEV uniquement
 import { usePhotoStore } from "../store/usePhotoStore";
 
 // ── Données de configuration ──────────────────────────────────────────────────
@@ -434,6 +435,7 @@ export function SettingsScreen({ navigation, route }) {
           Pellicule v1.0.0 · Fait avec ❤️ en France
         </Text>
 
+        <IconsBoard />
       </ScrollView>
 
       {/* ── Modal picker de direction de swipe ──────────────────────────── */}
