@@ -15,6 +15,8 @@ import {
   TextInput,
 } from "react-native";
 import Text from "../components/AppText";
+import HomeHeader from "../components/home/HomeHeader";
+import TriHero from "../components/home/TriHero";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image as ExpoImage } from "expo-image";
@@ -204,6 +206,9 @@ export function HomeScreen({ navigation, route }) {
   const libraryTotalCount = usePhotoStore((state) => state.libraryTotalCount);
   const libraryLoading    = usePhotoStore((state) => state.libraryLoading);
   const randomCount            = usePhotoStore((state) => state.randomCount);
+  const setRandomCount         = usePhotoStore((state) => state.setRandomCount);
+  const shuffleOn              = usePhotoStore((state) => state.shuffleOn);
+  const setShuffleOn           = usePhotoStore((state) => state.setShuffleOn);
   const albums                 = usePhotoStore((state) => state.albums);
   const notificationFrequency  = usePhotoStore((state) => state.notificationFrequency);
   const albumFilters      = usePhotoStore((state) => state.albumFilters);
@@ -343,6 +348,13 @@ export function HomeScreen({ navigation, route }) {
     }
   }
 
+  // Bouton 🔀 (mode Tri) : allumé = « Lancer un tri » pioche randomCount photos au hasard.
+  function toggleShuffle() {
+    const next = !shuffleOn;
+    setShuffleOn(next);
+    if (next) maybePromptNotifications(); // 1er usage : propose d'activer les rappels
+  }
+
   // ── Queues ───────────────────────────────────────────────────────────────
   const deletedSize = deleted.reduce((a, p) => a + p.size, 0);
 
@@ -395,7 +407,10 @@ export function HomeScreen({ navigation, route }) {
     if (queue.length === 0) return;
     if (isMenage) {
       // En mode ménage on va directement au swipe, sans passer par la question
-      navigation.navigate("Swipe", { queue, mode: "menage" });
+      const q = shuffleOn
+        ? [...filteredPool].sort(() => Math.random() - 0.5).slice(0, randomCount)
+        : queue;
+      navigation.navigate("Swipe", { queue: q, mode: "menage" });
     } else {
       navigation.navigate("TriMode", { preQueue: queue, skipToAlbum: true });
     }
@@ -543,142 +558,41 @@ export function HomeScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* ── Header ──────────────────────────────────────────────────── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ fontSize: 33, fontWeight: "900", color: C.accent }}>Pellicule</Text>
-              <Image source={require("../assets/icon.png")} style={{ width: 36, height: 36, borderRadius: 8 }} />
-            </View>
-            <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>Tes souvenirs méritent mieux</Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Settings")}
-            style={{ backgroundColor: C.bgCard, borderRadius: 14, padding: 11, borderWidth: 1, borderColor: C.border }}
-          >
-            <Text style={{ fontSize: 18 }}>⚙️</Text>
-          </TouchableOpacity>
-        </View>
+        {/* ── En-tête + bascule Tri / Album ──────────────────────────────── */}
+        <HomeHeader
+          activeMode={activeMode}
+          onSwitchMode={switchMode}
+          onOpenSettings={() => navigation.navigate("Settings")}
+        />
 
-        {/* ── Toggle Ménage / Album ────────────────────────────────────── */}
-        <View style={{
-          flexDirection: "row",
-          backgroundColor: C.bgCard,
-          borderRadius: 14,
-          borderWidth: 1,
-          borderColor: C.border,
-          padding: 4,
-          marginBottom: 10,
-          gap: 4,
-        }}>
-          {[
-            { key: "menage", label: "🧹 Tri",            color: C.accent },
-            { key: "album",  label: "📕 Créer un album",  color: C_ALBUM },
-          ].map((m) => {
-            const active = activeMode === m.key;
-            return (
-              <TouchableOpacity
-                key={m.key}
-                onPress={() => switchMode(m.key)}
-                style={{
-                  flex: 1,
-                  paddingVertical: 11,
-                  borderRadius: 11,
-                  alignItems: "center",
-                  backgroundColor: active ? m.color : "transparent",
-                }}
-              >
-                <Text style={{
-                  fontSize: 14,
-                  fontWeight: "800",
-                  color: active ? "#fff" : C.textMuted,
-                }}>
-                  {m.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-
-          {/* Pastille ⇄ à cheval entre les 2 modes : indique qu'on peut changer de mode.
-              Un tap bascule vers l'autre mode. Toujours blanche ; flèches à la couleur du mode actif. */}
-          <TouchableOpacity
-            onPress={() => switchMode(isMenage ? "album" : "menage")}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel={isMenage ? "Passer en mode Créer un album" : "Passer en mode Tri"}
-            style={{
-              position: "absolute", left: "50%", top: "50%",
-              width: 28, height: 28, marginLeft: -14, marginTop: -14,
-              borderRadius: 14, alignItems: "center", justifyContent: "center",
-              backgroundColor: "#fff",
-              borderWidth: 1, borderColor: C.border,
-              shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.12, shadowRadius: 4, elevation: 3,
-              zIndex: 2,
-            }}
-          >
-            <SwapIcon size={14} color={modeColor} />
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Mode TRI : carte objectif (avancement + jours restants + bouton) ── */}
-        {isMenage && (
-          <LinearGradient
-            colors={C.accentGrad}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={{ borderRadius: 22, padding: 18, marginBottom: 12 }}
-          >
-            {progressPct >= 100 ? (
-              <Text style={{ fontSize: 26, fontWeight: "900", color: "#fff", marginBottom: 12 }}>🎉 Tout est trié !</Text>
-            ) : (
-              <>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.8)", letterSpacing: 0.6 }}>
-                  PHOTOTHÈQUE TRIÉE DANS
-                </Text>
-                <Text style={{ color: "#fff", marginTop: 2 }}>
-                  <Text style={{ fontSize: 40, fontWeight: "900" }}>≈ {duree.val} </Text>
-                  <Text style={{ fontSize: 17, fontWeight: "800" }}>{duree.unit}</Text>
-                </Text>
-                <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginBottom: 12 }}>
-                  à raison d'une session de {randomCount} photos {RHYTHM_LABEL[notificationFrequency] ?? "par jour"}
-                </Text>
-              </>
-            )}
-
-            {/* Barre d'avancement */}
-            <View style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)", overflow: "hidden" }}>
-              <View style={{ height: 6, width: `${progressPct}%`, backgroundColor: "#fff", borderRadius: 3 }} />
-            </View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6, marginBottom: 14 }}>
-              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.9)" }}>
-                <Text style={{ fontWeight: "900" }}>{Math.round(progressPct)} %</Text> · {triees} triées
-              </Text>
-              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.9)" }}>
-                <Text style={{ fontWeight: "900" }}>{formatSize(trieesSize)}</Text> triés
-              </Text>
-            </View>
-
-            {/* Bouton principal */}
-            <TouchableOpacity
-              onPress={handleCTA}
-              disabled={libraryLoading || albumFiltering || queue.length === 0}
-              style={{
-                backgroundColor: "#fff", borderRadius: 16, paddingVertical: 15,
-                alignItems: "center",
-                opacity: libraryLoading || albumFiltering || queue.length === 0 ? 0.6 : 1,
-              }}
-            >
-              <Text style={{ fontSize: 16, fontWeight: "900", color: C.accent }}>
-                {libraryLoading || albumFiltering
-                  ? "Chargement de tes photos…"
-                  : queue.length === 0
-                  ? "Rien à trier ici"
-                  : `▶ Faire le tri · ${queue.length} photo${queue.length > 1 ? "s" : ""}`}
-              </Text>
-            </TouchableOpacity>
-          </LinearGradient>
-        )}
+        {/* ── Mode TRI : héros (jours restants, session, 🔀, Lancer un tri) ── */}
+        {isMenage && (() => {
+          const loading = libraryLoading || albumFiltering;
+          const count = shuffleOn ? Math.min(randomCount, filteredPool.length) : queue.length;
+          return (
+            <TriHero
+              allSorted={progressPct >= 100}
+              dureeVal={duree.val}
+              dureeUnit={duree.unit}
+              rhythmLabel={RHYTHM_LABEL[notificationFrequency] ?? "par jour"}
+              progressPct={progressPct}
+              triees={triees}
+              trieesSizeLabel={formatSize(trieesSize)}
+              randomCount={randomCount}
+              onChangeRandomCount={setRandomCount}
+              shuffleOn={shuffleOn}
+              onToggleShuffle={toggleShuffle}
+              ctaTitle={loading ? "Chargement de tes photos…"
+                : count === 0 ? "Rien à trier ici"
+                : shuffleOn ? "Lancer un tri aléatoire" : "Lancer un tri"}
+              ctaSub={loading || count === 0 ? null
+                : shuffleOn ? `${count} photo${count > 1 ? "s" : ""} au hasard`
+                : `${count} photo${count > 1 ? "s" : ""}`}
+              ctaDisabled={loading || count === 0}
+              onLaunch={handleCTA}
+            />
+          );
+        })()}
 
         {/* ── Mode ALBUM : carte "Ton prochain album" (aperçu + bouton) ── */}
         {!isMenage && (() => {
