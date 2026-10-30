@@ -176,7 +176,7 @@ export function SettingsScreen({ navigation, route }) {
   // ── UI helpers ─────────────────────────────────────────────────────────────
   const Section = ({ title }) => (
     <Text style={{
-      fontSize: 11, fontWeight: "800", color: C.textMuted,
+      fontSize: 11, fontWeight: "600", color: C.textMuted,
       letterSpacing: 1.5, marginTop: 24, marginBottom: 10,
       textTransform: "uppercase",
     }}>
@@ -200,7 +200,7 @@ export function SettingsScreen({ navigation, route }) {
         padding: S.pad, paddingBottom: 8,
       }}>
         {!inTab && <BackButton accentColor={C.accent} onPress={() => navigation.goBack()} />}
-        <Text style={{ fontWeight: "900", fontSize: 22, color: C.text }}>Paramètres</Text>
+        <Text style={{ fontWeight: "600", fontSize: 22, color: C.text }}>Paramètres</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: S.pad, paddingBottom: 40 }}>
@@ -211,13 +211,14 @@ export function SettingsScreen({ navigation, route }) {
           onPress={() => setMenageExpanded(!menageExpanded)}
           style={{
             backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1,
-            borderColor: menageExpanded ? C.accent : C.border,
+            borderColor: menageExpanded ? C.accent : "transparent",
+            shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
             padding: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between",
             marginBottom: menageExpanded ? 8 : 0,
           }}
         >
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>Personnaliser les directions</Text>
+            <Text style={{ fontWeight: "600", fontSize: 14, color: C.text }}>Personnaliser les directions</Text>
             {!menageExpanded && (
               <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>{makeSummary(swipeMappingsMenage, "menage")}</Text>
             )}
@@ -246,7 +247,7 @@ export function SettingsScreen({ navigation, route }) {
               onPress={() => confirmReset("menage")}
               style={{ alignSelf: "flex-end", paddingHorizontal: 12, paddingVertical: 6, marginTop: 4 }}
             >
-              <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: "700" }}>↺ Réinitialiser</Text>
+              <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: "600" }}>↺ Réinitialiser</Text>
             </TouchableOpacity>
           </>
         )}
@@ -257,13 +258,14 @@ export function SettingsScreen({ navigation, route }) {
           onPress={() => setAlbumExpanded(!albumExpanded)}
           style={{
             backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1,
-            borderColor: albumExpanded ? C.accent : C.border,
+            borderColor: albumExpanded ? C.accent : "transparent",
+            shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
             padding: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between",
             marginBottom: albumExpanded ? 8 : 0,
           }}
         >
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>Personnaliser les directions</Text>
+            <Text style={{ fontWeight: "600", fontSize: 14, color: C.text }}>Personnaliser les directions</Text>
             {!albumExpanded && (
               <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>{makeSummary(swipeMappingsAlbum, "album")}</Text>
             )}
@@ -292,7 +294,7 @@ export function SettingsScreen({ navigation, route }) {
               onPress={() => confirmReset("album")}
               style={{ alignSelf: "flex-end", paddingHorizontal: 12, paddingVertical: 6, marginTop: 4 }}
             >
-              <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: "700" }}>↺ Réinitialiser</Text>
+              <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: "600" }}>↺ Réinitialiser</Text>
             </TouchableOpacity>
           </>
         )}
@@ -300,8 +302,7 @@ export function SettingsScreen({ navigation, route }) {
         {/* ── Section Session aléatoire (compacte) ─────────────────────────── */}
         <Section title="🎲 Photos par session aléatoire" />
         <View style={{
-          backgroundColor: C.bgCard, borderRadius: S.radius, borderWidth: 1,
-          borderColor: C.border, paddingVertical: 10, paddingHorizontal: 16,
+          backgroundColor: C.bgCard, borderRadius: S.radius, shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2, paddingVertical: 10, paddingHorizontal: 16,
           flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4,
         }}>
           <TouchableOpacity
@@ -314,11 +315,11 @@ export function SettingsScreen({ navigation, route }) {
               alignItems: "center", justifyContent: "center",
             }}
           >
-            <Text style={{ fontSize: 20, fontWeight: "800", color: randomCount <= 10 ? C.textMuted : C.accent }}>−</Text>
+            <Text style={{ fontSize: 20, fontWeight: "600", color: randomCount <= 10 ? C.textMuted : C.accent }}>−</Text>
           </TouchableOpacity>
 
           <View style={{ flex: 1, alignItems: "center" }}>
-            <Text style={{ fontSize: 24, fontWeight: "900", color: C.text }}>{randomCount}</Text>
+            <Text style={{ fontSize: 24, fontWeight: "600", color: C.text }}>{randomCount}</Text>
             <Text style={{ fontSize: 10, color: C.textMuted }}>photos / session</Text>
           </View>
 
@@ -332,7 +333,7 @@ export function SettingsScreen({ navigation, route }) {
               alignItems: "center", justifyContent: "center",
             }}
           >
-            <Text style={{ fontSize: 20, fontWeight: "800", color: randomCount >= 200 ? C.textMuted : C.accent }}>+</Text>
+            <Text style={{ fontSize: 20, fontWeight: "600", color: randomCount >= 200 ? C.textMuted : C.accent }}>+</Text>
           </TouchableOpacity>
         </View>
         <Text style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginBottom: 4 }}>
@@ -358,7 +359,7 @@ export function SettingsScreen({ navigation, route }) {
             <Text style={{ fontSize: 18 }}>🔄</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "800", fontSize: 14, color: C.red }}>
+            <Text style={{ fontWeight: "600", fontSize: 14, color: C.red }}>
               Renvoyer toutes les photos dans la file
             </Text>
             <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 16 }}>
@@ -383,7 +384,7 @@ export function SettingsScreen({ navigation, route }) {
             <Text style={{ fontSize: 18 }}>❤️</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "800", fontSize: 14, color: C.red }}>
+            <Text style={{ fontWeight: "600", fontSize: 14, color: C.red }}>
               Réinitialiser les coups de cœur
             </Text>
             <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 16 }}>
@@ -447,7 +448,7 @@ export function SettingsScreen({ navigation, route }) {
             borderTopLeftRadius: S.radiusLg, borderTopRightRadius: S.radiusLg,
             padding: S.padLg, paddingBottom: 40,
           }}>
-            <Text style={{ fontSize: 20, fontWeight: "900", color: C.text, marginBottom: 4 }}>
+            <Text style={{ fontSize: 20, fontWeight: "600", color: C.text, marginBottom: 4 }}>
               {editingSwipe ? DIRECTIONS.find((d) => d.key === editingSwipe.direction)?.label : ""}
             </Text>
             <Text style={{ fontSize: 13, color: C.textMuted, marginBottom: 16 }}>
@@ -477,10 +478,10 @@ export function SettingsScreen({ navigation, route }) {
                     <Text style={{ fontSize: 18 }}>{a.emoji}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>{a.label}</Text>
+                    <Text style={{ fontWeight: "600", fontSize: 14, color: C.text }}>{a.label}</Text>
                     <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{a.desc}</Text>
                   </View>
-                  {isSelected && <Text style={{ color: C.accent, fontSize: 18, fontWeight: "900" }}>✓</Text>}
+                  {isSelected && <Text style={{ color: C.accent, fontSize: 18, fontWeight: "600" }}>✓</Text>}
                 </TouchableOpacity>
               );
             })}
@@ -507,7 +508,7 @@ export function SettingsScreen({ navigation, route }) {
               ) : (
                 <Text style={{ fontSize: 52, marginBottom: 16 }}>{TUTORIAL_SLIDES[tutorialIdx].emoji}</Text>
               )}
-              <Text style={{ fontSize: 20, fontWeight: "900", color: C.text, textAlign: "center", marginBottom: 10 }}>
+              <Text style={{ fontSize: 20, fontWeight: "600", color: C.text, textAlign: "center", marginBottom: 10 }}>
                 {TUTORIAL_SLIDES[tutorialIdx].title}
               </Text>
               <Text style={{ fontSize: 14, color: C.textMuted, textAlign: "center", lineHeight: 21 }}>
@@ -533,7 +534,7 @@ export function SettingsScreen({ navigation, route }) {
                   onPress={() => setTutorialIdx(tutorialIdx - 1)}
                   style={{ flex: 1, backgroundColor: C.bgMuted, borderRadius: S.radius, padding: 14, alignItems: "center" }}
                 >
-                  <Text style={{ color: C.textMuted, fontWeight: "700" }}>← Précédent</Text>
+                  <Text style={{ color: C.textMuted, fontWeight: "600" }}>← Précédent</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -546,7 +547,7 @@ export function SettingsScreen({ navigation, route }) {
                 }}
                 style={{ flex: 1, backgroundColor: C.accent, borderRadius: S.radius, padding: 14, alignItems: "center", elevation: 3 }}
               >
-                <Text style={{ color: "#fff", fontWeight: "900" }}>
+                <Text style={{ color: "#fff", fontWeight: "600" }}>
                   {tutorialIdx < TUTORIAL_SLIDES.length - 1 ? "Suivant →" : "Terminer ✓"}
                 </Text>
               </TouchableOpacity>

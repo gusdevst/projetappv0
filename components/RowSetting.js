@@ -14,7 +14,7 @@ export function RowSetting({ emoji, label, desc, right, onPress }) {
       style={{
         backgroundColor: C.bgCard, borderRadius: S.radius,
         padding: 16, flexDirection: "row", alignItems: "center",
-        gap: 12, marginBottom: 8, borderWidth: 1, borderColor: C.border,
+        gap: 12, marginBottom: 8, shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
       }}
     >
       <View style={{
@@ -24,7 +24,7 @@ export function RowSetting({ emoji, label, desc, right, onPress }) {
         <Text style={{ fontSize: 20 }}>{emoji}</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>{label}</Text>
+        <Text style={{ fontWeight: "600", fontSize: 14, color: C.text }}>{label}</Text>
         {desc && <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{desc}</Text>}
       </View>
       {right}

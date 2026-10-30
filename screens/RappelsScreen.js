@@ -216,7 +216,7 @@ export function RappelsScreen({ navigation }) {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: S.pad, paddingBottom: 12 }}>
         <BackButton mode="menage" onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
-          <Text style={{ fontWeight: "800", fontSize: 20, color: C.text }}>Rappels quotidiens</Text>
+          <Text style={{ fontWeight: "600", fontSize: 20, color: C.text }}>Rappels quotidiens</Text>
           <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>Configure ton rythme de tri</Text>
         </View>
         {/* Badge statut */}
@@ -226,7 +226,7 @@ export function RappelsScreen({ navigation }) {
           paddingHorizontal: 10, paddingVertical: 5,
           borderWidth: 1, borderColor: isActive ? `${C.green}50` : C.border,
         }}>
-          <Text style={{ fontSize: 12, fontWeight: "800", color: isActive ? C.green : C.textMuted }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: isActive ? C.green : C.textMuted }}>
             {isActive ? "● Actif" : "○ Inactif"}
           </Text>
         </View>
@@ -236,11 +236,12 @@ export function RappelsScreen({ navigation }) {
 
         {/* ── Carte stats ────────────────────────────────────────────── */}
         <View style={{
-          backgroundColor: isActive ? `${C.accent}10` : C.bgCard,
+          backgroundColor: isActive ? C.sage : C.bgCard,
           borderRadius: S.radiusLg,
           padding: 20,
           borderWidth: 2,
-          borderColor: isActive ? `${C.accent}40` : C.border,
+          borderColor: isActive ? `${C.accent}40` : "transparent",
+          shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
           marginBottom: 24,
         }}>
           {isActive ? (
@@ -251,12 +252,12 @@ export function RappelsScreen({ navigation }) {
               </Text>
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <View style={{ flex: 1, alignItems: "center" }}>
-                  <Text style={{ fontSize: 36, fontWeight: "900", color: C.accent }}>{remainingCount}</Text>
+                  <Text style={{ fontSize: 36, fontWeight: "600", color: C.accent }}>{remainingCount}</Text>
                   <Text style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 2 }}>photos à trier</Text>
                 </View>
                 <View style={{ width: 1, backgroundColor: C.border }} />
                 <View style={{ flex: 1, alignItems: "center" }}>
-                  <Text style={{ fontSize: 36, fontWeight: "900", color: C.accent }}>{sessionsLeft}</Text>
+                  <Text style={{ fontSize: 36, fontWeight: "600", color: C.accent }}>{sessionsLeft}</Text>
                   <Text style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 2 }}>sessions restantes</Text>
                 </View>
                 <View style={{ width: 1, backgroundColor: C.border }} />
@@ -264,7 +265,7 @@ export function RappelsScreen({ navigation }) {
                   onPress={cycleSessionCount}
                   style={{ flex: 1, alignItems: "center" }}
                 >
-                  <Text style={{ fontSize: 36, fontWeight: "900", color: C.accent }}>{randomCount}</Text>
+                  <Text style={{ fontSize: 36, fontWeight: "600", color: C.accent }}>{randomCount}</Text>
                   <Text style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 2 }}>photos / session</Text>
                   <View style={{
                     marginTop: 6,
@@ -281,7 +282,7 @@ export function RappelsScreen({ navigation }) {
                       />
                     ))}
                   </View>
-                  <Text style={{ fontSize: 10, color: C.accent, fontWeight: "700", marginTop: 3 }}>
+                  <Text style={{ fontSize: 10, color: C.accent, fontWeight: "600", marginTop: 3 }}>
                     {currentProfile.label} · {currentProfile.desc}
                   </Text>
                 </TouchableOpacity>
@@ -290,7 +291,7 @@ export function RappelsScreen({ navigation }) {
           ) : (
             <View style={{ alignItems: "center", paddingVertical: 8 }}>
               <Text style={{ fontSize: 32, marginBottom: 8 }}>🔕</Text>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: C.text, marginBottom: 4 }}>Rappels désactivés</Text>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, marginBottom: 4 }}>Rappels désactivés</Text>
               <Text style={{ fontSize: 13, color: C.textMuted, textAlign: "center" }}>
                 Active une fréquence ci-dessous pour recevoir des notifications de tri.
               </Text>
@@ -309,25 +310,26 @@ export function RappelsScreen({ navigation }) {
                 onPress={() => handleFreqChange(opt.key)}
                 disabled={saving}
                 style={{
-                  backgroundColor: active ? `${C.accent}12` : C.bgCard,
+                  backgroundColor: active ? C.sage : C.bgCard,
                   borderRadius: S.radius,
                   padding: 14,
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 12,
                   borderWidth: 1.5,
-                  borderColor: active ? C.accent : C.border,
+                  borderColor: active ? C.accent : "transparent",
+                  shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
                   opacity: saving ? 0.6 : 1,
                 }}
               >
                 <Text style={{ fontSize: 22, width: 30, textAlign: "center" }}>{opt.emoji}</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "800", color: active ? C.accent : C.text }}>{opt.label}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "600", color: active ? C.accent : C.text }}>{opt.label}</Text>
                   <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{opt.desc}</Text>
                 </View>
                 {active && (
                   <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: C.accent, alignItems: "center", justifyContent: "center" }}>
-                    <Text style={{ color: "#fff", fontSize: 13, fontWeight: "900" }}>✓</Text>
+                    <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>✓</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -358,15 +360,14 @@ export function RappelsScreen({ navigation }) {
                       borderRadius: S.radius,
                       padding: 16,
                       alignItems: "center",
-                      borderWidth: 1.5,
-                      borderColor: C.border,
+                      shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
                     }}
                   >
-                    <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
+                    <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: "600", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
                       {label}
                     </Text>
-                    <Text style={{ fontSize: 28, fontWeight: "900", color: C.text }}>{time}</Text>
-                    <Text style={{ fontSize: 12, color: C.accent, fontWeight: "700", marginTop: 6 }}>Changer →</Text>
+                    <Text style={{ fontSize: 28, fontWeight: "600", color: C.text }}>{time}</Text>
+                    <Text style={{ fontSize: 12, color: C.accent, fontWeight: "600", marginTop: 6 }}>Changer →</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -381,13 +382,12 @@ export function RappelsScreen({ navigation }) {
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  borderWidth: 1.5,
-                  borderColor: C.border,
+                  shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
                   marginBottom: 24,
                 }}
               >
-                <Text style={{ fontSize: 28, fontWeight: "900", color: C.text }}>{timeLabel}</Text>
-                <Text style={{ fontSize: 13, color: C.accent, fontWeight: "700" }}>Changer →</Text>
+                <Text style={{ fontSize: 28, fontWeight: "600", color: C.text }}>{timeLabel}</Text>
+                <Text style={{ fontSize: 13, color: C.accent, fontWeight: "600" }}>Changer →</Text>
               </TouchableOpacity>
             )}
           </>
@@ -448,7 +448,7 @@ export function RappelsScreen({ navigation }) {
       <Modal visible={showTimePicker} transparent animationType="slide" onRequestClose={() => setActivePickerSlot(null)}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 44 }}>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 4 }}>
+            <Text style={{ fontSize: 18, fontWeight: "600", color: C.text, marginBottom: 4 }}>
               {notificationFrequency === "twice_daily"
                 ? (activePickerSlot === 2 ? "2e rappel" : "1er rappel")
                 : "Heure du rappel"}
@@ -458,7 +458,7 @@ export function RappelsScreen({ navigation }) {
             </Text>
             <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, marginBottom: 24 }}>
               <NumberDrum values={HOURS}   selected={tempHour}   onChange={setTempHour} />
-              <Text style={{ fontSize: 28, fontWeight: "900", color: C.text }}>:</Text>
+              <Text style={{ fontSize: 28, fontWeight: "600", color: C.text }}>:</Text>
               <NumberDrum values={MINUTES} selected={tempMinute} onChange={setTempMinute} />
             </View>
             <View style={{ flexDirection: "row", gap: 10 }}>
@@ -466,13 +466,13 @@ export function RappelsScreen({ navigation }) {
                 onPress={() => setActivePickerSlot(null)}
                 style={{ flex: 1, backgroundColor: C.bgMuted, borderRadius: S.radius, padding: 14, alignItems: "center" }}
               >
-                <Text style={{ color: C.textMuted, fontWeight: "700" }}>Annuler</Text>
+                <Text style={{ color: C.textMuted, fontWeight: "600" }}>Annuler</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={confirmTimePicker}
                 style={{ flex: 1, backgroundColor: C.accent, borderRadius: S.radius, padding: 14, alignItems: "center" }}
               >
-                <Text style={{ color: "#fff", fontWeight: "800" }}>Confirmer</Text>
+                <Text style={{ color: "#fff", fontWeight: "600" }}>Confirmer</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -483,7 +483,7 @@ export function RappelsScreen({ navigation }) {
       <Modal visible={showAlbumPicker} transparent animationType="slide" onRequestClose={() => setShowAlbumPicker(false)}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 44, maxHeight: "70%" }}>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: C.text, marginBottom: 4 }}>Choisir un dossier</Text>
+            <Text style={{ fontSize: 18, fontWeight: "600", color: C.text, marginBottom: 4 }}>Choisir un dossier</Text>
             <Text style={{ fontSize: 13, color: C.textMuted, marginBottom: 16 }}>
               Les photos de ce dossier seront triées en priorité.
             </Text>
@@ -495,7 +495,7 @@ export function RappelsScreen({ navigation }) {
                     key={a.id}
                     onPress={() => handleSelectNativeAlbum(a)}
                     style={{
-                      backgroundColor: active ? `${C.accent}12` : C.bg,
+                      backgroundColor: active ? C.sage : C.bg,
                       borderRadius: S.radius,
                       padding: 14,
                       marginBottom: 8,
@@ -503,15 +503,16 @@ export function RappelsScreen({ navigation }) {
                       alignItems: "center",
                       gap: 10,
                       borderWidth: 1.5,
-                      borderColor: active ? C.accent : C.border,
+                      borderColor: active ? C.accent : "transparent",
+                      shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
                     }}
                   >
                     <Text style={{ fontSize: 18 }}>📁</Text>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontWeight: "700", fontSize: 14, color: C.text }}>{a.title}</Text>
+                      <Text style={{ fontWeight: "600", fontSize: 14, color: C.text }}>{a.title}</Text>
                       <Text style={{ fontSize: 12, color: C.textMuted }}>{a.assetCount} photo{a.assetCount !== 1 ? "s" : ""}</Text>
                     </View>
-                    {active && <Text style={{ color: C.accent, fontWeight: "900" }}>✓</Text>}
+                    {active && <Text style={{ color: C.accent, fontWeight: "600" }}>✓</Text>}
                   </TouchableOpacity>
                 );
               })}
@@ -520,7 +521,7 @@ export function RappelsScreen({ navigation }) {
               onPress={() => setShowAlbumPicker(false)}
               style={{ marginTop: 12, padding: 14, alignItems: "center" }}
             >
-              <Text style={{ color: C.textMuted, fontWeight: "700" }}>Annuler</Text>
+              <Text style={{ color: C.textMuted, fontWeight: "600" }}>Annuler</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -533,14 +534,14 @@ export function RappelsScreen({ navigation }) {
 function CheckMark() {
   return (
     <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: C.accent, alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ color: "#fff", fontSize: 13, fontWeight: "900" }}>✓</Text>
+      <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>✓</Text>
     </View>
   );
 }
 
 const styles = {
   sectionLabel: {
-    fontSize: 11, fontWeight: "800", color: C.textMuted,
+    fontSize: 11, fontWeight: "600", color: C.textMuted,
     textTransform: "uppercase", letterSpacing: 1.5,
     marginBottom: 10,
   },
@@ -551,8 +552,7 @@ const styles = {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderWidth: 1.5,
-    borderColor: C.border,
+    shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
     marginBottom: 8,
   },
   priorityCardActive: {
@@ -560,7 +560,7 @@ const styles = {
     borderColor: C.accent,
   },
   priorityTitle: {
-    fontSize: 14, fontWeight: "800", color: C.text,
+    fontSize: 14, fontWeight: "600", color: C.text,
   },
   priorityDesc: {
     fontSize: 12, color: C.textMuted, marginTop: 2,
