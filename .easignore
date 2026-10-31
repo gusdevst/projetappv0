@@ -1,0 +1,27 @@
+node_modules/
+.expo/
+dist/
+web-build/
+/ios
+/android
+.kotlin/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+.DS_Store
+.env*.local
+
+# Outils IA et documents, pas du code de l'app
+claude-code/
+Claude outputs/
+.claude/
+.gemini/
+.qoder/
+.kiro/
+.code-review-graph/
+*.pdf
+*.md
+tutoriel-phototri.html
