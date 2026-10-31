@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#f4f5f7"
+      "backgroundColor": "#f4f3ef"
     },
     "ios": {
       "supportsTablet": true,
@@ -24,7 +24,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#dfe8d2"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.phototri.app",
@@ -55,7 +55,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#2e4d7a"
+          "color": "#4c7a2b"
         }
       ],
       [

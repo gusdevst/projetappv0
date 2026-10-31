@@ -2,7 +2,7 @@
 
 > Fichier de passation. Lu en début de session pour retrouver l'état du projet
 > sans re-scanner tout le code. **À maintenir à jour** à chaque étape importante.
-> Dernière mise à jour : 2026-10-30.
+> Dernière mise à jour : 2026-10-31.
 
 ---
 
@@ -19,13 +19,11 @@ trop-plein de photos sans y passer des heures.
 
 ---
 
-## 2. État actuel (au 2026-10-30)
+## 2. État actuel (au 2026-10-31)
 
-- Branche de travail : **`feature/barre-menu`** (créée depuis `feature/themes` le 30 oct.) :
-  barre de menu en bas (§12). À fusionner dans `feature/themes` une fois validée.
-- `feature/themes` : **refonte visuelle « sauge »** (§12). Faits : Accueil, Progression, Swipe, Bilan.
-  Reste : Galerie, Onboarding (maquettes) puis Réglages, Rappels, Même instant, Carte,
-  Partenaires, Permission refusée, Choix du mode (repeinture directe).
+- Branche de travail : **`feature/themes`** — refonte « sauge » **terminée** (tous les écrans),
+  barre de menu en bas (`feature/barre-menu` fusionnée dedans). Prête pour TestFlight + build Android.
+  À fusionner dans `main` après test (avec `feature/progression`, déjà incluse dedans).
 - `feature/progression` : terminée, commitée, **pas encore fusionnée** dans `main`
   (attend son test TestFlight). C'est aussi le **retour arrière** si le thème casse tout.
 - `main` = fin de la session d'octobre (`ab35958 vdefversionoctobre`).
@@ -167,17 +165,19 @@ Aussi `FONT` ("Outfit"), styles `S`. Ne jamais écrire une couleur en dur : pass
    retouchera. `HomeScreen` découpé le 30 oct. (~990 l., dont la fenêtre partenaires inutilisée).
 5. **Fenêtre « Nos partenaires impression »** dans `HomeScreen` (PRODUCTS, Cheerz/CEWE/Photobox) :
    plus aucun bouton ne l'ouvre. À supprimer ou rebrancher (décision d'Augustin).
-6. **Avant TestFlight du thème** : retirer `IconsBoard` de Réglages ; passer la couleur des
-   notifications (`app.json`, `#2e4d7a` ardoise) en vert sauge ; champs `TextInput` hors
-   Accueil pas encore en Outfit.
+6. **Code mort à supprimer** (suppression de fichiers = permission à demander) : `AlbumFiltersBar`,
+   `ExitIcon`, `SwapIcon`, `IconsBoard` (plus affichée), `MomentScreen` (orphelin, encore déclaré
+   dans le navigateur). Quelques `TextInput` hors Accueil/Galerie pas encore en Outfit.
+7. **Android : jamais d'ombre (`elevation`) sur un fond transparent** (`${couleur}12`, rgba) →
+   rectangle gris. Fond opaque (ex. `C.sage`) ou pas d'ombre.
 
 ---
 
 ## 8. Prochaines étapes probables
 
-0. **Thème sauge** (§12) : écran Progression, puis maquette + code écran par écran
-   (Swipe en priorité, Bilan, Même instant, Galerie, Réglages, Rappels, Carte, Partenaires, Onboarding).
-   Plus tard : choix de la couleur par l'utilisateur (le mécanisme `PALETTES` est prêt).
+0. **Tester le thème** : TestFlight (iPhone de sa femme) + APK Android (`eas build --profile preview`).
+   Plus tard : choix de la couleur par l'utilisateur (le mécanisme `PALETTES` est prêt ; l'icône de
+   l'app est une image → à régénérer par palette, ou icônes alternatives).
 1. Build TestFlight de `feature/progression` et test sur plusieurs jours
    (rappels datés, série, déblocages).
 2. Fusionner `feature/progression` dans `main` (`git merge --ff-only`).
@@ -280,4 +280,27 @@ le store → accueil refait (en-tête, héros Tri, Trier autrement, Au quotidien
 **badges : couleurs gardées telles quelles**, demandé par Augustin), Swipe (icônes au trait, ❤️ plein
 vert, halos aux couleurs du thème), Bilan + fenêtre « Nouveau galon ». Maquettes correspondantes dans
 `Claude outputs/` (swipe, bilan, logo, barre-menu, accueil-compact, corbeille-discrete).
+
+**31 oct.**
+- **Galerie** (onglet, `screens/GalleryHomeScreen.js`) : une seule page, sans barre de choix —
+  Coups de cœur en tête, albums (menu ··· renommer/imprimer/supprimer), « + Nouvel album »,
+  « Sans album », « Imprimer tes albums · BIENTÔT », Corbeille (si non vide). Toucher une carte →
+  `GalleryScreen` (pile, flèche retour). « Mes albums » retiré de l'accueil.
+- **Accueil Album** : plus de pastilles de filtres ni de barre de filtres combinés ; les filtres actifs
+  s'affichent dans leur ligne avec ✕ (Par date = 1 période à la fois, Par lieu, Dossiers « Dossiers du
+  téléphone »). Haut : « 48 photos » + poids (Mo/Go) + **période couverte** (« du 3 juin au 28 août 2026 »,
+  « en août 2026 », « le 14 juillet 2026 »). « Ton prochain album » retiré.
+- **Accueil Tri** : sous la barre « 62 % · 1 240 / 2 000 photos triées » (plus de Go triés).
+  **% stable après vidage de la corbeille** : `purgedCount` (store, persisté) compte les photos
+  supprimées pour de bon ; ajouté au trié ET au total (aussi pour le badge « Galerie nette »).
+- **Progression** en 3 sections : AUJOURD'HUI (série compacte, objectif, semaine, joker,
+  « Rappel quotidien »), TES CHIFFRES (graphe), TES RÉCOMPENSES (galon + badges).
+- **24 badges** (+10 : Centurion, Marathonien, Turbo 🚀, Collectionneur, Archiviste, Grand romantique,
+  Sans pitié, Week-end studieux, Joueur (`shuffleLaunchCount`), Légende = tous les autres).
+- Écrans outils repeints (Réglages, Rappels, Même instant, Carte, Choix du mode, Partenaires,
+  Permission, tuto), Onboarding (tuiles illustrées, textes mis à jour : onglet Galerie / Progression /
+  bouton central).
+- **Icônes de l'app** régénérées depuis le logo B (`assets/icon.png`, `adaptive-icon.png`,
+  `splash-icon.png`) ; `app.json` : fond splash `#f4f3ef`, fond icône Android `#dfe8d2`,
+  couleur des notifications `#4c7a2b`. Planche d'icônes retirée de Réglages.
 

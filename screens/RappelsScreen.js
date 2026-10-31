@@ -555,8 +555,10 @@ const styles = {
     shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
     marginBottom: 8,
   },
+  // Fond OPAQUE : une ombre sous un fond transparent fait un rectangle gris sur Android.
   priorityCardActive: {
-    backgroundColor: `${C.accent}08`,
+    backgroundColor: C.sage,
+    borderWidth: 1.5,
     borderColor: C.accent,
   },
   priorityTitle: {

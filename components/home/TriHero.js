@@ -45,7 +45,7 @@ function TubIllustration() {
 }
 
 export default function TriHero({
-  allSorted, dureeVal, dureeUnit, rhythmLabel, progressPct, triees, trieesSizeLabel,
+  allSorted, dureeVal, dureeUnit, rhythmLabel, progressPct, triees, totalGalerie,
   randomCount, onChangeRandomCount,
   shuffleOn, onToggleShuffle,
   ctaTitle, ctaSub, ctaDisabled, onLaunch,
@@ -116,7 +116,7 @@ export default function TriHero({
       </View>
       <Text style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 6 }}>
         <Text style={{ fontWeight: "600", color: C.text }}>{Math.round(progressPct)} %</Text>
-        {" · "}{triees} triées · <Text style={{ fontWeight: "600", color: C.text }}>{trieesSizeLabel}</Text> triés
+        {" · "}{triees.toLocaleString("fr-FR")} / {totalGalerie.toLocaleString("fr-FR")} photos triées
       </Text>
 
       {/* Corbeille : petite pastille, seulement s'il y a des photos à supprimer */}

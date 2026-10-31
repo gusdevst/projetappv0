@@ -459,11 +459,12 @@ export function SwipeScreen({ navigation, route }) {
             onPress={undo}
             disabled={!history.length}
             style={{
-              backgroundColor: history.length ? rgba(C.bgCard, 0.96) : rgba(C.bgCard, 0.45),
+              // Actif : fond opaque + ombre. Inactif : fond transparent SANS ombre (sinon carré gris sur Android).
+              backgroundColor: history.length ? C.bgCard : rgba(C.bgCard, 0.45),
               borderRadius: S.radiusFull, width: 54, height: 54,
               alignItems: "center", justifyContent: "center",
               shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.35, shadowRadius: 8, elevation: 6,
+              shadowOpacity: history.length ? 0.35 : 0, shadowRadius: 8, elevation: history.length ? 6 : 0,
             }}
           >
             <Icon name="undo" size={22} color={C.text} strokeWidth={2.2} />

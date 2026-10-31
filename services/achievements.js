@@ -55,7 +55,27 @@ export const BADGES = [
   { id: "days-10",  emoji: "📅", name: "Habitué", desc: "10 journées validées",  goal: 10,  value: (c) => c.validatedDays, fmt: (v, g) => `${v} / ${g}` },
   { id: "days-30",  emoji: "🗓️", name: "Assidu",  desc: "30 journées validées",  goal: 30,  value: (c) => c.validatedDays, fmt: (v, g) => `${v} / ${g}` },
   { id: "days-100", emoji: "🏅", name: "Fidèle",  desc: "100 journées validées", goal: 100, value: (c) => c.validatedDays, fmt: (v, g) => `${v} / ${g}` },
+
+  // ── Ajoutés le 31 oct. 2026 ──
+  // Intensité : photos triées en une seule journée
+  { id: "day-100", emoji: "💯", name: "Centurion",   desc: "100 photos triées en une journée", goal: 100, value: (c) => c.bestDay, fmt: (v, g) => `${Math.min(v, g)} / ${g}` },
+  { id: "day-300", emoji: "🏃", name: "Marathonien", desc: "300 photos triées en une journée", goal: 300, value: (c) => c.bestDay, fmt: (v, g) => `${Math.min(v, g)} / ${g}` },
+  { id: "turbo",   emoji: "🚀", name: "Turbo",       desc: "20 photos en moins de 25 s (moyenne d'une journée)", goal: 1, value: (c) => (c.hadTurboDay ? 1 : 0), fmt: () => "< 25 s / 20" },
+  // Albums & coups de cœur
+  { id: "albums-5",   emoji: "🗂️", name: "Collectionneur",   desc: "5 albums créés", goal: 5, value: (c) => c.albumCount, fmt: (v, g) => `${v} / ${g}` },
+  { id: "archive",    emoji: "📚", name: "Archiviste",       desc: "100 photos rangées dans des albums", goal: 100, value: (c) => c.photosInAlbums, fmt: (v, g) => `${v} / ${g}` },
+  { id: "hearts-200", emoji: "💘", name: "Grand romantique", desc: "200 coups de cœur", goal: 200, value: (c) => c.keptCount, fmt: (v, g) => `${v} / ${g}` },
+  // Ménage
+  { id: "purge-1000", emoji: "🗑️", name: "Sans pitié", desc: "1 000 photos supprimées définitivement", goal: 1000, value: (c) => c.purgedCount, fmt: (v, g) => `${v} / ${g}` },
+  // Régularité
+  { id: "weekend", emoji: "🛋️", name: "Week-end studieux", desc: "Samedi et dimanche validés le même week-end", goal: 1, value: (c) => (c.hadStudiousWeekend ? 1 : 0), fmt: () => "sam. + dim." },
+  // Aléatoire
+  { id: "shuffle-10", emoji: "🎲", name: "Joueur", desc: "10 tris aléatoires lancés", goal: 10, value: (c) => c.shuffleLaunches, fmt: (v, g) => `${v} / ${g}` },
+  // Le dernier : tous les autres
+  { id: "legend", emoji: "🏆", name: "Légende", desc: "Tous les autres badges obtenus", goal: 23, value: (c) => c.badgesWon, fmt: (v, g) => `${v} / ${g}` },
 ];
+// Objectif de « Légende » = nombre de badges hors lui-même.
+BADGES[BADGES.length - 1].goal = BADGES.length - 1;
 
 // ─── Contexte : toutes les mesures utiles, lues depuis l'état du store ────
 const FLASH_MIN_SAMPLES = 20;   // au moins 20 décisions chronométrées dans la journée
@@ -73,9 +93,35 @@ export function buildContext(state) {
   const lib = state.libraryPhotos || [];
   const tried = new Set([...(state.kept || []), ...(state.deleted || []), ...(state.printed || []), ...(state.skipped || [])].map((p) => p.id));
   const sortedInLib = lib.filter((p) => tried.has(p.id)).length;
-  const sortedPct = lib.length ? Math.floor((sortedInLib / lib.length) * 100) : 0;
+  // Photos supprimées pour de bon (corbeille vidée) : comptées comme triées (même calcul que l'accueil).
+  const purged = state.purgedCount || 0;
+  const sortedPct = lib.length + purged ? Math.floor(((sortedInLib + purged) / (lib.length + purged)) * 100) : 0;
+
+  // Meilleure journée (photos triées) et journée « turbo » (20 photos en < 25 s).
+  const bestDay = days.reduce((m, d) => Math.max(m, d.sorted || 0), 0);
+  const hadTurboDay = days.some((d) =>
+    (d.timedCount || 0) >= FLASH_MIN_SAMPLES && (d.activeMs / d.timedCount) * 20 < 25 * 1000
+  );
+  // Week-end studieux : un samedi ET le dimanche qui suit validés (≥ STREAK_MIN photos).
+  const okDay = (k) => (log[k]?.sorted || 0) >= STREAK_MIN;
+  const hadStudiousWeekend = Object.keys(log).some((k) => {
+    if (!okDay(k)) return false;
+    const [y, m, d] = k.split("-").map(Number);
+    const sat = new Date(y, m - 1, d, 12);
+    if (sat.getDay() !== 6) return false;
+    const sun = new Date(y, m - 1, d + 1, 12);
+    const kSun = `${sun.getFullYear()}-${String(sun.getMonth() + 1).padStart(2, "0")}-${String(sun.getDate()).padStart(2, "0")}`;
+    return okDay(kSun);
+  });
+  const photosInAlbums = new Set((state.albums || []).flatMap((a) => a.photoIds)).size;
+  // Badges déjà obtenus, sans compter « Légende ».
+  const have = state.achievements || {};
+  const badgesWon = BADGES.filter((b) => b.id !== "legend" && have[b.id]).length;
 
   return {
+    bestDay, hadTurboDay, hadStudiousWeekend, photosInAlbums, badgesWon,
+    purgedCount:     state.purgedCount || 0,
+    shuffleLaunches: state.shuffleLaunchCount || 0,
     totalSorted: state.lifetimeSorted ?? sumSorted,
     freedMo:     state.freedMo || 0,
     keptCount:   (state.kept || []).length,

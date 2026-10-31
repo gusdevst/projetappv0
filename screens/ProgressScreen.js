@@ -66,10 +66,21 @@ const CARD = {
   shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
 };
 
-// Flamme sauge (remplace l'émoji 🔥 en grand). Grisée tant que la série est à 0.
-function FlameIllustration({ dim }) {
+// Titre de section : « AUJOURD'HUI », « TES CHIFFRES », « TES RÉCOMPENSES ».
+function SectionLabel({ children }) {
   return (
-    <Svg width={110} height={88} viewBox="0 0 120 96" opacity={dim ? 0.4 : 1}>
+    <Text style={{ fontSize: 11, fontWeight: "600", color: C.textMuted, letterSpacing: 1.2, marginTop: 18, marginBottom: 8, marginHorizontal: 2 }}>
+      {children}
+    </Text>
+  );
+}
+
+const SEP = { height: 1, backgroundColor: C.border, marginVertical: 12 };
+
+// Flamme sauge (remplace l'émoji 🔥 en grand). Grisée tant que la série est à 0.
+function FlameIllustration({ dim, size = 110 }) {
+  return (
+    <Svg width={size} height={size * 0.8} viewBox="0 0 120 96" opacity={dim ? 0.4 : 1}>
       <Defs>
         <LinearGradient id="fl" x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={C.sage2} /><Stop offset="1" stopColor={C.sage3} /></LinearGradient>
         <LinearGradient id="fl2" x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={C.bgCard} /><Stop offset="1" stopColor={C.sage} /></LinearGradient>
@@ -158,16 +169,23 @@ export function ProgressScreen({ navigation, route }) {
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: S.pad, paddingBottom: 30 }}>
 
-        {/* ── Série 🔥 : chiffre héros ── */}
-        <View style={{ alignItems: "center", marginBottom: 14 }}>
-          <FlameIllustration dim={streak.current === 0} />
-          <Text style={{ fontSize: 48, fontWeight: "600", color: C.accent, lineHeight: 52, marginTop: 2 }}>{streak.current}</Text>
-          <Text style={{ fontSize: 16, fontWeight: "500", color: C.text }}>jour{streak.current > 1 ? "s" : ""} d'affilée</Text>
-          <Text style={{ fontSize: 12.5, color: C.textMuted, marginTop: 2 }}>Record : {streak.best} jour{streak.best > 1 ? "s" : ""}</Text>
-        </View>
+        {/* ══ AUJOURD'HUI : série, objectif du jour, semaine, joker, rappel ══ */}
+        <SectionLabel>AUJOURD'HUI</SectionLabel>
+        <View style={CARD}>
+          {/* Série 🔥 (compacte) */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <FlameIllustration dim={streak.current === 0} size={46} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: C.text }}>
+                <Text style={{ fontSize: 32, fontWeight: "600", color: C.accent }}>{streak.current}</Text>
+                <Text style={{ fontSize: 15, fontWeight: "500" }}> jour{streak.current > 1 ? "s" : ""} d'affilée</Text>
+              </Text>
+              <Text style={{ fontSize: 12, color: C.textMuted }}>Record : {streak.best} jour{streak.best > 1 ? "s" : ""}</Text>
+            </View>
+          </View>
 
-        {/* ── Objectif du jour + semaine en cours ── */}
-        <View style={[CARD, { marginBottom: 12 }]}>
+          <View style={SEP} />
+
           <Text style={{ fontSize: 13.5, fontWeight: "600", color: streak.todayDone ? C.accent : C.text }}>
             {streak.todayDone
               ? "✅ Journée validée"
@@ -205,30 +223,28 @@ export function ProgressScreen({ navigation, route }) {
                 : "Joker dispo : un jour raté cette semaine ne cassera pas ta série."}
             </Text>
           </View>
+
+          <View style={SEP} />
+
+          {/* Rappel quotidien : tap = réglages des rappels, interrupteur = on/off */}
+          <TouchableOpacity onPress={() => navigation.navigate("Rappels")} activeOpacity={0.8}
+            style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: C.sage, alignItems: "center", justifyContent: "center" }}>
+              <Icon name="bell" size={16} color={C.accent} strokeWidth={2} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: C.text }}>Rappel quotidien</Text>
+              <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 1 }}>
+                {notificationsEnabled ? `${notificationHour}:${String(notificationMinute).padStart(2, "0")}` : "Désactivé"}
+              </Text>
+            </View>
+            <Switch value={notificationsEnabled} onValueChange={toggleReminder} trackColor={{ true: C.accent, false: C.border }} thumbColor="#fff" />
+          </TouchableOpacity>
         </View>
 
-        {/* ── Rappel (déplacé depuis l'accueil) : tap = réglages, interrupteur = on/off ── */}
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Rappels")}
-          activeOpacity={0.8}
-          style={[CARD, { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }]}
-        >
-          <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: C.sage, alignItems: "center", justifyContent: "center" }}>
-            <Icon name="bell" size={17} color={C.accent} strokeWidth={2} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: "500", color: C.text }}>Rappel</Text>
-            <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 1 }}>
-              {notificationsEnabled ? `${notificationHour}:${String(notificationMinute).padStart(2, "0")}` : "Désactivé"}
-            </Text>
-          </View>
-          <Switch value={notificationsEnabled} onValueChange={toggleReminder} trackColor={{ true: C.accent, false: C.border }} thumbColor="#fff" />
-        </TouchableOpacity>
-
-        {/* ── Galon ── */}
-        <RankCard totalSorted={ctx.totalSorted} achievements={achievements} />
-
-        <View style={[CARD, { marginTop: 12 }]}>
+        {/* ══ TES CHIFFRES : graphe semaine / mois, totaux, chrono ══ */}
+        <SectionLabel>TES CHIFFRES</SectionLabel>
+        <View style={CARD}>
 
           {/* Bascule Semaine / Mois */}
           <View style={{ flexDirection: "row", backgroundColor: C.bgMuted, borderRadius: 12, padding: 3, marginBottom: 14 }}>
@@ -318,7 +334,9 @@ export function ProgressScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* ── Badges ── */}
+        {/* ══ TES RÉCOMPENSES : galon + badges (couleurs des badges inchangées) ══ */}
+        <SectionLabel>TES RÉCOMPENSES</SectionLabel>
+        <RankCard totalSorted={ctx.totalSorted} achievements={achievements} />
         <BadgesGrid ctx={ctx} achievements={achievements} />
       </ScrollView>
     </SafeAreaView>

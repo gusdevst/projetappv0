@@ -108,6 +108,26 @@ const RHYTHM_LABEL = {
 
 const iconBox = { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" };
 
+// Période couverte par une sélection : « du 3 juin au 28 août 2026 »,
+// « en août 2026 » (même mois), « le 14 juillet 2026 » (même jour).
+function periodLabel(photos) {
+  let min = Infinity, max = -Infinity;
+  for (const p of photos) {
+    const t = p.creationTime;
+    if (!t) continue;
+    if (t < min) min = t;
+    if (t > max) max = t;
+  }
+  if (!isFinite(min)) return "";
+  const a = new Date(min), b = new Date(max);
+  const fmt = (d, opts) => d.toLocaleDateString("fr-FR", opts);
+  const dayMonth = (d) => (d.getDate() === 1 ? "1er " : `${d.getDate()} `) + fmt(d, { month: "long" });
+  if (a.toDateString() === b.toDateString()) return `le ${dayMonth(a)} ${a.getFullYear()}`;
+  if (a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth()) return `en ${fmt(a, { month: "long", year: "numeric" })}`;
+  if (a.getFullYear() === b.getFullYear()) return `du ${dayMonth(a)} au ${dayMonth(b)} ${b.getFullYear()}`;
+  return `du ${dayMonth(a)} ${a.getFullYear()} au ${dayMonth(b)} ${b.getFullYear()}`;
+}
+
 // Durée lisible : en jours jusqu'à 179, en mois à partir de 180.
 function formatDuration(days) {
   if (days >= 180) return { val: Math.round(days / 30), unit: "mois" };
@@ -310,13 +330,16 @@ export function HomeScreen({ navigation, route }) {
 
   const excludedIds = isMenage ? menageExcludedIds : albumExcludedIds;
 
-  const triees      = menageExcludedIds.size;
-  const progressPct = libraryPhotos.length > 0
-    ? Math.min(100, (triees / libraryPhotos.length) * 100) : 0;
+  // Les photos supprimées pour de bon (corbeille vidée) ont quitté la photothèque :
+  // on les compte quand même comme triées, sinon le % baisserait après « Vider ».
+  const purgedCount = usePhotoStore((state) => state.purgedCount) || 0;
+  const triees      = menageExcludedIds.size + purgedCount;
+  const totalGalerie = libraryPhotos.length + purgedCount;
+  const progressPct = totalGalerie > 0
+    ? Math.min(100, (triees / totalGalerie) * 100) : 0;
 
   // ── Carte "objectif" du mode Tri ─────────────────────────────────────────
-  const resteATrier = Math.max(0, libraryPhotos.length - triees);
-  const trieesSize  = libraryPhotos.reduce((a, p) => (menageExcludedIds.has(p.id) ? a + p.size : a), 0);
+  const resteATrier = Math.max(0, totalGalerie - triees);
   const sessionsRestantes = Math.ceil(resteATrier / randomCount);
   const joursRestants = Math.ceil(sessionsRestantes / (SESSIONS_PER_DAY[notificationFrequency] ?? 1));
   const duree = formatDuration(joursRestants);
@@ -348,6 +371,7 @@ export function HomeScreen({ navigation, route }) {
       const q = shuffleOn
         ? [...filteredPool].sort(() => Math.random() - 0.5).slice(0, randomCount)
         : queue;
+      if (shuffleOn) usePhotoStore.getState().bumpShuffleLaunch(); // badge « Joueur »
       navigation.navigate("Swipe", { queue: q, mode: "menage" });
     } else {
       navigation.navigate("TriMode", { preQueue: queue, skipToAlbum: true });
@@ -451,7 +475,7 @@ export function HomeScreen({ navigation, route }) {
               rhythmLabel={RHYTHM_LABEL[notificationFrequency] ?? "par jour"}
               progressPct={progressPct}
               triees={triees}
-              trieesSizeLabel={formatSize(trieesSize)}
+              totalGalerie={totalGalerie}
               randomCount={randomCount}
               onChangeRandomCount={setRandomCount}
               shuffleOn={shuffleOn}
@@ -488,11 +512,17 @@ export function HomeScreen({ navigation, route }) {
                   <Text style={{ fontSize: 38, fontWeight: "600" }}>{queue.length} </Text>
                   <Text style={{ fontSize: 20, fontWeight: "600" }}>photo{queue.length > 1 ? "s" : ""}</Text>
                 </Text>
-                {/* Poids de la sélection (Mo / Go) */}
+                {/* Poids de la sélection (Mo / Go) + période couverte */}
                 {queue.length > 0 && (
-                  <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 1 }}>
-                    {formatSize(queue.reduce((t, p) => t + (p.size || 0), 0))}
-                  </Text>
+                  <>
+                    <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 1 }}>
+                      {formatSize(queue.reduce((t, p) => t + (p.size || 0), 0))}
+                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+                      <Icon name="calendar" size={14} color={C.album} />
+                      <Text style={{ fontSize: 13, color: C.text }}>{periodLabel(queue)}</Text>
+                    </View>
+                  </>
                 )}
               </View>
 

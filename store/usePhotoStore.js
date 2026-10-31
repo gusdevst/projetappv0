@@ -372,6 +372,12 @@ export const usePhotoStore = create(
       // Retourne true si la suppression a réussi, false sinon.
       // Total estimé (en Mo) des photos supprimées définitivement via Pellicule. Persisté.
       freedMo: 0,
+      // Nombre de photos définitivement supprimées (corbeille vidée). Elles sortent de la
+      // photothèque : on les garde dans le calcul du % trié pour qu'il ne baisse pas.
+      purgedCount: 0,
+      // Nombre de tris aléatoires lancés (badge « Joueur »).
+      shuffleLaunchCount: 0,
+      bumpShuffleLaunch: () => set((st) => ({ shuffleLaunchCount: (st.shuffleLaunchCount || 0) + 1 })),
 
       // ─── Galons & badges ────────────────────────────────────────────────
       // Compare ce qui est atteint avec ce qui est déjà débloqué, mémorise les
@@ -413,6 +419,7 @@ export const usePhotoStore = create(
             set({
               deleted: [],
               freedMo: (get().freedMo || 0) + freed,
+              purgedCount: (get().purgedCount || 0) + deleted.length,
               // Carnet du jour : les Mo comptent le jour où la corbeille est vidée (place réellement libérée).
               dailyLog: bumpLog(get().dailyLog, "freedMo", freed),
             });
@@ -595,6 +602,8 @@ export const usePhotoStore = create(
         shuffleOn:               state.shuffleOn,
         sortPriority:            state.sortPriority,
         freedMo:                 state.freedMo,
+        purgedCount:             state.purgedCount,
+        shuffleLaunchCount:      state.shuffleLaunchCount,
         dailyLog:                state.dailyLog,
         lifetimeSorted:          state.lifetimeSorted,
         achievements:            state.achievements,
