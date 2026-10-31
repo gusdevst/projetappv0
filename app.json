@@ -16,8 +16,6 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.phototri.app",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Pellicule a besoin d'accéder à tes photos pour t'aider à les trier (garder, supprimer, imprimer).",
-        "NSPhotoLibraryAddUsageDescription": "Pellicule a besoin d'enregistrer des photos améliorées dans ta photothèque.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
