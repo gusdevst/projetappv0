@@ -1,8 +1,9 @@
 // screens/GalleryHomeScreen.js
 // Onglet « Galerie » : une seule page (pas de barre de choix).
-// Coups de cœur en tête, puis les albums (menu ··· : renommer / imprimer / supprimer),
-// « + Nouvel album », « Sans album », « Imprimer tes albums · BIENTÔT »,
-// et la Corbeille (seulement si elle contient des photos).
+// 1. Mes albums : grille de 3 (menu ··· : renommer / imprimer / supprimer), ＋ dans le titre.
+// 2. Mes livres photo : étagère horizontale, ＋ dans le titre (feuille « Quel album ? »).
+// 3. Mes tirages photos : Coups de cœur (l'impression viendra plus tard).
+// Puis « Sans album » et la Corbeille (seulement si elles contiennent des photos).
 // Toucher une carte ouvre son contenu dans GalleryScreen (avec flèche retour).
 
 import { useMemo, useState } from "react";
@@ -13,6 +14,7 @@ import Text from "../components/AppText";
 import Icon from "../components/Icons";
 import { ListRow, SectionTitle, SHADOW } from "../components/home/ui";
 import { BookCover } from "../components/book/BookPage";
+import AlbumPickerSheet from "../components/book/AlbumPickerSheet";
 import { useBookFonts } from "../components/book/bookFonts";
 import { bookStats } from "../services/photoBook";
 import { C, FONT } from "../constants/theme";
@@ -53,14 +55,14 @@ function Cover({ urls, height }) {
   );
 }
 
-function Card({ width, cover, title, sub, onPress, onMenu }) {
+function Card({ width, cover, title, sub, subLines = 1, onPress, onMenu }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}
       style={[{ width, backgroundColor: C.bgCard, borderRadius: 16, padding: 7 }, SHADOW]}>
       {cover}
       <Text style={{ fontSize: 13.5, fontWeight: "500", color: C.text, marginTop: 7, marginHorizontal: 3 }} numberOfLines={1}>{title}</Text>
       <View style={{ flexDirection: "row", alignItems: "center", marginHorizontal: 3, marginBottom: 2 }}>
-        <Text style={{ flex: 1, fontSize: 11, color: C.textMuted }} numberOfLines={1}>{sub}</Text>
+        <Text style={{ flex: 1, fontSize: 11, color: C.textMuted }} numberOfLines={subLines}>{sub}</Text>
         {onMenu && (
           <TouchableOpacity onPress={onMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Text style={{ fontSize: 16, fontWeight: "600", color: C.textMuted, letterSpacing: 1 }}>···</Text>
@@ -73,8 +75,8 @@ function Card({ width, cover, title, sub, onPress, onMenu }) {
 
 export function GalleryHomeScreen({ navigation }) {
   const { width: SW } = useWindowDimensions();
-  const CARD_W = (SW - 32 - 10) / 2;
-  const COVER_H = CARD_W * 0.72;
+  const CARD_W = (SW - 32 - 20) / 3; // 3 cartes par ligne (2 espaces de 10)
+  const COVER_H = CARD_W;              // vignette carrée
 
   const kept          = usePhotoStore((s) => s.kept);
   const deleted       = usePhotoStore((s) => s.deleted);
@@ -95,6 +97,12 @@ export function GalleryHomeScreen({ navigation }) {
     return m;
   }, [libraryPhotos, printed]);
   // Couverture = les 3 dernières photos ajoutées encore présentes.
+  // Coups de cœur encore présents sur le téléphone (même règle que GalleryScreen).
+  const keptCount = useMemo(() => {
+    if (libraryPhotos.length === 0) return kept.length;
+    const ids = new Set(libraryPhotos.map((p) => p.id));
+    return kept.filter((p) => ids.has(p.id)).length;
+  }, [kept, libraryPhotos]);
   const coverUrls = (ids) => {
     const out = [];
     for (let k = ids.length - 1; k >= 0 && out.length < 3; k--) {
@@ -157,53 +165,47 @@ export function GalleryHomeScreen({ navigation }) {
 
   const open = (params) => navigation.navigate("Gallery", params);
 
+  // Petit ＋ discret à droite d'un titre de section
+  const PlusButton = ({ onPress }) => (
+    <TouchableOpacity onPress={onPress} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+      <Text style={{ fontSize: 22, lineHeight: 22, color: C.album }}>＋</Text>
+    </TouchableOpacity>
+  );
+  const [bookPickerOpen, setBookPickerOpen] = useState(false);
+
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 30 }}>
         <Text style={{ fontSize: 24, fontWeight: "600", color: C.text, marginBottom: 14 }}>Galerie</Text>
 
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-          {/* Coups de cœur : album automatique, toujours en tête */}
-          <Card
-            width={CARD_W}
-            cover={
-              <View style={{ height: COVER_H, borderRadius: 11, backgroundColor: C.redSoft, alignItems: "center", justifyContent: "center" }}>
-                <Icon name="heart" size={34} color={C.red} filled />
-              </View>
-            }
-            title="Coups de cœur"
-            sub={`${kept.length} photo${kept.length > 1 ? "s" : ""} · rempli avec le ❤️`}
-            onPress={() => open({ section: "kept" })}
-          />
+        {/* 1. Mes albums : grille de 3 */}
+        <SectionTitle title="Mes albums" right={<PlusButton onPress={() => { setNewName(""); setNewOpen(true); }} />} />
+        {sortedAlbums.length === 0 ? (
+          <Text style={{ fontSize: 12.5, color: C.textMuted, marginHorizontal: 2 }}>Crée ton premier album avec le ＋.</Text>
+        ) : (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {sortedAlbums.map((a) => (
+              <Card
+                key={a.id}
+                width={CARD_W}
+                cover={<Cover urls={coverUrls(a.photoIds)} height={COVER_H} />}
+                title={a.name}
+                sub={`${a.photoIds.length} photo${a.photoIds.length > 1 ? "s" : ""}${a.updatedAt ? ` · ${timeAgo(a.updatedAt)}` : ""}`}
+                onPress={() => open({ section: "album", albumId: a.id })}
+                onMenu={() => openAlbumMenu(a)}
+              />
+            ))}
+          </View>
+        )}
 
-          {sortedAlbums.map((a) => (
-            <Card
-              key={a.id}
-              width={CARD_W}
-              cover={<Cover urls={coverUrls(a.photoIds)} height={COVER_H} />}
-              title={a.name}
-              sub={`${a.photoIds.length} photo${a.photoIds.length > 1 ? "s" : ""}${a.updatedAt ? ` · ${timeAgo(a.updatedAt)}` : ""}`}
-              onPress={() => open({ section: "album", albumId: a.id })}
-              onMenu={() => openAlbumMenu(a)}
-            />
-          ))}
-
-          {/* + Nouvel album */}
-          <TouchableOpacity
-            onPress={() => { setNewName(""); setNewOpen(true); }}
-            style={{ width: CARD_W, minHeight: COVER_H + 44, borderRadius: 16, borderWidth: 1.5, borderStyle: "dashed", borderColor: C.album, alignItems: "center", justifyContent: "center", gap: 6 }}
-          >
-            <Text style={{ fontSize: 26, color: C.album }}>＋</Text>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: C.album }}>Nouvel album</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Mes livres photo : les livres en cours, à reprendre */}
-        {bookList.length > 0 && (
+        {/* 2. Mes livres photo : étagère horizontale (toujours affichée) */}
+        <SectionTitle title="Mes livres photo" right={<PlusButton onPress={() => setBookPickerOpen(true)} />} />
+        {bookList.length === 0 ? (
+          <Text style={{ fontSize: 12.5, color: C.textMuted, marginHorizontal: 2 }}>Transforme un album en vrai livre avec le ＋.</Text>
+        ) : (
           <>
-            <SectionTitle title="Mes livres photo" />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 4 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 4 }}>
               {bookList.map(({ book, album }) => {
                 const ids = album.photoIds.filter((id) => urlById[id]);
                 const pct = Math.round(bookStats(book, ids).fillRatio * 100);
@@ -211,9 +213,9 @@ export function GalleryHomeScreen({ navigation }) {
                   <TouchableOpacity key={book.albumId} activeOpacity={0.85}
                     onPress={() => navigation.navigate("PhotoBook", { albumId: album.id })}
                     onLongPress={() => openBookMenu({ book, album })}
-                    style={{ width: 128 }}>
+                    style={{ width: CARD_W }}>
                     <View style={{ borderRadius: 8, backgroundColor: C.bgCard, ...SHADOW }}>
-                      <BookCover cover={book.cover} size={128} urlById={urlById} />
+                      <BookCover cover={book.cover} size={CARD_W} urlById={urlById} />
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", marginTop: 7 }}>
                       <Text numberOfLines={1} style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: C.text }}>{book.cover.title || album.name}</Text>
@@ -230,18 +232,28 @@ export function GalleryHomeScreen({ navigation }) {
           </>
         )}
 
+        {/* 3. Mes tirages photos : les Coups de cœur (impression à venir) */}
+        <SectionTitle title="Mes tirages photos" />
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <Card
+            width={CARD_W}
+            cover={
+              <View style={{ height: COVER_H, borderRadius: 11, backgroundColor: C.redSoft, alignItems: "center", justifyContent: "center" }}>
+                <Icon name="heart" size={30} color={C.red} filled />
+              </View>
+            }
+            title="Coups de cœur"
+            sub={`${keptCount} photo${keptCount > 1 ? "s" : ""} à imprimer`}
+            onPress={() => open({ section: "kept" })}
+          />
+        </View>
+
         <View style={{ gap: 10, marginTop: 14 }}>
           {sansAlbum.length > 0 && (
             <ListRow icon="album" iconColor={C.textMid} iconBg={C.bgMuted} title="Sans album"
               sub={`${sansAlbum.length} photo${sansAlbum.length > 1 ? "s" : ""}`}
               onPress={() => open({ section: "album", albumId: "__sans_album__" })} />
           )}
-          <ListRow
-            icon="printer" iconColor={C.textMuted} iconBg={C.bgMuted}
-            title="Imprimer tes albums"
-            right={<Text style={{ fontSize: 10, fontWeight: "700", color: C.textMuted, backgroundColor: C.bgMuted, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, overflow: "hidden" }}>BIENTÔT</Text>}
-            onPress={() => Alert.alert("Bientôt disponible", "L'impression de tes albums arrive bientôt 🌸")}
-          />
           {deleted.length > 0 && (
             <ListRow icon="trash" iconColor={C.red} iconBg={C.redSoft} title="Corbeille"
               sub={`${deleted.length} photo${deleted.length > 1 ? "s" : ""} · ${formatSize(trashSize)}`}
@@ -271,6 +283,16 @@ export function GalleryHomeScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* ── ＋ Mes livres photo : « Quel album ? » ── */}
+      <AlbumPickerSheet
+        visible={bookPickerOpen}
+        onClose={() => setBookPickerOpen(false)}
+        albums={albums}
+        urlById={urlById}
+        books={books}
+        onPick={(a) => { setBookPickerOpen(false); navigation.navigate("PhotoBook", { albumId: a.id }); }}
+      />
 
       {/* ── Nouvel album ── */}
       <Modal visible={newOpen} transparent animationType="fade" onRequestClose={() => setNewOpen(false)}>

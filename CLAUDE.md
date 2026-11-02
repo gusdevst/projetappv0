@@ -304,3 +304,8 @@ vert, halos aux couleurs du thème), Bilan + fenêtre « Nouveau galon ». Maque
   `splash-icon.png`) ; `app.json` : fond splash `#f4f3ef`, fond icône Android `#dfe8d2`,
   couleur des notifications `#4c7a2b`. Planche d'icônes retirée de Réglages.
 
+
+**2 nov.** — Galerie (`GalleryHomeScreen`) : « Mes albums » en grille de 3 (vignettes carrées, ＋ dans le titre),
+« Mes livres photo » toujours affichée (＋ → `AlbumPickerSheet`), « Mes tirages photos » = Coups de cœur
+(« N photos à imprimer », impression à brancher plus tard). Ligne « Imprimer tes albums » supprimée.
+Bug corrigé : Coups de cœur vides → `GalleryScreen` ne garde que les photos encore présentes dans la photothèque.

@@ -3,7 +3,7 @@
 // - Corbeille : restauration individuelle ou vidage
 // - Album souvenirs : liste des albums → tap → grille de l'album → tap → plein écran swipeable
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   View,
   ScrollView,
@@ -76,7 +76,16 @@ export function GalleryScreen({ navigation, route }) {
   const config  = SECTION_CONFIG[section] ?? SECTION_CONFIG.kept;
   const { title, accent, showEmpty } = config;
 
-  const photos               = usePhotoStore((s) => s[config.storeKey]);
+  const storedPhotos         = usePhotoStore((s) => s[config.storeKey]);
+  const libraryPhotos        = usePhotoStore((s) => s.libraryPhotos);
+  // Coups de cœur : on ne garde que les photos encore présentes sur le téléphone,
+  // avec leur adresse à jour (une photo supprimée hors de l'app = vignette vide).
+  // Tant que la photothèque n'est pas chargée, on affiche la liste telle quelle.
+  const photos = useMemo(() => {
+    if (section !== "kept" || libraryPhotos.length === 0) return storedPhotos;
+    const byId = new Map(libraryPhotos.map((p) => [p.id, p]));
+    return storedPhotos.filter((p) => byId.has(p.id)).map((p) => ({ ...p, url: byId.get(p.id).url }));
+  }, [section, storedPhotos, libraryPhotos]);
   const albums               = usePhotoStore((s) => s.albums);
   const emptyTrash           = usePhotoStore((s) => s.emptyTrash);
   const restorePhoto         = usePhotoStore((s) => s.restorePhoto);
