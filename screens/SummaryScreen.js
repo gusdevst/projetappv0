@@ -13,6 +13,8 @@ import Icon from "../components/Icons";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
 import { BadgeUnlockBanner, RankUnlockModal } from "../components/AchievementUnlocks";
+import { DeleteRatio } from "../components/DeleteRatio";
+import { deleteRatio } from "../services/progressStats";
 
 const { width: SW } = Dimensions.get("window");
 
@@ -93,6 +95,12 @@ export function SummaryScreen({ navigation, route }) {
   const reviewedCount =
     sessionConserved.length + sessionDeleted.length + sessionKept.length +
     sessionHesitated.length + sessionAlbumPhotos.length;
+
+  // « X photos sur 10 sont supprimées » sur la session (triées = conservées + ❤️ + supprimées).
+  const sessionRatio = deleteRatio(
+    sessionConserved.length + sessionKept.length + sessionDeleted.length,
+    sessionDeleted.length,
+  );
 
   // Album créé pendant cette session (mode album uniquement)
   const createdAlbum = albumId ? albums.find((a) => a.id === albumId) : null;
@@ -186,6 +194,13 @@ export function SummaryScreen({ navigation, route }) {
             return <View key={s.label}>{cardContent}</View>;
           })}
         </View>
+        )}
+
+        {/* ── Ratio de suppression de la session (mode ménage) ── */}
+        {!isAlbum && sessionRatio && (
+          <View style={[CARD, { marginTop: -6, marginBottom: 20 }]}>
+            <DeleteRatio ratio={sessionRatio} subtitle="sur cette session" />
+          </View>
         )}
 
         {/* ── Bilan album (mode album) ──────────────────────────────────── */}

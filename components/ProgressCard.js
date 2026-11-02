@@ -7,7 +7,10 @@
 import { View, TouchableOpacity } from "react-native";
 import Text from "./AppText";
 import { C } from "../constants/theme";
-import { dayKey } from "../store/usePhotoStore";
+import { dayKey, usePhotoStore } from "../store/usePhotoStore";
+import Icon from "./Icons";
+import { RankShield } from "./RankShield";
+import { rankInfo } from "../services/achievements";
 import { formatSize, sumRange, avgFor20, computeStreak } from "../services/progressStats";
 
 export function ProgressCard({ dailyLog, onPress }) {
@@ -34,6 +37,9 @@ export function ProgressCard({ dailyLog, onPress }) {
   const max = Math.max(1, ...spark);
 
   const streak = computeStreak(dailyLog); // série 🔥
+  // Galon actuel (null avant 25 photos triées) → petit écusson avant « Cette semaine ».
+  const lifetimeSorted = usePhotoStore((s) => s.lifetimeSorted);
+  const rank = rankInfo(lifetimeSorted ?? 0).current;
   const pace = avgFor20(week); // ex. "1 min 40 s" (null si pas assez de données)
 
   const isEmpty = week.sorted === 0 && week.freedMo === 0 && last.sorted === 0;
@@ -51,12 +57,14 @@ export function ProgressCard({ dailyLog, onPress }) {
     >
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          {rank && <RankShield metal={rank.metal} chevrons={rank.chevrons} size={16} />}
           <Text style={{ fontSize: 10.5, fontWeight: "600", color: C.textMuted, letterSpacing: 0.6 }}>CETTE SEMAINE</Text>
-          {/* Série 🔥 : grisée tant que la journée n'est pas validée */}
+          {/* Série : flamme dessinée, orange quand la journée est validée, grise sinon */}
           {streak.current > 0 && (
-            <View style={{ backgroundColor: streak.todayDone ? "#fdeee2" : C.bg, borderRadius: 9, paddingHorizontal: 7, paddingVertical: 2 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: streak.todayDone ? "#fdeee2" : C.bg, borderRadius: 9, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Icon name="flame" size={11} filled strokeWidth={1} color={streak.todayDone ? "#d9641e" : C.textMuted} />
               <Text style={{ fontSize: 10.5, fontWeight: "600", color: streak.todayDone ? "#d9641e" : C.textMuted }}>
-                🔥 {streak.current} j
+                {streak.current} j
               </Text>
             </View>
           )}

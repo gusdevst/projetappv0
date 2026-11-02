@@ -97,3 +97,29 @@ export function computeStreak(log) {
     jokerDays: [...jokerDays],
   };
 }
+
+// ─── Ratio de suppression (« 3 photos sur 4 sont supprimées ») ─────────────
+// Toujours exprimé « sur 10 », à une décimale (« 9,6 photos sur 10 »), à partir de 10 photos
+// triées sur la période. Décimale masquée si ronde (« 7 photos sur 10 »).
+export const RATIO_MIN = 10;
+
+// null si moins de 10 photos triées ou aucune suppression.
+export function deleteRatio(sorted, deleted) {
+  if (!sorted || sorted < RATIO_MIN || !deleted) return null;
+  const n = Math.max(0.1, Math.round(Math.min(1, deleted / sorted) * 100) / 10); // ex. 9.6
+  const txt = Number.isInteger(n) ? String(n) : n.toFixed(1).replace(".", ",");
+  const plural = n >= 2; // en français : « 1,5 photo » mais « 2 photos »
+  return { n, d: 10, label: `${txt} photo${plural ? "s" : ""} sur 10`, verb: plural ? "sont supprimées" : "est supprimée" };
+}
+
+// Triées + supprimées par swipe entre 2 dates. On ne compte que les tris notés depuis
+// l'arrivée du compteur (champ decided) : les anciens tris ne faussent pas le ratio.
+export function deletedRange(log, from, to) {
+  let sorted = 0, deleted = 0;
+  for (let d = noon(from); d <= to; d = addDays(d, 1)) {
+    const v = log?.[dayKey(d)];
+    sorted  += v?.decided || 0;
+    deleted += v?.binned || 0; // binned et decided démarrent ensemble → ratio juste
+  }
+  return { sorted, deleted };
+}

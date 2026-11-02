@@ -25,6 +25,8 @@ let geoScanRunning = false;
 // ─── Carnet de bord journalier (progression) ──────────────────────────────
 // dailyLog = { "2026-10-26": { sorted: 18, freedMo: 0 }, ... }
 // sorted = photos triées ce jour-là (gardées ✅/❤️ ou supprimées 🗑).
+// decided / binned = triées / envoyées à la corbeille par swipe, comptées ensemble depuis nov. 2026
+// (ratio « X sur 10 supprimées »). L'ancien champ deleted, mal synchronisé, est ignoré.
 const LOG_MAX_DAYS = 400; // on garde ~13 mois max, le carnet ne grossit pas à l'infini
 
 // dayKey vit dans services/dateKey.js ; ré-exporté ici pour les écrans qui l'importent depuis le store.
@@ -40,6 +42,13 @@ function bumpLog(log, field, delta) {
     keys.sort().slice(0, keys.length - LOG_MAX_DAYS).forEach((old) => delete next[old]);
   }
   return next;
+}
+
+// Photo triée : +sorted, et +decided (= triées depuis que l'app compte les suppressions).
+// Le ratio « X sur 10 supprimées » = deleted / decided : les tris d'avant nov. 2026,
+// sans suppressions notées, ne faussent donc pas le calcul.
+function bumpSorted(log, n) {
+  return bumpLog(bumpLog(log, "sorted", n), "decided", n);
 }
 
 // Compteur "à vie" des photos triées (pour les galons). Le carnet est limité à
@@ -184,7 +193,7 @@ export const usePhotoStore = create(
           kept:    [...state.kept, photo],
           deleted: state.deleted.filter((p) => p.id !== photo.id),
           lifetimeSorted: bumpTotal(state, 1),
-          ...timeDecision(state, bumpLog(state.dailyLog, "sorted", 1)), // ❤️ = photo gardée → triée
+          ...timeDecision(state, bumpSorted(state.dailyLog, 1)), // ❤️ = photo gardée → triée
         };
       }),
 
@@ -196,7 +205,7 @@ export const usePhotoStore = create(
           kept:    state.kept.filter((p) => p.id !== photo.id),
           printed: state.printed.filter((p) => p.id !== photo.id),
           lifetimeSorted: bumpTotal(state, 1),
-          ...timeDecision(state, bumpLog(state.dailyLog, "sorted", 1)), // 🗑 = photo supprimée → triée
+          ...timeDecision(state, bumpLog(bumpSorted(state.dailyLog, 1), "binned", 1)), // 🗑 = photo supprimée → triée (+ compteur « supprimées » binned)
         };
       }),
 
@@ -214,7 +223,7 @@ export const usePhotoStore = create(
       addSkipped: (photo) => set((state) =>
         state.skipped.some((p) => p.id === photo.id)
           ? state
-          : { skipped: [...state.skipped, photo], lifetimeSorted: bumpTotal(state, 1), ...timeDecision(state, bumpLog(state.dailyLog, "sorted", 1)) } // ✅ gardée → triée
+          : { skipped: [...state.skipped, photo], lifetimeSorted: bumpTotal(state, 1), ...timeDecision(state, bumpSorted(state.dailyLog, 1)) } // ✅ gardée → triée
       ),
 
       // addHesitated = "je déciderai plus tard". L'user n'est pas prêt à choisir.
@@ -300,7 +309,11 @@ export const usePhotoStore = create(
           printed:   printedSnap,
           skipped:   skippedBack,
           hesitated: hesitatedSnap !== undefined ? hesitatedSnap : state.hesitated,
-          ...(removed > 0 ? { dailyLog: bumpLog(state.dailyLog, "sorted", -removed), lifetimeSorted: bumpTotal(state, -removed) } : {}),
+          ...(removed > 0 ? { dailyLog: bumpSorted(state.dailyLog, -removed), lifetimeSorted: bumpTotal(state, -removed) } : {}),
+          // ↩ sur une suppression : on retire aussi du compteur « supprimées » du jour.
+          ...(state.deleted.length > deletedSnap.length
+            ? { dailyLog: bumpLog(removed > 0 ? bumpSorted(state.dailyLog, -removed) : state.dailyLog, "binned", -(state.deleted.length - deletedSnap.length)) }
+            : {}),
         };
       }),
 

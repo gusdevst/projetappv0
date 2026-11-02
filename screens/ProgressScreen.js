@@ -13,7 +13,8 @@ import Svg, { Defs, LinearGradient, Stop, Ellipse, Path } from "react-native-svg
 import Icon from "../components/Icons";
 import { C, S } from "../constants/theme";
 import { usePhotoStore, dayKey } from "../store/usePhotoStore";
-import { formatSize, noon, addDays, mondayOf, dayStats, sumRange, avgFor20, computeStreak, STREAK_MIN, fmtDuration } from "../services/progressStats";
+import { formatSize, noon, addDays, mondayOf, dayStats, sumRange, avgFor20, computeStreak, STREAK_MIN, fmtDuration, deleteRatio, deletedRange } from "../services/progressStats";
+import { DeleteRatio } from "../components/DeleteRatio";
 import BackButton from "../components/BackButton";
 import { RankCard } from "../components/RankCard";
 import { BadgesGrid } from "../components/BadgesGrid";
@@ -39,7 +40,33 @@ function buildPeriod(mode, offset, log) {
     const title = offset === 0 ? "Cette semaine"
       : offset === -1 ? "Semaine dernière"
       : `Semaine du ${start.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`;
-    return { bars, title };
+    const end = addDays(start, 6);
+    return { bars, title, from: start, to: end > today ? today : end };
+  }
+
+  if (mode === "total") {
+    // Total : une barre par mois, du 1er jour de tri à aujourd'hui (12 derniers mois max).
+    const keys = Object.keys(log || {}).filter((k) => (log[k]?.sorted || 0) > 0 || (log[k]?.activeMs || 0) > 0).sort();
+    const start = keys.length ? noon(new Date(keys[0] + "T12:00:00")) : today;
+    let m = new Date(start.getFullYear(), start.getMonth(), 1);
+    const lastMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const months = [];
+    while (m <= lastMonth) { months.push(m); m = new Date(m.getFullYear(), m.getMonth() + 1, 1); }
+    const bars = months.slice(-12).map((mm) => {
+      const s = noon(mm);
+      const e = noon(new Date(mm.getFullYear(), mm.getMonth() + 1, 0));
+      return {
+        label: mm.toLocaleDateString("fr-FR", { month: "short" }).replace(".", ""),
+        ...sumRange(log, s, e > today ? today : e),
+        isCurrent: mm.getTime() === lastMonth.getTime(),
+        isFuture: false,
+      };
+    });
+    const days = Math.round((today - start) / 86400000) + 1;
+    const since = keys.length
+      ? `Depuis le ${start.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} · ${days} jour${days > 1 ? "s" : ""}`
+      : null;
+    return { bars, title: "Depuis le début", since, from: start, to: today };
   }
 
   const first = noon(new Date(today.getFullYear(), today.getMonth() + offset, 1));
@@ -57,7 +84,7 @@ function buildPeriod(mode, offset, log) {
     s = addDays(e, 1);
   }
   const m = first.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-  return { bars, title: m.charAt(0).toUpperCase() + m.slice(1) };
+  return { bars, title: m.charAt(0).toUpperCase() + m.slice(1), from: first, to: last > today ? today : last };
 }
 
 // Style de carte sauge : fond clair, ombre douce, pas de bordure.
@@ -98,12 +125,52 @@ export function ProgressScreen({ navigation, route }) {
   const [mode, setMode]     = useState("week"); // "week" | "month"
   const [offset, setOffset] = useState(0);      // 0 = période actuelle, -1 = précédente…
 
-  const { bars, title } = useMemo(() => buildPeriod(mode, offset, dailyLog), [mode, offset, dailyLog]);
-  const total = bars.reduce((a, b) => ({
-    sorted: a.sorted + b.sorted, freedMo: a.freedMo + b.freedMo,
-    timedCount: a.timedCount + b.timedCount, activeMs: a.activeMs + b.activeMs,
+  const { bars, title, since, from, to } = useMemo(() => buildPeriod(mode, offset, dailyLog), [mode, offset, dailyLog]);
+  const lifetimeSorted = usePhotoStore((s) => s.lifetimeSorted);
+  const freedMoAll     = usePhotoStore((s) => s.freedMo);
+  const isTotal = mode === "total";
+  // Semaine / Mois : somme des barres. Total : tout le carnet + compteurs « à vie ».
+  const sumBars = (list) => list.reduce((a, b) => ({
+    sorted: a.sorted + (b.sorted || 0), freedMo: a.freedMo + (b.freedMo || 0),
+    timedCount: a.timedCount + (b.timedCount || 0), activeMs: a.activeMs + (b.activeMs || 0),
   }), { sorted: 0, freedMo: 0, timedCount: 0, activeMs: 0 });
-  const pace = avgFor20(total); // temps moyen pour 20 photos sur la période
+  const total = useMemo(() => {
+    if (!isTotal) return sumBars(bars);
+    const all = sumBars(Object.values(dailyLog || {}));
+    return { ...all, sorted: lifetimeSorted ?? all.sorted, freedMo: freedMoAll || all.freedMo };
+  }, [isTotal, bars, dailyLog, lifetimeSorted, freedMoAll]);
+  const pace = avgFor20(total);
+  // « 3 photos sur 4 sont supprimées » (suppressions par swipe, pas la corbeille vidée).
+  // Total : corbeille actuelle + photos déjà supprimées pour de bon / toutes les triées.
+  const trashCount  = usePhotoStore((s) => s.deleted.length);
+  const purgedCount = usePhotoStore((s) => s.purgedCount || 0);
+  const ratio = useMemo(() => {
+    if (isTotal) return deleteRatio(total.sorted, trashCount + purgedCount);
+    const r = deletedRange(dailyLog, from, to);
+    return r ? deleteRatio(r.sorted, r.deleted) : null;
+  }, [isTotal, total.sorted, trashCount, purgedCount, dailyLog, from, to]);
+  // ── Date de fin estimée : photos restantes ÷ rythme moyen des 7 derniers jours ──
+  // Restantes = même calcul que l'accueil (photothèque moins gardées / supprimées / albums / conservées).
+  const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
+  const keptL = usePhotoStore((s) => s.kept), deletedL = usePhotoStore((s) => s.deleted);
+  const printedL = usePhotoStore((s) => s.printed), skippedL = usePhotoStore((s) => s.skipped);
+  const finish = useMemo(() => {
+    const done = new Set([...keptL, ...deletedL, ...printedL, ...skippedL].map((p) => p.id));
+    const left = (libraryPhotos || []).filter((p) => !done.has(p.id)).length;
+    const today = noon(new Date());
+    const perDay = sumRange(dailyLog, addDays(today, -6), today).sorted / 7;
+    if (!left || perDay <= 0) return null; // rien à trier, ou pas trié ces 7 derniers jours
+    const days = Math.ceil(left / perDay);
+    const date = addDays(today, days);
+    return {
+      date: date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }),
+      perDay: perDay >= 10 ? Math.round(perDay) : Math.round(perDay * 10) / 10,
+    };
+  }, [libraryPhotos, keptL, deletedL, printedL, skippedL, dailyLog]);
+
+  const ratioSub = isTotal ? "en moyenne, depuis le début"
+    : offset !== 0 ? "en moyenne, sur cette période"
+    : mode === "week" ? "en moyenne, cette semaine" : "en moyenne, ce mois-ci"; // temps moyen pour 20 photos sur la période
   const streak = useMemo(() => computeStreak(dailyLog), [dailyLog]);
   const best20Ms = usePhotoStore((s) => s.best20Ms); // record du sprint de 20
 
@@ -249,7 +316,7 @@ export function ProgressScreen({ navigation, route }) {
 
           {/* Bascule Semaine / Mois */}
           <View style={{ flexDirection: "row", backgroundColor: C.bgMuted, borderRadius: 12, padding: 3, marginBottom: 14 }}>
-            {[{ key: "week", label: "Semaine" }, { key: "month", label: "Mois" }].map((o) => {
+            {[{ key: "week", label: "Semaine" }, { key: "month", label: "Mois" }, { key: "total", label: "Total" }].map((o) => {
               const on = mode === o.key;
               return (
                 <TouchableOpacity
@@ -263,7 +330,14 @@ export function ProgressScreen({ navigation, route }) {
             })}
           </View>
 
-          {/* Navigation ‹ période › */}
+          {/* Total : pas de flèches, titre + date du 1er tri */}
+          {isTotal ? (
+            <View style={{ alignItems: "center", marginBottom: 12 }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>{title}</Text>
+              {since && <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2 }}>{since}</Text>}
+            </View>
+          ) : (
+          /* Navigation ‹ période › */
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <TouchableOpacity onPress={() => setOffset(offset - 1)} disabled={!canPrev} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Text style={{ fontSize: 22, fontWeight: "500", color: canPrev ? C.accent : C.border }}>‹</Text>
@@ -273,6 +347,7 @@ export function ProgressScreen({ navigation, route }) {
               <Text style={{ fontSize: 22, fontWeight: "500", color: canNext ? C.accent : C.border }}>›</Text>
             </TouchableOpacity>
           </View>
+          )}
 
           {/* Graphe en barres */}
           <View style={{ flexDirection: "row", alignItems: "flex-end", height: CHART_H + 22 }}>
@@ -315,6 +390,10 @@ export function ProgressScreen({ navigation, route }) {
               <Text style={{ fontSize: 20, fontWeight: "600", color: C.accent }}>{formatSize(total.freedMo)}</Text>
               <Text style={{ fontSize: 11, color: C.textMuted }}>libérés</Text>
             </View>
+            <View style={{ flex: 1, backgroundColor: C.bg, borderRadius: 12, padding: 10 }}>
+              <Text style={{ fontSize: 20, fontWeight: "600", color: C.text }}>{total.activeMs > 0 ? fmtDuration(total.activeMs) : "—"}</Text>
+              <Text style={{ fontSize: 11, color: C.textMuted }}>de swipe</Text>
+            </View>
           </View>
 
           {/* Rythme : temps moyen pour trier 20 photos ("j'hésite" inclus) */}
@@ -333,9 +412,33 @@ export function ProgressScreen({ navigation, route }) {
             </View>
           </View>
 
+          {/* Ratio de suppression */}
+          {ratio && (
+            <View style={{ backgroundColor: C.bg, borderRadius: 12, padding: 10, marginTop: 8 }}>
+              <DeleteRatio ratio={ratio} subtitle={ratioSub} compact />
+            </View>
+          )}
+
+          {/* Date de fin estimée (rythme des 7 derniers jours, indépendant de l'onglet) */}
+          {finish && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.bg, borderRadius: 12, padding: 10, marginTop: 8 }}>
+              <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: C.sage, alignItems: "center", justifyContent: "center" }}>
+                <Icon name="calendar" size={18} color={C.accent} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: C.text }}>
+                  Ta galerie sera triée le <Text style={{ color: C.accent }}>{finish.date}</Text>
+                </Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+                  à ton rythme actuel : {String(finish.perDay).replace(".", ",")} photo{finish.perDay >= 2 ? "s" : ""} / jour (7 derniers jours)
+                </Text>
+              </View>
+            </View>
+          )}
+
           {total.sorted === 0 && total.freedMo === 0 && (
             <Text style={{ fontSize: 12, color: C.textMuted, textAlign: "center", marginTop: 12 }}>
-              {offset === 0 ? "Rien de trié pour l'instant sur cette période. Lance un tri !" : "Aucun tri sur cette période."}
+              {offset === 0 || isTotal ? "Rien de trié pour l'instant sur cette période. Lance un tri !" : "Aucun tri sur cette période."}
             </Text>
           )}
         </View>
