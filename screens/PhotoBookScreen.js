@@ -12,6 +12,7 @@ import Text from "../components/AppText";
 import BackButton from "../components/BackButton";
 import { BookPage, BlankPage, BookCover, COVER_STYLE } from "../components/book/BookPage";
 import PhotoPickerSheet from "../components/book/PhotoPickerSheet";
+import { useBookFonts } from "../components/book/bookFonts";
 import { SHADOW } from "../components/home/ui";
 import { C, S, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
@@ -29,6 +30,7 @@ export function PhotoBookScreen({ navigation, route }) {
   const book    = usePhotoStore((s) => s.books[albumId]);
   const setBook = usePhotoStore((s) => s.setBook);
   const { width } = useWindowDimensions();
+  useBookFonts(); // charge les polices du titre (l'écran se redessine quand elles sont prêtes)
 
   // id → adresse de l'image, pour afficher les photos du livre.
   const urlById = useMemo(() => Object.fromEntries(printed.map((p) => [p.id, p.url])), [printed]);
@@ -75,7 +77,7 @@ export function PhotoBookScreen({ navigation, route }) {
   const renderPage = (pi, size) =>
     pi < 0 ? <BlankPage key="in" size={size} label="Intérieur de couverture" />
     : pi >= book.format ? <BlankPage key="end" size={size} label="Fin du livre" />
-    : <BookPage key={pi} page={book.pages[pi]} size={size} urlById={urlById} number={pi + 1}
+    : <BookPage key={pi} page={book.pages[pi]} size={size} urlById={urlById}
         selected={pi === cur} onPress={() => setCur(pi)}
         onSlotPress={(si) => { setCur(pi); setPicker({ page: pi, slot: si }); }} />;
 

@@ -560,7 +560,7 @@ export function HomeScreen({ navigation, route }) {
                   shadowColor: C.album, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.28, shadowRadius: 12, elevation: 4 }}
               >
                 <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>
-                  {busy ? "Chargement…" : queue.length === 0 ? "Ajuste tes filtres" : "Créer l'album"}
+                  {busy ? "Chargement…" : queue.length === 0 ? "Ajuste tes filtres" : "Créer un album"}
                 </Text>
                 {!busy && queue.length > 0 && (
                   <Text style={{ fontSize: 12, fontWeight: "500", color: "rgba(255,255,255,0.85)", marginTop: 1 }}>

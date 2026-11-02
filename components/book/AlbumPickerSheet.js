@@ -27,7 +27,7 @@ export default function AlbumPickerSheet({ visible, onClose, albums, urlById, bo
 
           {withPhotos.length === 0 ? (
             <Text style={{ fontSize: 13, color: C.textMuted, textAlign: "center", paddingVertical: 26, paddingHorizontal: 30, lineHeight: 19 }}>
-              Tu n'as pas encore d'album.{"\n"}Crée-en un avec « Créer l'album », puis reviens ici.
+              Tu n'as pas encore d'album.{"\n"}Crée-en un avec « Créer un album », puis reviens ici.
             </Text>
           ) : (
             <ScrollView>

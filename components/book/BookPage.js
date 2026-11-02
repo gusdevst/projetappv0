@@ -5,7 +5,7 @@
 // La mise en page = des LIGNES de cadres. Ex. 3 photos : 1 grand en haut, 2 en bas.
 // Les nombres dans ROWS sont les numéros de cadre (0, 1, 2…).
 
-import { View, TouchableOpacity, Platform } from "react-native";
+import { View, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import Text from "../AppText";
 import { C, FONT } from "../../constants/theme";
@@ -19,7 +19,7 @@ const ROWS = {
 const ROW_FLEX = { 3: [1.3, 1] }; // la ligne du haut un peu plus grande pour 3 photos
 
 // page : { layout, slots } · urlById : { id: url } · onSlotPress(slotIndex) optionnel
-export function BookPage({ page, size, urlById, selected, onPress, onSlotPress, number }) {
+export function BookPage({ page, size, urlById, selected, onPress, onSlotPress }) {
   const mini = size < 60;
   const pad = mini ? 1.5 : 9;
   const gap = mini ? 1 : 4;
@@ -30,7 +30,7 @@ export function BookPage({ page, size, urlById, selected, onPress, onSlotPress, 
       onPress={onPress}
       disabled={!onPress}
       style={{
-        width: size, height: size, padding: pad, paddingBottom: mini ? pad : 15,
+        width: size, height: size, padding: pad,
         backgroundColor: "#ffffff", borderRadius: mini ? 2 : 6,
         borderWidth: selected ? (mini ? 1.5 : 2.5) : 0, borderColor: C.album,
       }}
@@ -62,11 +62,6 @@ export function BookPage({ page, size, urlById, selected, onPress, onSlotPress, 
           </View>
         ))}
       </View>
-      {!mini && number != null && (
-        <Text style={{ position: "absolute", bottom: 2, left: 0, right: 0, textAlign: "center", fontSize: 9, color: C.textMuted }}>
-          {number}
-        </Text>
-      )}
     </TouchableOpacity>
   );
 }
@@ -83,17 +78,15 @@ export function BlankPage({ size, label }) {
 // ─── Réglages du titre de couverture ────────────────────────────────────────
 // Les clés (moderne, S, blanc, bas…) viennent de services/photoBook.js ; ici on
 // les traduit en vraie police / taille / couleur.
-// Polices intégrées au build (app.json → expo-font). iOS les appelle par leur
-// nom « PostScript », Android par le nom donné dans app.json → Platform.select.
-const pick = (ios, android) => Platform.select({ ios, default: android });
+// Polices chargées par components/book/bookFonts.js (même nom sur iOS et Android).
 export const COVER_STYLE = {
   font: {
-    moderne:    { label: "Moderne",    family: FONT,                                               weight: "600" },
-    elegante:   { label: "Élégante",   family: pick("PlayfairDisplay-SemiBold", "PlayfairDisplay"), weight: "400" },
-    manuscrite: { label: "Manuscrite", family: pick("Caveat-SemiBold", "Caveat"),                   weight: "400" },
-    affiche:    { label: "Affiche",    family: pick("BebasNeue-Regular", "BebasNeue"),              weight: "400" },
-    calligraphie: { label: "Calligraphie", family: pick("GreatVibes-Regular", "GreatVibes"),       weight: "400" },
-    ronde:      { label: "Ronde",      family: pick("Fredoka-SemiBold", "Fredoka"),                 weight: "400" },
+    moderne:      { label: "Moderne",      family: FONT,                          weight: "600" },
+    elegante:     { label: "Élégante",     family: "PlayfairDisplay_600SemiBold", weight: "normal" },
+    manuscrite:   { label: "Manuscrite",   family: "Caveat_600SemiBold",          weight: "normal" },
+    affiche:      { label: "Affiche",      family: "BebasNeue_400Regular",        weight: "normal" },
+    calligraphie: { label: "Calligraphie", family: "GreatVibes_400Regular",       weight: "normal" },
+    ronde:        { label: "Ronde",        family: "Fredoka_600SemiBold",         weight: "normal" },
   },
   size:  { S: 0.10, M: 0.14, L: 0.20 }, // part de la largeur de la couverture
   color: { blanc: "#ffffff", noir: C.text, terracotta: C.album, sauge: C.sage },
