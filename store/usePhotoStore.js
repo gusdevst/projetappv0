@@ -109,6 +109,9 @@ export const usePhotoStore = create(
       // Albums créés par l'utilisateur dans "Album souvenirs".
       // Format : [{ id, name, photoIds: [] }]
       albums:  [],
+      // Livres photo : un par album, rangés par id d'album → { [albumId]: book }.
+      // Forme d'un livre et calculs : services/photoBook.js.
+      books:   {},
 
       // Filtres combinés du mode ALBUM (transitoires, NON persistés).
       // Chaque filtre restreint la sélection en INTERSECTION (ET).
@@ -317,7 +320,7 @@ export const usePhotoStore = create(
         };
       }),
 
-      reset: () => set({ kept: [], deleted: [], printed: [], skipped: [], hesitated: [], albums: [] }),
+      reset: () => set({ kept: [], deleted: [], printed: [], skipped: [], hesitated: [], albums: [], books: {} }),
 
       // Relance le tri depuis zéro : renvoie dans la file à trier toutes les
       // photos non supprimées qui avaient été classées (pile album, passées,
@@ -354,13 +357,15 @@ export const usePhotoStore = create(
       })),
 
       deleteAlbum: (albumId) => set((state) => {
-        // On supprime l'album…
+        // On supprime l'album… (et son livre photo s'il en a un)
         const updatedAlbums = state.albums.filter((a) => a.id !== albumId);
+        const { [albumId]: _deletedBook, ...books } = state.books;
         // …puis on retire de "printed" les photos qui ne sont plus dans aucun autre album.
         // Une photo dans plusieurs albums reste dans "printed" tant qu'elle a au moins un album.
         const stillReferenced = new Set(updatedAlbums.flatMap((a) => a.photoIds));
         return {
           albums:  updatedAlbums,
+          books,
           printed: state.printed.filter((p) => stillReferenced.has(p.id)),
         };
       }),
@@ -396,6 +401,10 @@ export const usePhotoStore = create(
           skipped: photo ? [...state.skipped, photo] : state.skipped,
         };
       }),
+
+      // ─── Livre photo ─────────────────────────────────────────────────────
+      // L'écran calcule le nouveau livre avec services/photoBook.js, puis l'enregistre ici.
+      setBook: (albumId, book) => set((state) => ({ books: { ...state.books, [albumId]: book } })),
 
       // ─── Vider la corbeille (vraie suppression via MediaLibrary) ────────
       // Retourne true si la suppression a réussi, false sinon.
@@ -619,6 +628,7 @@ export const usePhotoStore = create(
         skipped:                 state.skipped,
         hesitated:               state.hesitated,
         albums:                  state.albums,
+        books:                   state.books,
         swipeMappingsMenage:     state.swipeMappingsMenage,
         swipeMappingsAlbum:      state.swipeMappingsAlbum,
         notificationFrequency:   state.notificationFrequency,
