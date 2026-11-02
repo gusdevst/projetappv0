@@ -17,7 +17,7 @@ export const BOOK_LAYOUTS = [1, 2, 3, 4];
 export const DEFAULT_PER_PAGE = 2;
 
 // Réglages de la couverture (les clés ; l'écran les traduit en police / taille / couleur).
-export const COVER_FONTS  = ["moderne", "elegante", "manuscrite", "affiche"];
+export const COVER_FONTS  = ["moderne", "elegante", "manuscrite", "affiche", "calligraphie", "ronde"];
 export const COVER_SIZES  = ["S", "M", "L"];
 export const COVER_COLORS = ["blanc", "noir", "terracotta", "sauge"];
 export const COVER_POS    = ["haut", "milieu", "bas"];

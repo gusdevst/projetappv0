@@ -15,6 +15,7 @@ import Text from "../components/AppText";
 import HomeHeader from "../components/home/HomeHeader";
 import TriHero from "../components/home/TriHero";
 import FolderSheet from "../components/home/FolderSheet";
+import AlbumPickerSheet from "../components/book/AlbumPickerSheet";
 import Icon from "../components/Icons";
 import { SectionTitle, ListRow, SHADOW } from "../components/home/ui";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -182,6 +183,7 @@ export function HomeScreen({ navigation, route }) {
   const shuffleOn              = usePhotoStore((state) => state.shuffleOn);
   const setShuffleOn           = usePhotoStore((state) => state.setShuffleOn);
   const albums                 = usePhotoStore((state) => state.albums);
+  const books                  = usePhotoStore((state) => state.books);
   const notificationFrequency  = usePhotoStore((state) => state.notificationFrequency);
   const albumFilters      = usePhotoStore((state) => state.albumFilters);
   const removeAlbumFilter = usePhotoStore((state) => state.removeAlbumFilter);
@@ -201,6 +203,7 @@ export function HomeScreen({ navigation, route }) {
   // Brique "Par date" : période choisie au calendrier (mode Tri), ouverte depuis l'accueil.
   const [dateRange, setDateRange]       = useState(null); // { from: Date, to: Date|null } | null
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showBookPicker, setShowBookPicker] = useState(false); // feuille « Quel album ? » (livre photo)
 
   // Filtres date proposés selon le mode actif
 
@@ -598,6 +601,15 @@ export function HomeScreen({ navigation, route }) {
                   onPress={openAlbumPicker}
                 />
               </View>
+
+              {/* Livre photo → feuille « Quel album ? » → écran PhotoBook */}
+              <SectionTitle title="Livre photo" />
+              <ListRow
+                icon="album" iconColor={C.album} iconBg={C.albumSoft}
+                title="Créer un livre photo"
+                sub="24 à 64 pages, depuis un de tes albums"
+                onPress={() => setShowBookPicker(true)}
+              />
             </View>
           );
         })()}
@@ -652,6 +664,16 @@ export function HomeScreen({ navigation, route }) {
         shortcuts={dateShortcuts}
         onConfirm={handleCalendarConfirm}
         onCancel={() => setShowCalendar(false)}
+      />
+
+      {/* ── Feuille « Quel album ? » (livre photo) ─────────────────── */}
+      <AlbumPickerSheet
+        visible={showBookPicker}
+        onClose={() => setShowBookPicker(false)}
+        albums={albums}
+        urlById={Object.fromEntries(printed.map((p) => [p.id, p.url]))}
+        books={books}
+        onPick={(a) => { setShowBookPicker(false); navigation.navigate("PhotoBook", { albumId: a.id }); }}
       />
 
       {/* ── Feuille « Choisir un dossier » ─────────────────────────── */}

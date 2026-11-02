@@ -6,18 +6,18 @@
 // (qui calcule le nouveau livre) puis l'enregistre avec setBook (store).
 
 import { useEffect, useMemo, useState } from "react";
-import { View, ScrollView, TouchableOpacity, useWindowDimensions } from "react-native";
+import { View, ScrollView, TouchableOpacity, TextInput, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Text from "../components/AppText";
 import BackButton from "../components/BackButton";
-import { BookPage, BlankPage, BookCover } from "../components/book/BookPage";
+import { BookPage, BlankPage, BookCover, COVER_STYLE } from "../components/book/BookPage";
 import PhotoPickerSheet from "../components/book/PhotoPickerSheet";
 import { SHADOW } from "../components/home/ui";
-import { C, S } from "../constants/theme";
+import { C, S, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import {
   BOOK_FORMATS, BOOK_LAYOUTS, createBook, syncWithAlbum, setFormat, setLayout, autofill, bookStats,
-  placedMap, placePhoto, clearSlot, setCover,
+  placedMap, placePhoto, clearSlot, setCover, COVER_FONTS, COVER_SIZES, COVER_COLORS, COVER_POS,
 } from "../services/photoBook";
 
 const COVER = -1; // « page » sélectionnée = la couverture
@@ -152,6 +152,50 @@ export function PhotoBookScreen({ navigation, route }) {
           )}
         </View>
 
+        {/* Réglages de la couverture */}
+        {cur === COVER && (
+          <>
+            <Text style={sectionStyle}>COUVERTURE</Text>
+            <View style={{ backgroundColor: C.bgCard, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 2, ...SHADOW }}>
+              <EditRow label="Titre">
+                <TextInput
+                  value={book.cover.title}
+                  onChangeText={(title) => save(setCover(book, { title }))}
+                  maxLength={40}
+                  placeholder="Titre du livre"
+                  placeholderTextColor={C.textMuted}
+                  style={{ flex: 1, backgroundColor: C.bgMuted, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, fontFamily: FONT, fontSize: 14, color: C.text }}
+                />
+              </EditRow>
+              <EditRow label="Police">
+                {COVER_FONTS.map((k) => {
+                  const f = COVER_STYLE.font[k];
+                  return <Chip key={k} on={book.cover.font === k} onPress={() => save(setCover(book, { font: k }))}
+                    textStyle={{ fontFamily: f.family, fontWeight: f.weight }}>{f.label}</Chip>;
+                })}
+              </EditRow>
+              <EditRow label="Taille">
+                {COVER_SIZES.map((k) => <Chip key={k} on={book.cover.size === k} onPress={() => save(setCover(book, { size: k }))}>{k}</Chip>)}
+              </EditRow>
+              <EditRow label="Couleur">
+                {COVER_COLORS.map((k) => {
+                  const on = book.cover.color === k;
+                  return (
+                    <TouchableOpacity key={k} onPress={() => save(setCover(book, { color: k }))}
+                      style={{ width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: on ? C.album : "transparent", alignItems: "center", justifyContent: "center" }}>
+                      <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: COVER_STYLE.color[k], borderWidth: 1, borderColor: "rgba(0,0,0,0.12)" }} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </EditRow>
+              <EditRow label="Position" last>
+                {COVER_POS.map((k) => <Chip key={k} on={book.cover.pos === k} onPress={() => save(setCover(book, { pos: k }))}>{COVER_STYLE.pos[k].label}</Chip>)}
+              </EditRow>
+            </View>
+            <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 8 }}>Le titre du livre ne renomme pas l'album.</Text>
+          </>
+        )}
+
         {/* Mise en page de la page sélectionnée */}
         {cur !== COVER && (
           <>
@@ -214,6 +258,23 @@ export function PhotoBookScreen({ navigation, route }) {
 }
 
 const sectionStyle = { fontSize: 11, fontWeight: "600", letterSpacing: 0.8, color: C.textMuted, marginTop: 20, marginBottom: 8 };
+
+function EditRow({ label, last, children }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderBottomWidth: last ? 0 : 1, borderBottomColor: C.border }}>
+      <Text style={{ width: 62, fontSize: 13, color: C.text, fontWeight: "500" }}>{label}</Text>
+      <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 5 }}>{children}</View>
+    </View>
+  );
+}
+
+function Chip({ on, onPress, textStyle, children }) {
+  return (
+    <TouchableOpacity onPress={onPress} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: on ? C.album : C.bgMuted }}>
+      <Text style={[{ fontSize: 13, color: on ? "#fff" : C.textMid }, textStyle]}>{children}</Text>
+    </TouchableOpacity>
+  );
+}
 
 function NavArrow({ label, disabled, onPress }) {
   return (

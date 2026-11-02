@@ -66,7 +66,12 @@
               "./node_modules/@expo-google-fonts/outfit/600SemiBold/Outfit_600SemiBold.ttf",
               "./node_modules/@expo-google-fonts/outfit/700Bold/Outfit_700Bold.ttf",
               "./node_modules/@expo-google-fonts/outfit/800ExtraBold/Outfit_800ExtraBold.ttf",
-              "./node_modules/@expo-google-fonts/outfit/900Black/Outfit_900Black.ttf"
+              "./node_modules/@expo-google-fonts/outfit/900Black/Outfit_900Black.ttf",
+              "./node_modules/@expo-google-fonts/playfair-display/600SemiBold/PlayfairDisplay_600SemiBold.ttf",
+              "./node_modules/@expo-google-fonts/caveat/600SemiBold/Caveat_600SemiBold.ttf",
+              "./node_modules/@expo-google-fonts/bebas-neue/400Regular/BebasNeue_400Regular.ttf",
+              "./node_modules/@expo-google-fonts/great-vibes/400Regular/GreatVibes_400Regular.ttf",
+              "./node_modules/@expo-google-fonts/fredoka/600SemiBold/Fredoka_600SemiBold.ttf"
             ]
           },
           "android": {
@@ -97,6 +102,51 @@
                   {
                     "path": "./node_modules/@expo-google-fonts/outfit/900Black/Outfit_900Black.ttf",
                     "weight": 900
+                  }
+                ]
+              },
+              {
+                "fontFamily": "PlayfairDisplay",
+                "fontDefinitions": [
+                  {
+                    "path": "./node_modules/@expo-google-fonts/playfair-display/600SemiBold/PlayfairDisplay_600SemiBold.ttf",
+                    "weight": 400
+                  }
+                ]
+              },
+              {
+                "fontFamily": "Caveat",
+                "fontDefinitions": [
+                  {
+                    "path": "./node_modules/@expo-google-fonts/caveat/600SemiBold/Caveat_600SemiBold.ttf",
+                    "weight": 400
+                  }
+                ]
+              },
+              {
+                "fontFamily": "BebasNeue",
+                "fontDefinitions": [
+                  {
+                    "path": "./node_modules/@expo-google-fonts/bebas-neue/400Regular/BebasNeue_400Regular.ttf",
+                    "weight": 400
+                  }
+                ]
+              },
+              {
+                "fontFamily": "GreatVibes",
+                "fontDefinitions": [
+                  {
+                    "path": "./node_modules/@expo-google-fonts/great-vibes/400Regular/GreatVibes_400Regular.ttf",
+                    "weight": 400
+                  }
+                ]
+              },
+              {
+                "fontFamily": "Fredoka",
+                "fontDefinitions": [
+                  {
+                    "path": "./node_modules/@expo-google-fonts/fredoka/600SemiBold/Fredoka_600SemiBold.ttf",
+                    "weight": 400
                   }
                 ]
               }

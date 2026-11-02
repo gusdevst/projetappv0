@@ -5,10 +5,10 @@
 // La mise en page = des LIGNES de cadres. Ex. 3 photos : 1 grand en haut, 2 en bas.
 // Les nombres dans ROWS sont les numéros de cadre (0, 1, 2…).
 
-import { View, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity, Platform } from "react-native";
 import { Image } from "expo-image";
 import Text from "../AppText";
-import { C } from "../../constants/theme";
+import { C, FONT } from "../../constants/theme";
 
 const ROWS = {
   1: [[0]],
@@ -80,7 +80,27 @@ export function BlankPage({ size, label }) {
   );
 }
 
-// Couverture (affichage simple ; les réglages du titre arrivent à l'étape 4).
+// ─── Réglages du titre de couverture ────────────────────────────────────────
+// Les clés (moderne, S, blanc, bas…) viennent de services/photoBook.js ; ici on
+// les traduit en vraie police / taille / couleur.
+// Polices intégrées au build (app.json → expo-font). iOS les appelle par leur
+// nom « PostScript », Android par le nom donné dans app.json → Platform.select.
+const pick = (ios, android) => Platform.select({ ios, default: android });
+export const COVER_STYLE = {
+  font: {
+    moderne:    { label: "Moderne",    family: FONT,                                               weight: "600" },
+    elegante:   { label: "Élégante",   family: pick("PlayfairDisplay-SemiBold", "PlayfairDisplay"), weight: "400" },
+    manuscrite: { label: "Manuscrite", family: pick("Caveat-SemiBold", "Caveat"),                   weight: "400" },
+    affiche:    { label: "Affiche",    family: pick("BebasNeue-Regular", "BebasNeue"),              weight: "400" },
+    calligraphie: { label: "Calligraphie", family: pick("GreatVibes-Regular", "GreatVibes"),       weight: "400" },
+    ronde:      { label: "Ronde",      family: pick("Fredoka-SemiBold", "Fredoka"),                 weight: "400" },
+  },
+  size:  { S: 0.10, M: 0.14, L: 0.20 }, // part de la largeur de la couverture
+  color: { blanc: "#ffffff", noir: C.text, terracotta: C.album, sauge: C.sage },
+  pos:   { haut: { label: "Haut", justify: "flex-start" }, milieu: { label: "Milieu", justify: "center" }, bas: { label: "Bas", justify: "flex-end" } },
+};
+
+// Couverture : photo plein cadre + titre réglable.
 export function BookCover({ cover, size, urlById, onPress }) {
   const url = cover.photoId ? urlById[cover.photoId] : null;
   const mini = size < 60;
@@ -93,13 +113,20 @@ export function BookCover({ cover, size, urlById, onPress }) {
           <Text style={{ fontSize: 10.5, fontWeight: "600", color: C.text }}>Changer la photo</Text>
         </View>
       )}
-      {!mini && (
-        <Text numberOfLines={2} style={{ position: "absolute", left: "8%", right: "8%", bottom: "9%", textAlign: "center",
-          color: "#ffffff", fontSize: size * 0.13, fontWeight: "600",
-          textShadowColor: "rgba(0,0,0,0.25)", textShadowRadius: 8 }}>
-          {cover.title}
-        </Text>
-      )}
+      {!mini && !!cover.title && (() => {
+        const font = COVER_STYLE.font[cover.font] ?? COVER_STYLE.font.moderne;
+        const fontSize = Math.round(size * (COVER_STYLE.size[cover.size] ?? 0.14));
+        return (
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+            paddingHorizontal: "8%", paddingVertical: "9%", justifyContent: (COVER_STYLE.pos[cover.pos] ?? COVER_STYLE.pos.bas).justify }}>
+            <Text numberOfLines={2} style={{ textAlign: "center", fontFamily: font.family, fontWeight: font.weight,
+              fontSize, lineHeight: Math.round(fontSize * 1.15), color: COVER_STYLE.color[cover.color] ?? "#ffffff",
+              textShadowColor: "rgba(0,0,0,0.22)", textShadowRadius: 8 }}>
+              {cover.title}
+            </Text>
+          </View>
+        );
+      })()}
     </TouchableOpacity>
   );
 }
