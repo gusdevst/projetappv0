@@ -88,6 +88,11 @@ export function BookCover({ cover, size, urlById, onPress }) {
     <TouchableOpacity activeOpacity={0.9} onPress={onPress} disabled={!onPress}
       style={{ width: size, height: size, borderRadius: mini ? 2 : 8, overflow: "hidden", backgroundColor: C.albumSoft }}>
       {url && <Image source={{ uri: url }} style={{ position: "absolute", width: "100%", height: "100%" }} contentFit="cover" />}
+      {onPress && !mini && (
+        <View style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+          <Text style={{ fontSize: 10.5, fontWeight: "600", color: C.text }}>Changer la photo</Text>
+        </View>
+      )}
       {!mini && (
         <Text numberOfLines={2} style={{ position: "absolute", left: "8%", right: "8%", bottom: "9%", textAlign: "center",
           color: "#ffffff", fontSize: size * 0.13, fontWeight: "600",

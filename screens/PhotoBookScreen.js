@@ -11,11 +11,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Text from "../components/AppText";
 import BackButton from "../components/BackButton";
 import { BookPage, BlankPage, BookCover } from "../components/book/BookPage";
+import PhotoPickerSheet from "../components/book/PhotoPickerSheet";
 import { SHADOW } from "../components/home/ui";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import {
   BOOK_FORMATS, BOOK_LAYOUTS, createBook, syncWithAlbum, setFormat, setLayout, autofill, bookStats,
+  placedMap, placePhoto, clearSlot, setCover,
 } from "../services/photoBook";
 
 const COVER = -1; // « page » sélectionnée = la couverture
@@ -44,11 +46,21 @@ export function PhotoBookScreen({ navigation, route }) {
   }, [albumId, albumIds.length]);
 
   const [cur, setCur] = useState(COVER);
+  // Feuille de choix ouverte pour : null (fermée) · "cover" · { page, slot }.
+  const [picker, setPicker] = useState(null);
   if (!album || !book) return <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} />;
 
   const save = (next) => setBook(albumId, next);
   const stats = bookStats(book, albumIds);
   const left = albumIds.length - stats.placedCount;
+  const placed = placedMap(book);
+  const pickerCurrent = picker === "cover" ? book.cover.photoId
+    : picker ? book.pages[picker.page]?.slots[picker.slot] : null;
+  const onPick = (id) => {
+    if (picker === "cover") save(setCover(book, { photoId: id }));
+    else save(placePhoto(book, picker.page, picker.slot, id));
+    setPicker(null);
+  };
 
   // Double page affichée : la couverture seule, puis [intérieur couv. | 1], [2 | 3]…
   const leftIndex = cur === COVER ? null : cur === 0 ? -1 : cur % 2 === 1 ? cur : cur - 1;
@@ -64,7 +76,8 @@ export function PhotoBookScreen({ navigation, route }) {
     pi < 0 ? <BlankPage key="in" size={size} label="Intérieur de couverture" />
     : pi >= book.format ? <BlankPage key="end" size={size} label="Fin du livre" />
     : <BookPage key={pi} page={book.pages[pi]} size={size} urlById={urlById} number={pi + 1}
-        selected={pi === cur} onPress={() => setCur(pi)} onSlotPress={() => setCur(pi)} />;
+        selected={pi === cur} onPress={() => setCur(pi)}
+        onSlotPress={(si) => { setCur(pi); setPicker({ page: pi, slot: si }); }} />;
 
   // Bande des miniatures : couverture, puis chaque double page.
   const spreads = [];
@@ -129,7 +142,7 @@ export function PhotoBookScreen({ navigation, route }) {
         {/* Double page (ou couverture seule) */}
         <View style={{ marginTop: 10, alignItems: "center" }}>
           {cur === COVER ? (
-            <BookCover cover={book.cover} size={Math.round(pageW * 1.25)} urlById={urlById} />
+            <BookCover cover={book.cover} size={Math.round(pageW * 1.25)} urlById={urlById} onPress={() => setPicker("cover")} />
           ) : (
             <View style={{ flexDirection: "row", backgroundColor: "#ffffff", borderRadius: 6,
               shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.16, shadowRadius: 14, elevation: 4 }}>
@@ -181,6 +194,21 @@ export function PhotoBookScreen({ navigation, route }) {
           <Text style={{ fontSize: 10.5, fontWeight: "600", letterSpacing: 0.8, color: C.album, marginTop: 2 }}>BIENTÔT</Text>
         </View>
       </ScrollView>
+
+      <PhotoPickerSheet
+        visible={!!picker}
+        onClose={() => setPicker(null)}
+        forCover={picker === "cover"}
+        subtitle={picker === "cover" ? "couverture" : picker ? `page ${picker.page + 1}` : ""}
+        albumIds={albumIds}
+        urlById={urlById}
+        placed={placed}
+        currentId={pickerCurrent}
+        onPick={onPick}
+        onRemove={picker && picker !== "cover" && pickerCurrent
+          ? () => { save(clearSlot(book, picker.page, picker.slot)); setPicker(null); }
+          : null}
+      />
     </SafeAreaView>
   );
 }
