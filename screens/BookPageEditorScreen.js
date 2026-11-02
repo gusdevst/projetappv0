@@ -2,7 +2,7 @@
 // Une page du livre photo, en grand. Ouvert depuis l'aperçu :
 // navigation.navigate("BookPageEditor", { albumId, pageIndex }).
 // Onglet Page  : mise en page (1 à 4 photos) + titre de page.
-// Onglet Photo : la photo touchée → changer / retirer (recadrer & pivoter : étape suivante).
+// Onglet Photo : la photo touchée → recadrer (pincer / glisser), pivoter, redresser, changer, retirer.
 
 import { useMemo, useState } from "react";
 import { View, ScrollView, TouchableOpacity, TextInput, useWindowDimensions } from "react-native";
@@ -13,11 +13,12 @@ import { BookPage, COVER_STYLE } from "../components/book/BookPage";
 import PhotoPickerSheet from "../components/book/PhotoPickerSheet";
 import { useBookFonts } from "../components/book/bookFonts";
 import { EditRow, Chip, NavArrow, LayoutPicker, sectionStyle } from "../components/book/BookControls";
+import { TiltSlider } from "../components/book/TiltSlider";
 import { SHADOW } from "../components/home/ui";
 import { C, S, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import {
-  setLayout, setPageTitle, placePhoto, clearSlot, placedMap,
+  setLayout, setPageTitle, placePhoto, clearSlot, placedMap, getCrop, setCrop, resetCrop,
   COVER_FONTS, PAGE_TITLE_POS, PAGE_TITLE_SIZES,
 } from "../services/photoBook";
 
@@ -39,6 +40,7 @@ export function BookPageEditorScreen({ navigation, route }) {
   const [tab, setTab]         = useState("page");                          // "page" | "photo"
   const [selSlot, setSelSlot] = useState(null);                            // cadre sélectionné
   const [picker, setPicker]   = useState(null);                            // cadre pour lequel on choisit une photo
+  const [liveTilt, setLiveTilt] = useState(null);                          // redressement pendant le glissé du curseur
 
   if (!album || !book || !book.pages[pi]) return <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} />;
 
@@ -48,6 +50,10 @@ export function BookPageEditorScreen({ navigation, route }) {
   const titleFont = title.font ?? book.cover.font; // par défaut : la police de la couverture
   const selId = selSlot != null ? page.slots[selSlot] : null;
 
+  const crop  = selId ? getCrop(page, selId) : null;
+  const editing = tab === "photo" && !!selId; // une photo est en cours de recadrage
+  const saveCrop = (patch) => save(setCrop(book, pi, selId, patch));
+
   const goTo = (next) => { setPi(next); setSelSlot(null); setTab("page"); };
   const onSlotPress = (si) => {
     if (!page.slots[si]) { setPicker(si); return; }   // cadre vide → choisir une photo
@@ -56,7 +62,7 @@ export function BookPageEditorScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ padding: S.pad, paddingTop: 8, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+      <ScrollView scrollEnabled={!editing} contentContainerStyle={{ padding: S.pad, paddingTop: 8, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         {/* En-tête */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <BackButton accentColor={C.album} onPress={() => navigation.goBack()} />
@@ -74,10 +80,13 @@ export function BookPageEditorScreen({ navigation, route }) {
         <View style={{ marginTop: 14, borderRadius: 6, backgroundColor: "#fff",
           shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.16, shadowRadius: 14, elevation: 4 }}>
           <BookPage page={page} size={width - S.pad * 2} urlById={urlById} coverFont={book.cover.font}
-            onSlotPress={onSlotPress} selectedSlot={tab === "photo" ? selSlot : null} />
+            onSlotPress={onSlotPress} selectedSlot={tab === "photo" ? selSlot : null}
+            editableSlot={editing ? selSlot : null}
+            onCropChange={(si, c) => save(setCrop(book, pi, page.slots[si], c))}
+            cropPreview={editing && liveTilt != null ? { slot: selSlot, tilt: liveTilt } : null} />
         </View>
         <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginTop: 10 }}>
-          Touche une photo pour la modifier, ou un cadre vide pour en ajouter une
+          {editing ? "Pince pour zoomer · glisse pour déplacer" : "Touche une photo pour la modifier, ou un cadre vide pour en ajouter une"}
         </Text>
 
         {/* Onglets */}
@@ -138,8 +147,19 @@ export function BookPageEditorScreen({ navigation, route }) {
           <>
             <Text style={sectionStyle}>PHOTO SÉLECTIONNÉE</Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
+              <Tool icon="↺" label="Pivoter" onPress={() => saveCrop({ rot: (crop.rot + 270) % 360 })} />
+              <Tool icon="↻" label="Pivoter" onPress={() => saveCrop({ rot: (crop.rot + 90) % 360 })} />
+              <Tool icon="⌖" label="Recentrer" onPress={() => save(resetCrop(book, pi, selId))} />
               <Tool icon="⇄" label="Changer" onPress={() => setPicker(selSlot)} />
               <Tool icon="✕" label="Retirer" danger onPress={() => { save(clearSlot(book, pi, selSlot)); setSelSlot(null); }} />
+            </View>
+            <Text style={sectionStyle}>REDRESSER</Text>
+            <View style={{ backgroundColor: C.bgCard, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, ...SHADOW }}>
+              <TiltSlider
+                value={liveTilt ?? crop.tilt}
+                onChange={setLiveTilt}
+                onEnd={(v) => { saveCrop({ tilt: v }); setLiveTilt(null); }}
+              />
             </View>
           </>
         )}

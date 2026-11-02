@@ -9,6 +9,8 @@ import { View, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import Text from "../AppText";
 import { C, FONT } from "../../constants/theme";
+import { CroppedImage } from "./CroppedImage";
+import { getCrop } from "../../services/photoBook";
 
 const ROWS = {
   1: [[0]],
@@ -24,7 +26,8 @@ export const PAGE_TITLE_SIZE = { S: 0.045, M: 0.06, L: 0.08 };
 // page : { layout, slots, title? } · urlById : { id: url }
 // coverFont : police de la couverture = police du titre de page par défaut.
 // onSlotPress(slotIndex) optionnel (éditeur) · selectedSlot : cadre entouré.
-export function BookPage({ page, size, urlById, selected, onPress, onSlotPress, selectedSlot, coverFont }) {
+// editableSlot : cadre recadrable au doigt · onCropChange(slot, crop) · cropPreview : { slot, ...réglages } en direct.
+export function BookPage({ page, size, urlById, selected, onPress, onSlotPress, selectedSlot, coverFont, editableSlot, onCropChange, cropPreview }) {
   const mini = size < 60;
   const pad = mini ? 1.5 : size * 0.05;
   const gap = mini ? 1 : Math.max(3, size * 0.02);
@@ -33,8 +36,12 @@ export function BookPage({ page, size, urlById, selected, onPress, onSlotPress, 
   const rows = ROWS[page.layout].map((row, ri) => (
     <View key={`r${ri}`} style={{ flex: ROW_FLEX[page.layout]?.[ri] ?? 1, flexDirection: "row", gap }}>
       {row.map((si) => {
-        const url = page.slots[si] ? urlById[page.slots[si]] : null;
-        const Frame = onSlotPress ? TouchableOpacity : View;
+        const id = page.slots[si];
+        const url = id ? urlById[id] : null;
+        const editable = editableSlot === si && !!url;
+        const crop = { ...(id ? getCrop(page, id) : {}), ...(cropPreview?.slot === si ? cropPreview : {}) };
+        // Cadre recadrable : pas de « bouton » autour, sinon il volerait les gestes.
+        const Frame = onSlotPress && !editable ? TouchableOpacity : View;
         return (
           <Frame
             key={si}
@@ -48,7 +55,7 @@ export function BookPage({ page, size, urlById, selected, onPress, onSlotPress, 
             }}
           >
             {url
-              ? <Image source={{ uri: url }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+              ? <CroppedImage url={url} crop={crop} editable={editable} onChange={(c) => onCropChange?.(si, c)} />
               : !mini && <Text style={{ color: "#b5b3a9", fontSize: Math.max(14, size * 0.06) }}>+</Text>}
             {selectedSlot === si && (
               <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderWidth: 3, borderColor: C.album, borderRadius: 3 }} />

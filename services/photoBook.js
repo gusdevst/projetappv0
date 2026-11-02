@@ -25,6 +25,37 @@ export const COVER_POS    = ["haut", "milieu", "bas"];
 export const PAGE_TITLE_POS   = ["haut", "milieu", "bas"];
 export const PAGE_TITLE_SIZES = ["S", "M", "L"];
 
+// ─── Recadrage ──────────────────────────────────────────────────────────────
+// page.crops = { [photoId]: { scale, x, y, rot, tilt } }
+//   scale : zoom (1 = photo qui remplit juste le cadre, max 4)
+//   x, y  : décalage en PART du cadre (0.1 = 10 % de sa largeur/hauteur) → marche à toutes les tailles
+//   rot   : quart de tour (0, 90, 180, 270) · tilt : redressement fin (-15 à +15°)
+export const DEFAULT_CROP = { scale: 1, x: 0, y: 0, rot: 0, tilt: 0 };
+export const MAX_ZOOM = 4;
+export const MAX_TILT = 15;
+export const getCrop = (page, photoId) => ({ ...DEFAULT_CROP, ...(page.crops?.[photoId] ?? {}) });
+
+// Garde seulement les recadrages des photos encore sur la page.
+function pruneCrops(page) {
+  if (!page.crops) return page;
+  const ids = new Set(page.slots.filter(Boolean));
+  const crops = Object.fromEntries(Object.entries(page.crops).filter(([id]) => ids.has(id)));
+  return { ...page, crops };
+}
+
+export function setCrop(book, pageIndex, photoId, patch) {
+  const pages = book.pages.map((p, pi) =>
+    pi !== pageIndex ? p : { ...p, crops: { ...(p.crops ?? {}), [photoId]: { ...getCrop(p, photoId), ...patch } } }
+  );
+  return touch({ ...book, pages });
+}
+
+// Remettre la photo au centre, sans zoom ni redressement (le quart de tour est gardé).
+export function resetCrop(book, pageIndex, photoId) {
+  const page = book.pages[pageIndex];
+  return setCrop(book, pageIndex, photoId, { ...DEFAULT_CROP, rot: getCrop(page, photoId).rot });
+}
+
 const emptyPage = (layout = DEFAULT_PER_PAGE) => ({ layout, slots: Array(layout).fill(null) });
 const touch = (book) => ({ ...book, updatedAt: Date.now() });
 
@@ -71,14 +102,14 @@ export function setLayout(book, pageIndex, layout) {
     const kept = p.slots.filter(Boolean).slice(0, layout);
     // « Milieu » = entre deux lignes de photos → impossible avec 1 photo : le titre passe en bas.
     const title = layout === 1 && p.title?.pos === "milieu" ? { ...p.title, pos: "bas" } : p.title;
-    return { ...p, layout, title, slots: Array.from({ length: layout }, (_, i) => kept[i] ?? null) };
+    return pruneCrops({ ...p, layout, title, slots: Array.from({ length: layout }, (_, i) => kept[i] ?? null) });
   });
   return touch({ ...book, pages });
 }
 
 // Placer une photo dans un cadre. Si elle était déjà ailleurs, elle se déplace.
 export function placePhoto(book, pageIndex, slotIndex, photoId) {
-  const pages = book.pages.map((p, pi) => ({
+  const pages = book.pages.map((p, pi) => pruneCrops({
     ...p,
     slots: p.slots.map((id, si) => {
       if (pi === pageIndex && si === slotIndex) return photoId;
@@ -90,7 +121,7 @@ export function placePhoto(book, pageIndex, slotIndex, photoId) {
 
 export function clearSlot(book, pageIndex, slotIndex) {
   const pages = book.pages.map((p, pi) =>
-    pi !== pageIndex ? p : { ...p, slots: p.slots.map((id, si) => (si === slotIndex ? null : id)) }
+    pi !== pageIndex ? p : pruneCrops({ ...p, slots: p.slots.map((id, si) => (si === slotIndex ? null : id)) })
   );
   return touch({ ...book, pages });
 }
