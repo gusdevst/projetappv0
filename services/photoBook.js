@@ -21,6 +21,9 @@ export const COVER_FONTS  = ["moderne", "elegante", "manuscrite", "affiche", "ca
 export const COVER_SIZES  = ["S", "M", "L"];
 export const COVER_COLORS = ["blanc", "noir", "terracotta", "sauge"];
 export const COVER_POS    = ["haut", "milieu", "bas"];
+// Titre de page : page.title = { text, pos, size, font }. font absent = police de la couverture.
+export const PAGE_TITLE_POS   = ["haut", "milieu", "bas"];
+export const PAGE_TITLE_SIZES = ["S", "M", "L"];
 
 const emptyPage = (layout = DEFAULT_PER_PAGE) => ({ layout, slots: Array(layout).fill(null) });
 const touch = (book) => ({ ...book, updatedAt: Date.now() });
@@ -66,7 +69,9 @@ export function setLayout(book, pageIndex, layout) {
   const pages = book.pages.map((p, pi) => {
     if (pi !== pageIndex) return p;
     const kept = p.slots.filter(Boolean).slice(0, layout);
-    return { layout, slots: Array.from({ length: layout }, (_, i) => kept[i] ?? null) };
+    // « Milieu » = entre deux lignes de photos → impossible avec 1 photo : le titre passe en bas.
+    const title = layout === 1 && p.title?.pos === "milieu" ? { ...p.title, pos: "bas" } : p.title;
+    return { ...p, layout, title, slots: Array.from({ length: layout }, (_, i) => kept[i] ?? null) };
   });
   return touch({ ...book, pages });
 }
@@ -95,6 +100,14 @@ export function autofill(book, albumPhotoIds) {
   const placed = placedMap(book);
   const free = albumPhotoIds.filter((id) => placed[id] === undefined);
   const pages = book.pages.map((p) => ({ ...p, slots: p.slots.map((id) => id ?? free.shift() ?? null) }));
+  return touch({ ...book, pages });
+}
+
+// Modifier le titre d'une page : setPageTitle(book, 4, { text: "Plage" }).
+export function setPageTitle(book, pageIndex, patch) {
+  const pages = book.pages.map((p, pi) =>
+    pi !== pageIndex ? p : { ...p, title: { text: "", pos: "bas", size: "M", ...p.title, ...patch } }
+  );
   return touch({ ...book, pages });
 }
 

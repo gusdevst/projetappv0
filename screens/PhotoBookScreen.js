@@ -13,11 +13,12 @@ import BackButton from "../components/BackButton";
 import { BookPage, BlankPage, BookCover, COVER_STYLE } from "../components/book/BookPage";
 import PhotoPickerSheet from "../components/book/PhotoPickerSheet";
 import { useBookFonts } from "../components/book/bookFonts";
+import { EditRow, Chip, NavArrow, LayoutPicker, sectionStyle } from "../components/book/BookControls";
 import { SHADOW } from "../components/home/ui";
 import { C, S, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import {
-  BOOK_FORMATS, BOOK_LAYOUTS, createBook, syncWithAlbum, setFormat, setLayout, autofill, bookStats,
+  BOOK_FORMATS, createBook, syncWithAlbum, setFormat, setLayout, autofill, bookStats,
   placedMap, placePhoto, clearSlot, setCover, COVER_FONTS, COVER_SIZES, COVER_COLORS, COVER_POS,
 } from "../services/photoBook";
 
@@ -78,8 +79,8 @@ export function PhotoBookScreen({ navigation, route }) {
     pi < 0 ? <BlankPage key="in" size={size} label="Intérieur de couverture" />
     : pi >= book.format ? <BlankPage key="end" size={size} label="Fin du livre" />
     : <BookPage key={pi} page={book.pages[pi]} size={size} urlById={urlById}
-        selected={pi === cur} onPress={() => setCur(pi)}
-        onSlotPress={(si) => { setCur(pi); setPicker({ page: pi, slot: si }); }} />;
+        coverFont={book.cover.font}
+        selected={pi === cur} onPress={() => { setCur(pi); navigation.navigate("BookPageEditor", { albumId, pageIndex: pi }); }} />;
 
   // Bande des miniatures : couverture, puis chaque double page.
   const spreads = [];
@@ -154,6 +155,10 @@ export function PhotoBookScreen({ navigation, route }) {
           )}
         </View>
 
+        <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginTop: 10 }}>
+          {cur === COVER ? "Touche la photo pour la changer" : "Touche une page pour l'ouvrir en grand"}
+        </Text>
+
         {/* Réglages de la couverture */}
         {cur === COVER && (
           <>
@@ -202,21 +207,7 @@ export function PhotoBookScreen({ navigation, route }) {
         {cur !== COVER && (
           <>
             <Text style={sectionStyle}>MISE EN PAGE · PAGE {cur + 1}</Text>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              {BOOK_LAYOUTS.map((n) => {
-                const on = book.pages[cur].layout === n;
-                return (
-                  <TouchableOpacity key={n} onPress={() => save(setLayout(book, cur, n))}
-                    style={{ flex: 1, alignItems: "center", paddingTop: 8, paddingBottom: 6, borderRadius: 14,
-                      backgroundColor: on ? C.albumSoft : C.bgCard, borderWidth: 2, borderColor: on ? C.album : C.bgCard }}>
-                    <BookPage page={{ layout: n, slots: Array(n).fill(null) }} size={34} urlById={{}} />
-                    <Text style={{ fontSize: 11, marginTop: 4, color: on ? C.album : C.textMuted, fontWeight: on ? "600" : "500" }}>
-                      {n} photo{n > 1 ? "s" : ""}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <LayoutPicker value={book.pages[cur].layout} onChange={(n) => save(setLayout(book, cur, n))} />
             <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 8 }}>Les photos en trop retournent dans l'album, rien n'est perdu.</Text>
           </>
         )}
@@ -229,7 +220,7 @@ export function PhotoBookScreen({ navigation, route }) {
           </Thumb>
           {spreads.map((ps) => (
             <Thumb key={ps[0]} label={ps.map((p) => p + 1).join("–")} on={ps.includes(cur)} onPress={() => setCur(ps[0])}>
-              {ps.map((pi) => <BookPage key={pi} page={book.pages[pi]} size={26} urlById={urlById} />)}
+              {ps.map((pi) => <BookPage key={pi} page={book.pages[pi]} size={26} urlById={urlById} coverFont={book.cover.font} />)}
             </Thumb>
           ))}
         </ScrollView>
@@ -256,34 +247,6 @@ export function PhotoBookScreen({ navigation, route }) {
           : null}
       />
     </SafeAreaView>
-  );
-}
-
-const sectionStyle = { fontSize: 11, fontWeight: "600", letterSpacing: 0.8, color: C.textMuted, marginTop: 20, marginBottom: 8 };
-
-function EditRow({ label, last, children }) {
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderBottomWidth: last ? 0 : 1, borderBottomColor: C.border }}>
-      <Text style={{ width: 62, fontSize: 13, color: C.text, fontWeight: "500" }}>{label}</Text>
-      <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 5 }}>{children}</View>
-    </View>
-  );
-}
-
-function Chip({ on, onPress, textStyle, children }) {
-  return (
-    <TouchableOpacity onPress={onPress} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: on ? C.album : C.bgMuted }}>
-      <Text style={[{ fontSize: 13, color: on ? "#fff" : C.textMid }, textStyle]}>{children}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function NavArrow({ label, disabled, onPress }) {
-  return (
-    <TouchableOpacity onPress={onPress} disabled={disabled}
-      style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: C.bgCard, alignItems: "center", justifyContent: "center", opacity: disabled ? 0.35 : 1, ...SHADOW }}>
-      <Text style={{ fontSize: 18, color: C.text }}>{label}</Text>
-    </TouchableOpacity>
   );
 }
 

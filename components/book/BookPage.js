@@ -18,11 +18,59 @@ const ROWS = {
 };
 const ROW_FLEX = { 3: [1.3, 1] }; // la ligne du haut un peu plus grande pour 3 photos
 
-// page : { layout, slots } · urlById : { id: url } · onSlotPress(slotIndex) optionnel
-export function BookPage({ page, size, urlById, selected, onPress, onSlotPress }) {
+// Taille du titre de page, en part de la largeur de la page.
+export const PAGE_TITLE_SIZE = { S: 0.045, M: 0.06, L: 0.08 };
+
+// page : { layout, slots, title? } · urlById : { id: url }
+// coverFont : police de la couverture = police du titre de page par défaut.
+// onSlotPress(slotIndex) optionnel (éditeur) · selectedSlot : cadre entouré.
+export function BookPage({ page, size, urlById, selected, onPress, onSlotPress, selectedSlot, coverFont }) {
   const mini = size < 60;
-  const pad = mini ? 1.5 : 9;
-  const gap = mini ? 1 : 4;
+  const pad = mini ? 1.5 : size * 0.05;
+  const gap = mini ? 1 : Math.max(3, size * 0.02);
+
+  // Lignes de photos…
+  const rows = ROWS[page.layout].map((row, ri) => (
+    <View key={`r${ri}`} style={{ flex: ROW_FLEX[page.layout]?.[ri] ?? 1, flexDirection: "row", gap }}>
+      {row.map((si) => {
+        const url = page.slots[si] ? urlById[page.slots[si]] : null;
+        const Frame = onSlotPress ? TouchableOpacity : View;
+        return (
+          <Frame
+            key={si}
+            activeOpacity={0.8}
+            onPress={onSlotPress ? () => onSlotPress(si) : undefined}
+            style={{
+              flex: 1, borderRadius: mini ? 1 : 3, overflow: "hidden",
+              backgroundColor: url ? C.bgMuted : mini ? C.border : C.bgCard,
+              borderWidth: url || mini ? 0 : 1.5, borderStyle: "dashed", borderColor: "#cfcdc4",
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            {url
+              ? <Image source={{ uri: url }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+              : !mini && <Text style={{ color: "#b5b3a9", fontSize: Math.max(14, size * 0.06) }}>+</Text>}
+            {selectedSlot === si && (
+              <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderWidth: 3, borderColor: C.album, borderRadius: 3 }} />
+            )}
+          </Frame>
+        );
+      })}
+    </View>
+  ));
+
+  // …et le titre de page, inséré en haut, au milieu (entre deux lignes) ou en bas.
+  const t = page.title;
+  if (t?.text) {
+    const font = COVER_STYLE.font[t.font ?? coverFont] ?? COVER_STYLE.font.moderne;
+    const fontSize = Math.round(size * (PAGE_TITLE_SIZE[t.size] ?? PAGE_TITLE_SIZE.M));
+    const el = mini
+      ? <View key="title" style={{ height: 2, marginHorizontal: "25%", backgroundColor: C.textMuted, borderRadius: 1 }} />
+      : <Text key="title" numberOfLines={2} style={{ textAlign: "center", color: C.text, fontFamily: font.family, fontWeight: font.weight, fontSize, lineHeight: Math.round(fontSize * 1.2) }}>{t.text}</Text>;
+    if (t.pos === "haut") rows.unshift(el);
+    else if (t.pos === "milieu" && rows.length > 1) rows.splice(Math.ceil(rows.length / 2), 0, el);
+    else rows.push(el);
+  }
 
   return (
     <TouchableOpacity
@@ -35,33 +83,7 @@ export function BookPage({ page, size, urlById, selected, onPress, onSlotPress }
         borderWidth: selected ? (mini ? 1.5 : 2.5) : 0, borderColor: C.album,
       }}
     >
-      <View style={{ flex: 1, gap }}>
-        {ROWS[page.layout].map((row, ri) => (
-          <View key={ri} style={{ flex: ROW_FLEX[page.layout]?.[ri] ?? 1, flexDirection: "row", gap }}>
-            {row.map((si) => {
-              const url = page.slots[si] ? urlById[page.slots[si]] : null;
-              return (
-                <TouchableOpacity
-                  key={si}
-                  activeOpacity={0.8}
-                  disabled={!onSlotPress}
-                  onPress={() => onSlotPress?.(si)}
-                  style={{
-                    flex: 1, borderRadius: mini ? 1 : 3, overflow: "hidden",
-                    backgroundColor: url ? C.bgMuted : mini ? C.border : C.bgCard,
-                    borderWidth: url || mini ? 0 : 1.5, borderStyle: "dashed", borderColor: "#cfcdc4",
-                    alignItems: "center", justifyContent: "center",
-                  }}
-                >
-                  {url
-                    ? <Image source={{ uri: url }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
-                    : !mini && <Text style={{ color: "#b5b3a9", fontSize: 18 }}>+</Text>}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ))}
-      </View>
+      <View style={{ flex: 1, gap }}>{rows}</View>
     </TouchableOpacity>
   );
 }
