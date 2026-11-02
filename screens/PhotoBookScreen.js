@@ -92,7 +92,7 @@ export function PhotoBookScreen({ navigation, route }) {
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <BackButton accentColor={C.album} onPress={() => navigation.goBack()} />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 11.5, color: C.textMuted, fontWeight: "500" }}>Livre photo</Text>
+            <Text style={{ fontSize: 11.5, color: C.textMuted, fontWeight: "500" }}>Livre photo · enregistré automatiquement</Text>
             <Text numberOfLines={1} style={{ fontSize: 19, color: C.text, fontWeight: "600" }}>📕 {album.name}</Text>
           </View>
         </View>

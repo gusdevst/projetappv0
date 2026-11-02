@@ -11,7 +11,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import Text from "../components/AppText";
 import Icon from "../components/Icons";
-import { ListRow, SHADOW } from "../components/home/ui";
+import { ListRow, SectionTitle, SHADOW } from "../components/home/ui";
+import { BookCover } from "../components/book/BookPage";
+import { useBookFonts } from "../components/book/bookFonts";
+import { bookStats } from "../services/photoBook";
 import { C, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 
@@ -81,6 +84,9 @@ export function GalleryHomeScreen({ navigation }) {
   const createAlbum   = usePhotoStore((s) => s.createAlbum);
   const renameAlbum   = usePhotoStore((s) => s.renameAlbum);
   const deleteAlbum   = usePhotoStore((s) => s.deleteAlbum);
+  const books         = usePhotoStore((s) => s.books);
+  const deleteBook    = usePhotoStore((s) => s.deleteBook);
+  useBookFonts(); // titres des couvertures dans leur police
 
   // Retrouver une photo (url) par son id : photothèque + photos rangées.
   const photoById = useMemo(() => {
@@ -97,6 +103,27 @@ export function GalleryHomeScreen({ navigation }) {
     }
     return out;
   };
+  // ── Livres photo (en cours) : le plus récemment modifié en premier ──
+  const urlById = useMemo(() => Object.fromEntries([...photoById].map(([id, p]) => [id, p.url])), [photoById]);
+  const bookList = Object.values(books)
+    .map((b) => ({ book: b, album: albums.find((a) => a.id === b.albumId) }))
+    .filter((x) => x.album)
+    .sort((x, y) => (y.book.updatedAt || 0) - (x.book.updatedAt || 0));
+  function openBookMenu({ book, album }) {
+    Alert.alert(book.cover.title || album.name, `Livre de ${book.format} pages · album « ${album.name} »`, [
+      { text: "Ouvrir", onPress: () => navigation.navigate("PhotoBook", { albumId: album.id }) },
+      {
+        text: "Supprimer le livre", style: "destructive",
+        onPress: () => Alert.alert(
+          "Supprimer le livre ?",
+          "La mise en page sera perdue. L'album et ses photos restent intacts.",
+          [{ text: "Annuler", style: "cancel" }, { text: "Supprimer", style: "destructive", onPress: () => deleteBook(album.id) }]
+        ),
+      },
+      { text: "Annuler", style: "cancel" },
+    ]);
+  }
+
   const albumTime = (a) => a.updatedAt || Number(String(a.id).replace("album-", "")) || 0;
   const sortedAlbums = [...albums].sort((x, y) => albumTime(y) - albumTime(x));
 
@@ -171,6 +198,37 @@ export function GalleryHomeScreen({ navigation }) {
             <Text style={{ fontSize: 13, fontWeight: "600", color: C.album }}>Nouvel album</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Mes livres photo : les livres en cours, à reprendre */}
+        {bookList.length > 0 && (
+          <>
+            <SectionTitle title="Mes livres photo" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 4 }}>
+              {bookList.map(({ book, album }) => {
+                const ids = album.photoIds.filter((id) => urlById[id]);
+                const pct = Math.round(bookStats(book, ids).fillRatio * 100);
+                return (
+                  <TouchableOpacity key={book.albumId} activeOpacity={0.85}
+                    onPress={() => navigation.navigate("PhotoBook", { albumId: album.id })}
+                    onLongPress={() => openBookMenu({ book, album })}
+                    style={{ width: 128 }}>
+                    <View style={{ borderRadius: 8, backgroundColor: C.bgCard, ...SHADOW }}>
+                      <BookCover cover={book.cover} size={128} urlById={urlById} />
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: 7 }}>
+                      <Text numberOfLines={1} style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: C.text }}>{book.cover.title || album.name}</Text>
+                      <TouchableOpacity onPress={() => openBookMenu({ book, album })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Text style={{ fontSize: 15, color: C.textMuted, fontWeight: "700" }}>···</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={{ fontSize: 11.5, color: C.textMuted }}>{book.format} pages · {pct} % rempli</Text>
+                    {!!book.updatedAt && <Text style={{ fontSize: 11, color: C.textMuted }}>{timeAgo(book.updatedAt)}</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </>
+        )}
 
         <View style={{ gap: 10, marginTop: 14 }}>
           {sansAlbum.length > 0 && (

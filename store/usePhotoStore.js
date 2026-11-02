@@ -405,6 +405,10 @@ export const usePhotoStore = create(
       // ─── Livre photo ─────────────────────────────────────────────────────
       // L'écran calcule le nouveau livre avec services/photoBook.js, puis l'enregistre ici.
       setBook: (albumId, book) => set((state) => ({ books: { ...state.books, [albumId]: book } })),
+      deleteBook: (albumId) => set((state) => {
+        const { [albumId]: _removed, ...books } = state.books;
+        return { books }; // l'album, lui, reste intact
+      }),
 
       // ─── Vider la corbeille (vraie suppression via MediaLibrary) ────────
       // Retourne true si la suppression a réussi, false sinon.
