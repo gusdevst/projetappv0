@@ -23,6 +23,7 @@ import { PartenairesScreen }      from "../screens/PartenairesScreen";
 import { RappelsScreen }          from "../screens/RappelsScreen";
 import { ProgressScreen }         from "../screens/ProgressScreen";
 import { GalleryHomeScreen }      from "../screens/GalleryHomeScreen";
+import { PhotoBookScreen }        from "../screens/PhotoBookScreen";
 import { usePhotoStore }          from "../store/usePhotoStore";
 
 const Stack = createStackNavigator();
@@ -91,6 +92,7 @@ export function AppNavigator() {
       <Stack.Screen name="Partenaires" component={PartenairesScreen} />
       <Stack.Screen name="Rappels"     component={RappelsScreen} />
       <Stack.Screen name="Progress"    component={ProgressScreen} />
+      <Stack.Screen name="PhotoBook"   component={PhotoBookScreen} />
     </Stack.Navigator>
   );
 }

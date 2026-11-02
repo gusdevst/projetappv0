@@ -89,6 +89,7 @@ export function GalleryScreen({ navigation, route }) {
   // On peut ouvrir directement un album via route.params.albumId (lien depuis le bilan de tri).
   const [activeAlbumId, setActiveAlbumId] = useState(route?.params?.albumId ?? null);
   const activeAlbum = albums.find((a) => a.id === activeAlbumId) ?? null;
+  const book = usePhotoStore((s) => (activeAlbumId ? s.books[activeAlbumId] : undefined));
   const activeAlbumPhotos = activeAlbum
     ? photos.filter((p) => activeAlbum.photoIds.includes(p.id))
     : [];
@@ -336,24 +337,34 @@ export function GalleryScreen({ navigation, route }) {
           </View>
         )}
         {activeAlbum && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            {/* Bouton export de l'album ouvert */}
-            {activeAlbumPhotos.length > 0 && (
-              <TouchableOpacity
-                onPress={() => { setSyncDone(false); setShowExport(true); }}
-                style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 12, paddingVertical: 7,
-                  shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 }}
-              >
-                <Icon name="export" size={14} color={section === "album" ? C.album : C.accent} strokeWidth={2.2} />
-                <Text style={{ fontSize: 13, color: section === "album" ? C.album : C.accent, fontWeight: "600" }}>Exporter</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={() => confirmDeleteAlbum(activeAlbum)}>
-              <Icon name="trash" size={20} color={C.textMuted} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity onPress={() => confirmDeleteAlbum(activeAlbum)}>
+            <Icon name="trash" size={20} color={C.textMuted} />
+          </TouchableOpacity>
         )}
       </View>
+
+      {/* ── Album ouvert : Livre photo + Exporter, sous le titre ── */}
+      {activeAlbum && activeAlbumPhotos.length > 0 && (
+        <View style={{ flexDirection: "row", gap: 8, marginHorizontal: S.pad, marginBottom: 12 }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("PhotoBook", { albumId: activeAlbum.id })}
+            style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.album, borderRadius: S.radiusFull, paddingVertical: 8,
+              shadowColor: C.album, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 3 }}
+          >
+            <Text style={{ fontSize: 13, color: "#fff", fontWeight: "600" }}>
+              {book ? `📖 Mon livre photo · ${book.format} p.` : "📖 Créer un livre photo"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => { setSyncDone(false); setShowExport(true); }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.bgCard, borderRadius: S.radiusFull, paddingHorizontal: 12, paddingVertical: 8,
+              shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 }}
+          >
+            <Icon name="export" size={14} color={C.album} strokeWidth={2.2} />
+            <Text style={{ fontSize: 13, color: C.album, fontWeight: "600" }}>Exporter</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ── Bannière "vider la corbeille" en haut (section deleted) ── */}
       {showEmpty && photos.length > 0 && (
