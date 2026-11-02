@@ -65,6 +65,19 @@ export const C = PALETTES[THEME_ACTIF];
 export { PALETTES };
 
 // Police de l'app (intégrée au build via app.json → expo-font)
+// Couleurs de l'illustration « chambre noire » (carte Coups de cœur, Galerie).
+// Fixes, quelle que soit la palette : c'est une scène, pas de l'interface.
+export const DARKROOM = {
+  glow:  ["#b3392c", "#6e1f1a", "#2b0f0e"], // lumière rouge → coins sombres
+  bulb:  "#fff7f3",
+  halo:  "#ffc9bc",
+  wire:  "#1d0a09",
+  clip:  "#3b1a14",
+  paper: "#f6e6e0",
+  tint:  "#c23b2e",                         // voile rouge posé sur les photos
+  tray:  "#4a1a16",
+};
+
 export const FONT = "Outfit";
 
 export const FILTERS = [

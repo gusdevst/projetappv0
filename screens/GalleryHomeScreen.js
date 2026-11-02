@@ -15,6 +15,7 @@ import Icon from "../components/Icons";
 import { ListRow, SectionTitle, SHADOW } from "../components/home/ui";
 import { BookCover } from "../components/book/BookPage";
 import AlbumPickerSheet from "../components/book/AlbumPickerSheet";
+import DarkroomCover, { printsFor } from "../components/DarkroomCover";
 import { useBookFonts } from "../components/book/bookFonts";
 import { bookStats } from "../services/photoBook";
 import { C, FONT } from "../constants/theme";
@@ -55,12 +56,15 @@ function Cover({ urls, height }) {
   );
 }
 
-function Card({ width, cover, title, sub, subLines = 1, onPress, onMenu }) {
+function Card({ width, cover, title, titleIcon, sub, subLines = 1, onPress, onMenu }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}
       style={[{ width, backgroundColor: C.bgCard, borderRadius: 16, padding: 7 }, SHADOW]}>
       {cover}
-      <Text style={{ fontSize: 13.5, fontWeight: "500", color: C.text, marginTop: 7, marginHorizontal: 3 }} numberOfLines={1}>{title}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 7, marginHorizontal: 3 }}>
+        {titleIcon}
+        <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "500", color: C.text }} numberOfLines={1}>{title}</Text>
+      </View>
       <View style={{ flexDirection: "row", alignItems: "center", marginHorizontal: 3, marginBottom: 2 }}>
         <Text style={{ flex: 1, fontSize: 11, color: C.textMuted }} numberOfLines={subLines}>{sub}</Text>
         {onMenu && (
@@ -96,13 +100,19 @@ export function GalleryHomeScreen({ navigation }) {
     [...libraryPhotos, ...printed].forEach((p) => { if (p && !m.has(p.id)) m.set(p.id, p); });
     return m;
   }, [libraryPhotos, printed]);
-  // Couverture = les 3 dernières photos ajoutées encore présentes.
-  // Coups de cœur encore présents sur le téléphone (même règle que GalleryScreen).
-  const keptCount = useMemo(() => {
-    if (libraryPhotos.length === 0) return kept.length;
-    const ids = new Set(libraryPhotos.map((p) => p.id));
-    return kept.filter((p) => ids.has(p.id)).length;
+  // Coups de cœur encore présents sur le téléphone (même règle que GalleryScreen),
+  // avec leur adresse à jour. Tant que la photothèque charge : liste telle quelle.
+  const keptAlive = useMemo(() => {
+    if (libraryPhotos.length === 0) return kept;
+    const byId = new Map(libraryPhotos.map((p) => [p.id, p]));
+    return kept.filter((p) => byId.has(p.id)).map((p) => ({ ...p, url: byId.get(p.id).url }));
   }, [kept, libraryPhotos]);
+  const keptCount = keptAlive.length;
+  // Carte Coups de cœur plus large : 2 colonnes de la grille (titre lisible en entier).
+  const HEART_W   = CARD_W * 2 + 10;
+  const HEART_IMG = HEART_W - 14; // largeur du dessin (carte moins son padding)
+  const keptUrls  = keptAlive.slice(-printsFor(HEART_IMG, COVER_H)).reverse().map((p) => p.url); // derniers ❤️ → guirlande
+  // Couverture d'album = les 3 dernières photos ajoutées encore présentes.
   const coverUrls = (ids) => {
     const out = [];
     for (let k = ids.length - 1; k >= 0 && out.length < 3; k--) {
@@ -236,12 +246,9 @@ export function GalleryHomeScreen({ navigation }) {
         <SectionTitle title="Mes tirages photos" />
         <View style={{ flexDirection: "row", gap: 10 }}>
           <Card
-            width={CARD_W}
-            cover={
-              <View style={{ height: COVER_H, borderRadius: 11, backgroundColor: C.redSoft, alignItems: "center", justifyContent: "center" }}>
-                <Icon name="heart" size={30} color={C.red} filled />
-              </View>
-            }
+            width={HEART_W}
+            cover={<DarkroomCover urls={keptUrls} width={HEART_IMG} height={COVER_H} />}
+            titleIcon={<Icon name="heart" size={13} color={C.red} filled />}
             title="Coups de cœur"
             sub={`${keptCount} photo${keptCount > 1 ? "s" : ""} à imprimer`}
             onPress={() => open({ section: "kept" })}
