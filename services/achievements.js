@@ -1,7 +1,7 @@
 // services/achievements.js
 // Galons (grades selon les photos triées) + badges. Calculs purs, pas d'UI.
 //
-import { computeStreak, STREAK_MIN } from "./progressStats";
+import { computeStreak, STREAK_MIN, fmtDuration } from "./progressStats";
 
 // Un galon / badge débloqué est mémorisé dans le store (achievements = { id: timestamp })
 // → il reste acquis même si la donnée redescend (ex. coups de cœur retirés).
@@ -36,12 +36,15 @@ export function rankInfo(totalSorted) {
 // value(ctx) = où en est l'user · goal = cible · fmt = affichage de l'avancement
 const GO = 1024; // Mo
 const fmtGo = (mo) => `${(mo / GO).toFixed(1).replace(".", ",")}`;
+// Avancement des badges sprint : record actuel (rempli par buildContext).
+let lastBest20 = null;
+const sprintFmt = () => (lastBest20 ? `Record : ${fmtDuration(lastBest20)}` : "Pas encore de sprint");
 export const BADGES = [
   { id: "clean-1",  emoji: "🧹", name: "Coup de balai",              desc: "1 Go libéré",  goal: 1 * GO,  value: (c) => c.freedMo, fmt: (v, g) => `${fmtGo(v)} / ${g / GO} Go` },
   { id: "clean-3",  emoji: "🌀", name: "Coup d'aspirateur",          desc: "3 Go libérés", goal: 3 * GO,  value: (c) => c.freedMo, fmt: (v, g) => `${fmtGo(v)} / ${g / GO} Go` },
   { id: "clean-5",  emoji: "🧽", name: "Grand ménage de printemps",  desc: "5 Go libérés", goal: 5 * GO,  value: (c) => c.freedMo, fmt: (v, g) => `${fmtGo(v)} / ${g / GO} Go` },
   { id: "clean-10", emoji: "✨", name: "Nickel chrome",              desc: "10 Go libérés", goal: 10 * GO, value: (c) => c.freedMo, fmt: (v, g) => `${fmtGo(v)} / ${g / GO} Go` },
-  { id: "flash",    emoji: "⚡", name: "Éclair",                     desc: "20 photos en moins de 40 s (moyenne d'une journée)", goal: 1, value: (c) => (c.hadFlashDay ? 1 : 0), fmt: () => "< 40 s / 20" },
+  { id: "flash",    emoji: "⚡", name: "Éclair",                     desc: "20 photos en moins de 1 min 30 (moyenne d'une journée)", goal: 1, value: (c) => (c.hadFlashDay ? 1 : 0), fmt: () => "< 1 min 30 / 20" },
   { id: "hearts",   emoji: "❤️", name: "Cœur d'or",                  desc: "50 coups de cœur", goal: 50, value: (c) => c.keptCount, fmt: (v, g) => `${v} / ${g}` },
   { id: "album",    emoji: "📕", name: "Premier album",              desc: "1 album créé", goal: 1, value: (c) => c.albumCount, fmt: (v, g) => `${v} / ${g}` },
   { id: "clear",    emoji: "🏁", name: "Galerie nette",              desc: "Toute la photothèque triée au moins une fois", goal: 100, value: (c) => c.sortedPct, fmt: (v) => `${v} %` },
@@ -60,7 +63,11 @@ export const BADGES = [
   // Intensité : photos triées en une seule journée
   { id: "day-100", emoji: "💯", name: "Centurion",   desc: "100 photos triées en une journée", goal: 100, value: (c) => c.bestDay, fmt: (v, g) => `${Math.min(v, g)} / ${g}` },
   { id: "day-300", emoji: "🏃", name: "Marathonien", desc: "300 photos triées en une journée", goal: 300, value: (c) => c.bestDay, fmt: (v, g) => `${Math.min(v, g)} / ${g}` },
-  { id: "turbo",   emoji: "🚀", name: "Turbo",       desc: "20 photos en moins de 25 s (moyenne d'une journée)", goal: 1, value: (c) => (c.hadTurboDay ? 1 : 0), fmt: () => "< 25 s / 20" },
+  { id: "turbo",   emoji: "🚀", name: "Turbo",       desc: "20 photos en moins de 1 min (moyenne d'une journée)", goal: 1, value: (c) => (c.hadTurboDay ? 1 : 0), fmt: () => "< 1 min / 20" },
+  // Sprint : 20 swipes d'affilée (record best20Ms, cassé par pause > 60 s, ↩ ou sortie du tri)
+  { id: "sprint-90", emoji: "🐆", name: "Guépard",      desc: "20 swipes d'affilée en moins de 1 min 30", goal: 1, value: (c) => (c.best20Ms && c.best20Ms < 90 * 1000 ? 1 : 0), fmt: (v) => sprintFmt(v) },
+  { id: "sprint-60", emoji: "🏎️", name: "Bolide",       desc: "20 swipes d'affilée en moins de 1 min",    goal: 1, value: (c) => (c.best20Ms && c.best20Ms < 60 * 1000 ? 1 : 0), fmt: (v) => sprintFmt(v) },
+  { id: "sprint-45", emoji: "☄️", name: "Supersonique", desc: "20 swipes d'affilée en moins de 45 s",     goal: 1, value: (c) => (c.best20Ms && c.best20Ms < 45 * 1000 ? 1 : 0), fmt: (v) => sprintFmt(v) },
   // Albums & coups de cœur
   { id: "albums-5",   emoji: "🗂️", name: "Collectionneur",   desc: "5 albums créés", goal: 5, value: (c) => c.albumCount, fmt: (v, g) => `${v} / ${g}` },
   { id: "archive",    emoji: "📚", name: "Archiviste",       desc: "100 photos rangées dans des albums", goal: 100, value: (c) => c.photosInAlbums, fmt: (v, g) => `${v} / ${g}` },
@@ -79,7 +86,7 @@ BADGES[BADGES.length - 1].goal = BADGES.length - 1;
 
 // ─── Contexte : toutes les mesures utiles, lues depuis l'état du store ────
 const FLASH_MIN_SAMPLES = 20;   // au moins 20 décisions chronométrées dans la journée
-const FLASH_MAX_MS_PER_20 = 40 * 1000;
+const FLASH_MAX_MS_PER_20 = 90 * 1000; // Éclair : 1 min 30 en moyenne sur la journée
 
 export function buildContext(state) {
   const log = state.dailyLog || {};
@@ -100,7 +107,7 @@ export function buildContext(state) {
   // Meilleure journée (photos triées) et journée « turbo » (20 photos en < 25 s).
   const bestDay = days.reduce((m, d) => Math.max(m, d.sorted || 0), 0);
   const hadTurboDay = days.some((d) =>
-    (d.timedCount || 0) >= FLASH_MIN_SAMPLES && (d.activeMs / d.timedCount) * 20 < 25 * 1000
+    (d.timedCount || 0) >= FLASH_MIN_SAMPLES && (d.activeMs / d.timedCount) * 20 < 60 * 1000 // Turbo : 1 min
   );
   // Week-end studieux : un samedi ET le dimanche qui suit validés (≥ STREAK_MIN photos).
   const okDay = (k) => (log[k]?.sorted || 0) >= STREAK_MIN;
@@ -118,7 +125,10 @@ export function buildContext(state) {
   const have = state.achievements || {};
   const badgesWon = BADGES.filter((b) => b.id !== "legend" && have[b.id]).length;
 
+  lastBest20 = state.best20Ms || null;
+
   return {
+    best20Ms: state.best20Ms || null,
     bestDay, hadTurboDay, hadStudiousWeekend, photosInAlbums, badgesWon,
     purgedCount:     state.purgedCount || 0,
     shuffleLaunches: state.shuffleLaunchCount || 0,

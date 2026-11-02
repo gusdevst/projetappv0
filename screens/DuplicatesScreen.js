@@ -18,7 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { LinearGradient } from "expo-linear-gradient";
 import { C, S } from "../constants/theme";
-import { usePhotoStore } from "../store/usePhotoStore";
+import { usePhotoStore, resetSprint } from "../store/usePhotoStore";
 import { findDuplicates } from "../services/photoAnalysis";
 import { ZoomableImage } from "../components/ZoomableImage";
 import BackButton from "../components/BackButton";
@@ -120,6 +120,9 @@ export function DuplicatesScreen({ navigation, route }) {
     StatusBar.setHidden(false, "fade");
     if (NavigationBar) NavigationBar.setVisibilityAsync("visible").catch(() => {});
   };
+
+  // Sprint de 20 : repart de zéro à l'entrée et à la sortie de l'écran.
+  useEffect(() => { resetSprint(); return resetSprint; }, []);
 
   useEffect(() => {
     if (fullscreen !== null) hideAndroidBars();

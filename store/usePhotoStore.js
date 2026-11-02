@@ -62,12 +62,27 @@ let lastDecisionAt = 0;
 const PAUSE_MS = 60 * 1000; // > 60 s entre 2 décisions = pause (téléphone posé) → non compté
 const BULK_MS  = 200;       // < 0,2 s = action groupée ("Tout supprimer") → non comptée
 
-function timeLog(log) {
+// Sprint : durées des dernières décisions d'affilée (badges Guépard / Bolide / Supersonique).
+// Cassé par une pause > 60 s, un ↩ annuler ou la sortie du tri (resetSprint).
+let sprint = [];
+const SPRINT_LEN = 20;
+export function resetSprint() { sprint = []; }
+
+// Chronomètre une décision : renvoie le carnet mis à jour (+ best20Ms si nouveau record).
+function timeDecision(state, log) {
   const now = Date.now();
   const dt  = now - lastDecisionAt;
   lastDecisionAt = now;
-  if (dt < BULK_MS || dt > PAUSE_MS) return log;
-  return bumpLog(bumpLog(log, "timedCount", 1), "activeMs", dt);
+  if (dt < BULK_MS) return { dailyLog: log };
+  if (dt > PAUSE_MS) { sprint = []; return { dailyLog: log }; }
+  sprint.push(dt);
+  if (sprint.length > SPRINT_LEN) sprint.shift();
+  const out = { dailyLog: bumpLog(bumpLog(log, "timedCount", 1), "activeMs", dt) };
+  if (sprint.length === SPRINT_LEN) {
+    const total = sprint.reduce((a, b) => a + b, 0);
+    if (!state.best20Ms || total < state.best20Ms) out.best20Ms = total;
+  }
+  return out;
 }
 
 export const usePhotoStore = create(
@@ -169,7 +184,7 @@ export const usePhotoStore = create(
           kept:    [...state.kept, photo],
           deleted: state.deleted.filter((p) => p.id !== photo.id),
           lifetimeSorted: bumpTotal(state, 1),
-          dailyLog: timeLog(bumpLog(state.dailyLog, "sorted", 1)), // ❤️ = photo gardée → triée
+          ...timeDecision(state, bumpLog(state.dailyLog, "sorted", 1)), // ❤️ = photo gardée → triée
         };
       }),
 
@@ -181,7 +196,7 @@ export const usePhotoStore = create(
           kept:    state.kept.filter((p) => p.id !== photo.id),
           printed: state.printed.filter((p) => p.id !== photo.id),
           lifetimeSorted: bumpTotal(state, 1),
-          dailyLog: timeLog(bumpLog(state.dailyLog, "sorted", 1)), // 🗑 = photo supprimée → triée
+          ...timeDecision(state, bumpLog(state.dailyLog, "sorted", 1)), // 🗑 = photo supprimée → triée
         };
       }),
 
@@ -199,7 +214,7 @@ export const usePhotoStore = create(
       addSkipped: (photo) => set((state) =>
         state.skipped.some((p) => p.id === photo.id)
           ? state
-          : { skipped: [...state.skipped, photo], lifetimeSorted: bumpTotal(state, 1), dailyLog: timeLog(bumpLog(state.dailyLog, "sorted", 1)) } // ✅ gardée → triée
+          : { skipped: [...state.skipped, photo], lifetimeSorted: bumpTotal(state, 1), ...timeDecision(state, bumpLog(state.dailyLog, "sorted", 1)) } // ✅ gardée → triée
       ),
 
       // addHesitated = "je déciderai plus tard". L'user n'est pas prêt à choisir.
@@ -210,7 +225,7 @@ export const usePhotoStore = create(
           hesitated: [...state.hesitated, photo],
           deleted:   state.deleted.filter((p) => p.id !== photo.id),
           kept:      state.kept.filter((p) => p.id !== photo.id),
-          dailyLog:  timeLog(state.dailyLog), // "j'hésite" compte dans le chrono, pas dans les triées
+          ...timeDecision(state, state.dailyLog), // "j'hésite" compte dans le chrono, pas dans les triées
         };
       }),
 
@@ -272,6 +287,7 @@ export const usePhotoStore = create(
       },
 
       undoLast: (keptSnap, deletedSnap, printedSnap, skippedSnap, hesitatedSnap) => set((state) => {
+        resetSprint(); // ↩ annuler casse le sprint de 20
         const skippedBack = skippedSnap !== undefined ? skippedSnap : state.skipped;
         // Annulation : on retire du carnet les photos "triées" qui disparaissent des piles
         // gardées/supprimées (sinon swiper puis annuler gonflerait les chiffres).
@@ -377,6 +393,8 @@ export const usePhotoStore = create(
       purgedCount: 0,
       // Nombre de tris aléatoires lancés (badge « Joueur »).
       shuffleLaunchCount: 0,
+      // Record : temps le plus court (ms) pour 20 décisions d'affilée. null = pas encore de sprint.
+      best20Ms: null,
       bumpShuffleLaunch: () => set((st) => ({ shuffleLaunchCount: (st.shuffleLaunchCount || 0) + 1 })),
 
       // ─── Galons & badges ────────────────────────────────────────────────
@@ -604,6 +622,7 @@ export const usePhotoStore = create(
         freedMo:                 state.freedMo,
         purgedCount:             state.purgedCount,
         shuffleLaunchCount:      state.shuffleLaunchCount,
+        best20Ms:                state.best20Ms,
         dailyLog:                state.dailyLog,
         lifetimeSorted:          state.lifetimeSorted,
         achievements:            state.achievements,

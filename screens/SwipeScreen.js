@@ -23,7 +23,7 @@ try {
 import { LinearGradient } from "expo-linear-gradient";
 import { C, S, FONT } from "../constants/theme";
 import Icon from "../components/Icons";
-import { usePhotoStore } from "../store/usePhotoStore";
+import { usePhotoStore, resetSprint } from "../store/usePhotoStore";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { SessionTutoOverlay } from "../components/SessionTutoOverlay";
 import { SwipeEdgeHints } from "../components/SwipeEdgeHints";
@@ -148,6 +148,9 @@ export function SwipeScreen({ navigation, route }) {
   }, []);
 
   useEffect(() => { setHeartedThisPhoto(false); }, [idx]);
+
+  // Sprint de 20 : repart de zéro à l'entrée et à la sortie du tri.
+  useEffect(() => { resetSprint(); return resetSprint; }, []);
 
   const flashFeedback = (color, edge) => {
     setFeedbackColor(color);

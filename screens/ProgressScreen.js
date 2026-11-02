@@ -13,7 +13,7 @@ import Svg, { Defs, LinearGradient, Stop, Ellipse, Path } from "react-native-svg
 import Icon from "../components/Icons";
 import { C, S } from "../constants/theme";
 import { usePhotoStore, dayKey } from "../store/usePhotoStore";
-import { formatSize, noon, addDays, mondayOf, dayStats, sumRange, avgFor20, computeStreak, STREAK_MIN } from "../services/progressStats";
+import { formatSize, noon, addDays, mondayOf, dayStats, sumRange, avgFor20, computeStreak, STREAK_MIN, fmtDuration } from "../services/progressStats";
 import BackButton from "../components/BackButton";
 import { RankCard } from "../components/RankCard";
 import { BadgesGrid } from "../components/BadgesGrid";
@@ -105,6 +105,7 @@ export function ProgressScreen({ navigation, route }) {
   }), { sorted: 0, freedMo: 0, timedCount: 0, activeMs: 0 });
   const pace = avgFor20(total); // temps moyen pour 20 photos sur la période
   const streak = useMemo(() => computeStreak(dailyLog), [dailyLog]);
+  const best20Ms = usePhotoStore((s) => s.best20Ms); // record du sprint de 20
 
   // ── Rappel (même logique qu'avant sur l'accueil) ──
   const notificationHour         = usePhotoStore((s) => s.notificationHour);
@@ -324,6 +325,11 @@ export function ProgressScreen({ navigation, route }) {
               <Text style={{ fontSize: 11, color: C.textMuted }}>
                 {pace ? "en moyenne pour trier 20 photos" : "Trie encore quelques photos pour mesurer ton rythme"}
               </Text>
+              {!!best20Ms && (
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                  Record : 20 photos en <Text style={{ fontWeight: "600", color: C.accent }}>{fmtDuration(best20Ms)}</Text>
+                </Text>
+              )}
             </View>
           </View>
 

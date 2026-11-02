@@ -35,6 +35,16 @@ export function sumRange(log, from, to) {
   return { sorted, freedMo, timedCount, activeMs };
 }
 
+// Durée en texte : "45 s", "1 min 05 s", "8 min", "1 h 12".
+export function fmtDuration(ms) {
+  const sec = Math.round((ms || 0) / 1000);
+  if (sec < 60) return `${sec} s`;
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), r = sec % 60;
+  if (h) return `${h} h ${String(m).padStart(2, "0")}`;
+  if (sec >= 600) return `${m} min`;
+  return r ? `${m} min ${String(r).padStart(2, "0")} s` : `${m} min`;
+}
+
 // Temps moyen pour trier 20 photos, en texte ("1 min 40 s", "45 s").
 // null si moins de 10 décisions chronométrées (pas assez fiable).
 export const TIME_MIN_SAMPLES = 10;
