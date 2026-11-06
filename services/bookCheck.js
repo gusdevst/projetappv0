@@ -46,7 +46,8 @@ function requiredPx(layout, slotIndex, scale, landscape) {
 //   unplaced     : nombre de photos de l'album pas dans le livre
 export function checkBook(book, albumIds, photoById) {
   const coverId = book.cover?.photoId;
-  const coverOk = !!coverId && !!photoById[coverId];
+  // Le style « Titre seul » n'a pas de photo : rien à vérifier de ce côté.
+  const coverOk = book.cover?.style === "titre" || (!!coverId && !!photoById[coverId]);
 
   const emptyPages = [];
   const lowQuality = [];

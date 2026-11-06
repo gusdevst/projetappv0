@@ -20,7 +20,7 @@ export function PrintPageRenderer({ job, book, urlById, geo, viewRef, onReady })
 
   const page = job?.kind === "page" ? book.pages[job.pageIndex] : null;
   const expected = !job ? 0
-    : job.kind === "cover" ? (book.cover.photoId && urlById[book.cover.photoId] ? 1 : 0)
+    : job.kind === "cover" ? (book.cover.style !== "titre" && book.cover.photoId && urlById[book.cover.photoId] ? 1 : 0)
     : (page?.slots ?? []).filter((id) => id && urlById[id]).length;
 
   const finish = (ok) => {

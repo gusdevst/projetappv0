@@ -36,6 +36,59 @@ export function clampPages(n) {
 export const layoutRows = (layout, landscape) => (layout === 1 || (landscape && layout === 2) ? 1 : 2);
 export const DEFAULT_PER_PAGE = 2;
 
+// ─── Style de couverture + couleur de fond ──────────────────────────────────
+// cover.style : "pleine" (photo plein cadre, comme avant) · "centree" · "polaroid" · "bandeau" · "cadre" · "titre" (sans photo)
+// cover.bg    : clé d'une couleur de COVER_BGS. Sert au fond de la face avant (selon le style) ET au dos / 4ᵉ de couverture.
+// cover.color : couleur du titre ; "auto" = choisie selon le style et le fond (lisible : clair sur foncé, foncé sur clair).
+export const COVER_STYLES = [
+  { key: "pleine",   label: "Pleine page" },
+  { key: "centree",  label: "Photo centrée" },
+  { key: "polaroid", label: "Polaroïd" },
+  { key: "bandeau",  label: "Bandeau" },
+  { key: "cadre",    label: "Cadre fin" },
+  { key: "titre",    label: "Titre seul" },
+];
+export const DEFAULT_COVER_STYLE = "pleine";
+
+// 26 couleurs de fond, rangées par famille (neutres · verts · bleus · rouges / roses · jaunes · violets).
+export const COVER_BGS = [
+  { key: "creme",      label: "Crème",         hex: "#f1ebdf" },
+  { key: "blanc",      label: "Blanc",         hex: "#fbfbf8" },
+  { key: "sable",      label: "Sable",         hex: "#e2d3bb" },
+  { key: "nude",       label: "Nude",          hex: "#dcc3b3" },
+  { key: "perle",      label: "Gris perle",    hex: "#d5d5d0" },
+  { key: "ardoise",    label: "Ardoise",       hex: "#6b7480" },
+  { key: "noir",       label: "Noir",          hex: "#23271f" },
+  { key: "sauge",      label: "Sauge",         hex: "#a9c48b" },
+  { key: "eucalyptus", label: "Eucalyptus",    hex: "#9fb8a6" },
+  { key: "kaki",       label: "Kaki",          hex: "#7a7a4a" },
+  { key: "foret",      label: "Vert forêt",    hex: "#4c7a2b" },
+  { key: "emeraude",   label: "Émeraude",      hex: "#1f6b4f" },
+  { key: "ciel",       label: "Bleu ciel",     hex: "#a9c8e0" },
+  { key: "cyclades",   label: "Bleu Cyclades", hex: "#4d8fb5" },
+  { key: "roi",        label: "Bleu roi",      hex: "#2f5aa8" },
+  { key: "indigo",     label: "Indigo",        hex: "#3b3f7a" },
+  { key: "nuit",       label: "Bleu nuit",     hex: "#23354f" },
+  { key: "poudre",     label: "Rose poudré",   hex: "#e8c4bf" },
+  { key: "fuchsia",    label: "Rose vif",      hex: "#d9788f" },
+  { key: "corail",     label: "Corail",        hex: "#e5735a" },
+  { key: "terracotta", label: "Terracotta",    hex: "#b8653f" },
+  { key: "bordeaux",   label: "Bordeaux",      hex: "#7a2a35" },
+  { key: "moutarde",   label: "Moutarde",      hex: "#d9a93b" },
+  { key: "safran",     label: "Safran",        hex: "#e09a2d" },
+  { key: "lilas",      label: "Lilas",         hex: "#b7a3d1" },
+  { key: "prune",      label: "Prune",         hex: "#5b3a63" },
+];
+export const DEFAULT_COVER_BG = "creme";
+export const coverBgHex = (key) => (COVER_BGS.find((c) => c.key === key) ?? COVER_BGS[0]).hex;
+
+// Couleur claire ? (sert à choisir un titre foncé ou clair). Luminance perçue de 0 à 1.
+export function isLightHex(hex) {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6;
+}
+
 // Réglages de la couverture (les clés ; l'écran les traduit en police / taille / couleur).
 export const COVER_FONTS  = ["moderne", "elegante", "manuscrite", "affiche", "calligraphie", "ronde"];
 export const COVER_SIZES  = ["S", "M", "L"];
@@ -94,7 +147,8 @@ export function createBook(album) {
       albumId: album.id,
       orientation: "portrait",
       format,
-      cover: { photoId: ids[0] ?? null, title: album.name, font: "moderne", size: "M", color: "blanc", pos: "bas" },
+      cover: { photoId: ids[0] ?? null, title: album.name, font: "moderne", size: "M", color: "blanc", pos: "bas",
+               style: DEFAULT_COVER_STYLE, bg: DEFAULT_COVER_BG },
       pages,
       updatedAt: Date.now(),
     },
@@ -178,6 +232,17 @@ export function setPageTitle(book, pageIndex, patch) {
 // Modifier la couverture : setCover(book, { title: "Été" }).
 export function setCover(book, patch) {
   return touch({ ...book, cover: { ...book.cover, ...patch } });
+}
+
+// Changer de style de couverture : le titre repasse en couleur automatique (lisible sur le nouveau fond).
+export function setCoverStyle(book, style) {
+  if (!COVER_STYLES.some((s) => s.key === style) || (book.cover.style ?? DEFAULT_COVER_STYLE) === style) return book;
+  return setCover(book, { style, color: "auto" });
+}
+
+// Changer la couleur de fond : si le titre est en automatique, il se réadapte tout seul.
+export function setCoverBg(book, bg) {
+  return setCover(book, { bg });
 }
 
 // L'album a changé (photo retirée) → on enlève du livre les photos qui n'y sont plus.

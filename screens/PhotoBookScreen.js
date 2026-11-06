@@ -21,6 +21,7 @@ import { usePhotoStore } from "../store/usePhotoStore";
 import {
   BOOK_PAGES, createBook, syncWithAlbum, setFormat, setOrientation, setLayout, autofill, bookStats,
   placedMap, placePhoto, clearSlot, setCover, COVER_FONTS, COVER_SIZES, COVER_COLORS, COVER_POS,
+  COVER_STYLES, COVER_BGS, setCoverStyle, setCoverBg,
   pageRatio, isLandscape, clampPages,
 } from "../services/photoBook";
 
@@ -213,7 +214,41 @@ export function PhotoBookScreen({ navigation, route }) {
         {/* Réglages de la couverture */}
         {cur === COVER && (
           <>
-            <Text style={sectionStyle}>COUVERTURE</Text>
+            <Text style={sectionStyle}>STYLE DE COUVERTURE</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              {COVER_STYLES.map((s) => {
+                const on = (book.cover.style ?? "pleine") === s.key;
+                const tileW = Math.floor((width - S.pad * 2 - 20) / 3);
+                return (
+                  <TouchableOpacity key={s.key} onPress={() => save(setCoverStyle(book, s.key))} style={{ width: tileW, alignItems: "center" }}>
+                    <View style={{ padding: 3, borderRadius: 8, borderWidth: 2.5, borderColor: on ? C.album : "transparent" }}>
+                      <BookCover cover={{ ...book.cover, style: s.key, title: book.cover.title || "Titre" }} size={tileW - 14} ratio={ratio} urlById={urlById} />
+                    </View>
+                    <Text style={{ fontSize: 11.5, marginTop: 4, fontWeight: on ? "700" : "500", color: on ? C.album : C.textMid }}>{s.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={sectionStyle}>COULEUR DE FOND</Text>
+            <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 12, ...SHADOW }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                {COVER_BGS.map((c) => {
+                  const on = (book.cover.bg ?? "creme") === c.key;
+                  return (
+                    <TouchableOpacity key={c.key} onPress={() => save(setCoverBg(book, c.key))} accessibilityLabel={c.label}
+                      style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 2.5, borderColor: on ? C.album : "transparent", alignItems: "center", justifyContent: "center" }}>
+                      <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: c.hex, borderWidth: 1, borderColor: "rgba(0,0,0,0.12)" }} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 10 }}>
+                {COVER_BGS.find((c) => c.key === (book.cover.bg ?? "creme"))?.label} · sert aussi au dos et à la 4ᵉ de couverture.
+              </Text>
+            </View>
+
+            <Text style={sectionStyle}>TITRE</Text>
             <View style={{ backgroundColor: C.bgCard, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 2, ...SHADOW }}>
               <EditRow label="Titre">
                 <TextInput
@@ -235,7 +270,8 @@ export function PhotoBookScreen({ navigation, route }) {
               <EditRow label="Taille">
                 {COVER_SIZES.map((k) => <Chip key={k} on={book.cover.size === k} onPress={() => save(setCover(book, { size: k }))}>{k}</Chip>)}
               </EditRow>
-              <EditRow label="Couleur">
+              <EditRow label="Couleur" last={!["pleine", "cadre", undefined].includes(book.cover.style)}>
+                <Chip on={book.cover.color === "auto"} onPress={() => save(setCover(book, { color: "auto" }))}>Auto</Chip>
                 {COVER_COLORS.map((k) => {
                   const on = book.cover.color === k;
                   return (
@@ -246,9 +282,12 @@ export function PhotoBookScreen({ navigation, route }) {
                   );
                 })}
               </EditRow>
-              <EditRow label="Position" last>
-                {COVER_POS.map((k) => <Chip key={k} on={book.cover.pos === k} onPress={() => save(setCover(book, { pos: k }))}>{COVER_STYLE.pos[k].label}</Chip>)}
-              </EditRow>
+              {/* « Position » n'a de sens que si le titre est posé sur la photo ; les autres styles ont leur zone de titre. */}
+              {["pleine", "cadre", undefined].includes(book.cover.style) && (
+                <EditRow label="Position" last>
+                  {COVER_POS.map((k) => <Chip key={k} on={book.cover.pos === k} onPress={() => save(setCover(book, { pos: k }))}>{COVER_STYLE.pos[k].label}</Chip>)}
+                </EditRow>
+              )}
             </View>
             <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 8 }}>Le titre du livre ne renomme pas l'album.</Text>
           </>
