@@ -183,6 +183,13 @@ fond perdu **4 mm**, marge de sécurité **4 mm**, images **150 dpi min / 300 ma
 PDF/X-4 recommandé, sans traits de coupe, zone code-barres réservée sur la 4ᵉ. Largeur du dos :
 via l'API Gelato `GET /v3/products/{productUid}/cover-dimensions?pageCount=…` (clé API requise,
 à garder côté serveur Supabase). Les pages de documentation de Gelato bloquent la lecture automatique (403).
+**Fait le 6 nov.** : clé dans les secrets Supabase (`GELATO_API_KEY`) ; fonction `supabase/functions/gelato-cover`
+déployée (`--no-verify-jwt` = version d'essai, **à protéger par une connexion avant la mise en ligne**) :
+`GET https://xemwkqqpgvefumfvcehj.supabase.co/functions/v1/gelato-cover?pageCount=30` (pair, 30→200).
+Réponse testée (mm) : `pagesCount` = pages demandées + 4 · couverture à plat `wraparoundInsideSize`
+478×326 (30 p.) · dos `spineSize.width` 6 mm (30 p.), 9 (60), 11 (100), 19 (200) · panneaux 208×286 à 20 mm
+du haut ; dos arrière / dos / dos avant séparés par des charnières de 8 mm ; face avant à `left` = 250 (30 p.).
+Redéployer : `npx supabase functions deploy gelato-cover --no-verify-jwt` (après `login` + `link`).
 
 ---
 
