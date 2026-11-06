@@ -2,7 +2,7 @@
 
 > Fichier de passation. Lu en début de session pour retrouver l'état du projet
 > sans re-scanner tout le code. **À maintenir à jour** à chaque étape importante.
-> Dernière mise à jour : 2026-10-31.
+> Dernière mise à jour : 2026-11-06.
 
 ---
 
@@ -19,15 +19,15 @@ trop-plein de photos sans y passer des heures.
 
 ---
 
-## 2. État actuel (au 2026-10-31)
+## 2. État actuel (au 2026-11-06)
 
-- Branche de travail : **`feature/themes`** — refonte « sauge » **terminée** (tous les écrans),
-  barre de menu en bas (`feature/barre-menu` fusionnée dedans). Prête pour TestFlight + build Android.
-  À fusionner dans `main` après test (avec `feature/progression`, déjà incluse dedans).
-- `feature/progression` : terminée, commitée, **pas encore fusionnée** dans `main`
-  (attend son test TestFlight). C'est aussi le **retour arrière** si le thème casse tout.
-- `main` = fin de la session d'octobre (`ab35958 vdefversionoctobre`).
-- Ordre de fusion prévu : `feature/progression` → `main`, puis `feature/themes`.
+- **`main` contient tout** (testé et validé par Augustin) : progression, thème « sauge »,
+  barre de menu, Galerie, livre photo (`d49d903 coup de coeurs`). Fusion en fast-forward
+  le 6 nov. ; `main` est à pousser sur GitHub depuis VS Code.
+- Branche de travail : **`feature/comptes`** (créée le 6 nov. depuis `main`, même commit) —
+  comptes utilisateurs, à démarrer.
+- Branches déjà fusionnées dans `main`, supprimables : `feature/progression`,
+  `feature/themes`, `feature/barre-menu`, `feature/livre-photo`, `octobre27`.
 - Test au quotidien : **simulateur iOS du Mac** (`npx expo start --dev-client`, Fast Refresh).
   Test sur vrai téléphone : **app de dev Android** sur le téléphone d'Augustin (build EAS
   `development`, Metro en Wi-Fi) ; TestFlight sur l'iPhone de sa femme pour les versions beta.
