@@ -9,6 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
 import { AppNavigator } from "./navigation/AppNavigator";
 import { usePhotoStore } from "./store/usePhotoStore";
+import { useAuthStore } from "./store/useAuthStore";
 import { refreshReminders } from "./services/notificationService";
 
 // Import défensif : avant le rebuild incluant react-native-gesture-handler dans
@@ -104,6 +105,7 @@ export default function App() {
 
   useEffect(() => {
     hideAndroidNavBar();
+    useAuthStore.getState().init(); // relit la session de connexion (compte) au démarrage
 
     // iOS — app tuée puis ouverte via un tap sur la notification :
     // le listener ci-dessous ne se déclenche pas, on récupère la réponse ici.

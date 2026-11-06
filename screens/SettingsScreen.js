@@ -10,6 +10,9 @@ import { RowSetting } from "../components/RowSetting";
 import { SwipeDemo } from "../components/SwipeDemo";
 import BackButton from "../components/BackButton";
 import { usePhotoStore } from "../store/usePhotoStore";
+import { useAuthStore } from "../store/useAuthStore";
+import { AccountCard } from "../components/AccountCard";
+import { deleteAccount } from "../services/auth";
 
 // ── Données de configuration ──────────────────────────────────────────────────
 
@@ -113,6 +116,27 @@ export function SettingsScreen({ navigation, route }) {
   const setAlbumTutoSeen         = usePhotoStore((s) => s.setAlbumTutoSeen);
   const setPermission            = usePhotoStore((s) => s.setPermission);
 
+  const isLoggedIn = useAuthStore((s) => !!s.session);
+
+  // Suppression du compte (obligatoire côté Apple dès qu'on peut créer un compte)
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      "Supprimer ton compte ?",
+      "Ton compte sera supprimé définitivement. Tes photos ne sont pas touchées : elles restent sur ton téléphone.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            const res = await deleteAccount();
+            Alert.alert(res.ok ? "Compte supprimé" : "Échec", res.ok ? "À bientôt 👋" : res.message);
+          },
+        },
+      ]
+    );
+  };
+
   const comingSoon = (feature) =>
     Alert.alert("Bientôt disponible", `${feature} arrive très vite !`);
 
@@ -203,6 +227,9 @@ export function SettingsScreen({ navigation, route }) {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: S.pad, paddingBottom: 40 }}>
+
+        {/* ── Carte compte (connexion / déconnexion) ─────────────────────── */}
+        <AccountCard navigation={navigation} />
 
         {/* ── Section Tri par swipe — Mode Tri ──────────────────────────── */}
         <Section title="🧹 Swipe — Mode Tri" />
@@ -431,6 +458,11 @@ export function SettingsScreen({ navigation, route }) {
         <RowSetting emoji="🔒" label="Politique de confidentialité"
           onPress={() => comingSoon("La page de confidentialité")}
           right={<Text style={{ color: C.textMuted }}>›</Text>} />
+        {isLoggedIn && (
+          <RowSetting emoji="🗑" label="Supprimer mon compte" desc="Tes photos restent sur ton téléphone"
+            onPress={confirmDeleteAccount}
+            right={<Text style={{ color: C.textMuted }}>›</Text>} />
+        )}
 
         <Text style={{ textAlign: "center", color: C.textMuted, fontSize: 11, marginTop: 24 }}>
           Pellicule v1.0.0 · Fait avec ❤️ en France
