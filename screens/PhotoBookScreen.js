@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, ScrollView, TouchableOpacity, TextInput, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Text from "../components/AppText";
 import BackButton from "../components/BackButton";
 import { BookPage, BlankPage, BookCover, COVER_STYLE } from "../components/book/BookPage";
@@ -82,6 +83,13 @@ export function PhotoBookScreen({ navigation, route }) {
   const goPrev = () => setCur(leftIndex === -1 ? COVER : Math.max(0, leftIndex - 2));
   const goNext = () => setCur(cur === COVER ? 0 : leftIndex + 2);
   const canNext = cur === COVER || leftIndex + 2 < book.format;
+  // Glisser vers la gauche = page suivante, vers la droite = page précédente.
+  // Seulement si le geste est surtout horizontal, pour ne pas gêner le défilement de l'écran.
+  const swipe = Gesture.Pan().runOnJS(true).activeOffsetX([-25, 25]).failOffsetY([-20, 20])
+    .onEnd((e) => {
+      if (e.translationX < -50 && canNext) goNext();
+      else if (e.translationX > 50 && cur !== COVER) goPrev();
+    });
   const spreadLabel = cur === COVER ? "Couverture"
     : leftIndex === -1 ? "Page 1"
     : leftIndex + 1 >= book.format ? `Page ${leftIndex + 1}` : `Pages ${leftIndex + 1}–${leftIndex + 2}`;
@@ -183,7 +191,8 @@ export function PhotoBookScreen({ navigation, route }) {
           <NavArrow label="›" disabled={!canNext} onPress={goNext} />
         </View>
 
-        {/* Double page (ou couverture seule) */}
+        {/* Double page (ou couverture seule) — glisser vers la gauche / la droite tourne les pages */}
+        <GestureDetector gesture={swipe}>
         <View style={{ marginTop: 10, alignItems: "center" }}>
           {cur === COVER ? (
             <BookCover cover={book.cover} size={Math.round(pageW * (landscape ? 1.5 : 1.25))} ratio={ratio} urlById={urlById} onPress={() => setPicker("cover")} />
@@ -195,9 +204,10 @@ export function PhotoBookScreen({ navigation, route }) {
             </View>
           )}
         </View>
+        </GestureDetector>
 
         <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginTop: 10 }}>
-          {cur === COVER ? "Touche la photo pour la changer" : "Touche une page pour l'ouvrir en grand"}
+          {cur === COVER ? "Touche la photo pour la changer · glisse pour tourner la page" : "Touche une page pour l'ouvrir en grand · glisse pour tourner la page"}
         </Text>
 
         {/* Réglages de la couverture */}

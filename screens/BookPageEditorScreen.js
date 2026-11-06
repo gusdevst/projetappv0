@@ -7,6 +7,7 @@
 import { useMemo, useState } from "react";
 import { View, ScrollView, TouchableOpacity, TextInput, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Text from "../components/AppText";
 import BackButton from "../components/BackButton";
 import { BookPage, COVER_STYLE } from "../components/book/BookPage";
@@ -56,6 +57,13 @@ export function BookPageEditorScreen({ navigation, route }) {
   const saveCrop = (patch) => save(setCrop(book, pi, selId, patch));
 
   const goTo = (next) => { setPi(next); setSelSlot(null); setTab("page"); };
+  // Glisser vers la gauche = page suivante, vers la droite = précédente.
+  // Coupé pendant le recadrage d'une photo : le glissé sert alors à la déplacer.
+  const swipe = Gesture.Pan().runOnJS(true).enabled(!editing).activeOffsetX([-25, 25]).failOffsetY([-20, 20])
+    .onEnd((e) => {
+      if (e.translationX < -50 && pi < book.format - 1) goTo(pi + 1);
+      else if (e.translationX > 50 && pi > 0) goTo(pi - 1);
+    });
   const onSlotPress = (si) => {
     if (!page.slots[si]) { setPicker(si); return; }   // cadre vide → choisir une photo
     setSelSlot(si); setTab("photo");                    // cadre rempli → on le sélectionne
@@ -77,7 +85,8 @@ export function BookPageEditorScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* La page en grand */}
+        {/* La page en grand — glisser vers la gauche / la droite change de page (désactivé pendant le recadrage) */}
+        <GestureDetector gesture={swipe}>
         <View style={{ marginTop: 14, borderRadius: 6, backgroundColor: "#fff", alignSelf: "center",
           shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.16, shadowRadius: 14, elevation: 4 }}>
           <BookPage page={page} size={landscape ? width - S.pad * 2 : Math.min(width - S.pad * 2, 300)} ratio={pageRatio(book)}
@@ -87,8 +96,9 @@ export function BookPageEditorScreen({ navigation, route }) {
             onCropChange={(si, c) => save(setCrop(book, pi, page.slots[si], c))}
             cropPreview={editing && liveTilt != null ? { slot: selSlot, tilt: liveTilt } : null} />
         </View>
+        </GestureDetector>
         <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginTop: 10 }}>
-          {editing ? "Pince pour zoomer · glisse pour déplacer" : "Touche une photo pour la modifier, ou un cadre vide pour en ajouter une"}
+          {editing ? "Pince pour zoomer · glisse pour déplacer" : "Touche une photo pour la modifier · glisse pour tourner la page"}
         </Text>
 
         {/* Onglets */}
