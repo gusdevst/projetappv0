@@ -19,7 +19,7 @@ import { C, S, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import {
   setLayout, setPageTitle, placePhoto, clearSlot, placedMap, getCrop, setCrop, resetCrop,
-  COVER_FONTS, PAGE_TITLE_POS, PAGE_TITLE_SIZES,
+  COVER_FONTS, PAGE_TITLE_POS, PAGE_TITLE_SIZES, pageRatio, isLandscape, layoutRows,
 } from "../services/photoBook";
 
 const POS_LABEL = { haut: "Haut", milieu: "Milieu", bas: "Bas" };
@@ -45,6 +45,7 @@ export function BookPageEditorScreen({ navigation, route }) {
   if (!album || !book || !book.pages[pi]) return <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} />;
 
   const save  = (next) => setBook(albumId, next);
+  const landscape = isLandscape(book);
   const page  = book.pages[pi];
   const title = page.title ?? { text: "", pos: "bas", size: "M" };
   const titleFont = title.font ?? book.cover.font; // par défaut : la police de la couverture
@@ -77,9 +78,10 @@ export function BookPageEditorScreen({ navigation, route }) {
         </View>
 
         {/* La page en grand */}
-        <View style={{ marginTop: 14, borderRadius: 6, backgroundColor: "#fff",
+        <View style={{ marginTop: 14, borderRadius: 6, backgroundColor: "#fff", alignSelf: "center",
           shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.16, shadowRadius: 14, elevation: 4 }}>
-          <BookPage page={page} size={width - S.pad * 2} urlById={urlById} coverFont={book.cover.font}
+          <BookPage page={page} size={landscape ? width - S.pad * 2 : Math.min(width - S.pad * 2, 300)} ratio={pageRatio(book)}
+            urlById={urlById} coverFont={book.cover.font}
             onSlotPress={onSlotPress} selectedSlot={tab === "photo" ? selSlot : null}
             editableSlot={editing ? selSlot : null}
             onCropChange={(si, c) => save(setCrop(book, pi, page.slots[si], c))}
@@ -102,7 +104,7 @@ export function BookPageEditorScreen({ navigation, route }) {
         {tab === "page" ? (
           <>
             <Text style={sectionStyle}>MISE EN PAGE</Text>
-            <LayoutPicker value={page.layout} onChange={(n) => { save(setLayout(book, pi, n)); setSelSlot(null); }} />
+            <LayoutPicker value={page.layout} landscape={landscape} onChange={(n) => { save(setLayout(book, pi, n)); setSelSlot(null); }} />
 
             <Text style={sectionStyle}>TITRE DE LA PAGE</Text>
             <View style={{ backgroundColor: C.bgCard, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 2, ...SHADOW }}>
@@ -118,7 +120,7 @@ export function BookPageEditorScreen({ navigation, route }) {
               </EditRow>
               <EditRow label="Position">
                 {PAGE_TITLE_POS.map((k) => (
-                  <Chip key={k} on={title.pos === k} disabled={k === "milieu" && page.layout === 1}
+                  <Chip key={k} on={title.pos === k} disabled={k === "milieu" && layoutRows(page.layout, landscape) < 2}
                     onPress={() => save(setPageTitle(book, pi, { pos: k }))}>{POS_LABEL[k]}</Chip>
                 ))}
               </EditRow>
@@ -135,7 +137,7 @@ export function BookPageEditorScreen({ navigation, route }) {
                 ))}
               </EditRow>
             </View>
-            {page.layout === 1 && (
+            {layoutRows(page.layout, landscape) < 2 && (
               <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 8 }}>« Milieu » place le titre entre deux lignes de photos.</Text>
             )}
           </>

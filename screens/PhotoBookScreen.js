@@ -18,8 +18,9 @@ import { SHADOW } from "../components/home/ui";
 import { C, S, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import {
-  BOOK_FORMATS, createBook, syncWithAlbum, setFormat, setLayout, autofill, bookStats,
+  BOOK_PAGES, createBook, syncWithAlbum, setFormat, setOrientation, setLayout, autofill, bookStats,
   placedMap, placePhoto, clearSlot, setCover, COVER_FONTS, COVER_SIZES, COVER_COLORS, COVER_POS,
+  pageRatio, isLandscape, clampPages,
 } from "../services/photoBook";
 
 const COVER = -1; // « page » sélectionnée = la couverture
@@ -51,9 +52,19 @@ export function PhotoBookScreen({ navigation, route }) {
   const [cur, setCur] = useState(COVER);
   // Feuille de choix ouverte pour : null (fermée) · "cover" · { page, slot }.
   const [picker, setPicker] = useState(null);
+  // Saisie directe du nombre de pages (touche le chiffre) : null = pas en cours de saisie.
+  const [pagesInput, setPagesInput] = useState(null);
   if (!album || !book) return <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} />;
 
   const save = (next) => setBook(albumId, next);
+  const ratio = pageRatio(book);
+  const landscape = isLandscape(book);
+  // Change le nombre de pages et garde la page affichée valide.
+  const changePages = (n) => {
+    const f = clampPages(n);
+    save(setFormat(book, f));
+    if (cur >= f) setCur(f - 1);
+  };
   const stats = bookStats(book, albumIds);
   const left = albumIds.length - stats.placedCount;
   const placed = placedMap(book);
@@ -76,9 +87,9 @@ export function PhotoBookScreen({ navigation, route }) {
     : leftIndex + 1 >= book.format ? `Page ${leftIndex + 1}` : `Pages ${leftIndex + 1}–${leftIndex + 2}`;
 
   const renderPage = (pi, size) =>
-    pi < 0 ? <BlankPage key="in" size={size} label="Intérieur de couverture" />
-    : pi >= book.format ? <BlankPage key="end" size={size} label="Fin du livre" />
-    : <BookPage key={pi} page={book.pages[pi]} size={size} urlById={urlById}
+    pi < 0 ? <BlankPage key="in" size={size} ratio={ratio} label="Intérieur de couverture" />
+    : pi >= book.format ? <BlankPage key="end" size={size} ratio={ratio} label="Fin du livre" />
+    : <BookPage key={pi} page={book.pages[pi]} size={size} ratio={ratio} urlById={urlById}
         coverFont={book.cover.font}
         selected={pi === cur} onPress={() => { setCur(pi); navigation.navigate("BookPageEditor", { albumId, pageIndex: pi }); }} />;
 
@@ -98,18 +109,48 @@ export function PhotoBookScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* Formats */}
-        <View style={{ flexDirection: "row", gap: 6, marginTop: 16 }}>
-          {BOOK_FORMATS.map((f) => {
-            const on = f === book.format;
-            return (
-              <TouchableOpacity key={f} onPress={() => { save(setFormat(book, f)); if (cur >= f) setCur(f - 1); }}
-                style={{ flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 12, backgroundColor: on ? C.album : C.bgMuted }}>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: on ? "#fff" : C.textMuted }}>{f}</Text>
-                <Text style={{ fontSize: 10, color: on ? "#fff" : C.textMuted }}>pages</Text>
-              </TouchableOpacity>
-            );
-          })}
+        {/* Format 21 × 28 cm : orientation + nombre de pages */}
+        <View style={{ marginTop: 16, backgroundColor: C.bgCard, borderRadius: 16, padding: 12, ...SHADOW }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 0.8, color: C.textMuted, marginBottom: 8 }}>
+            FORMAT · {landscape ? "28 × 21" : "21 × 28"} CM
+          </Text>
+          <View style={{ flexDirection: "row", backgroundColor: C.bgMuted, borderRadius: 99, padding: 4 }}>
+            {[["portrait", "Vertical", 11, 15], ["landscape", "Horizontal", 15, 11]].map(([k, label, w, h]) => {
+              const on = (book.orientation ?? "portrait") === k;
+              return (
+                <TouchableOpacity key={k} onPress={() => save(setOrientation(book, k))}
+                  style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 8, borderRadius: 99, backgroundColor: on ? C.album : "transparent" }}>
+                  <View style={{ width: w, height: h, borderWidth: 2, borderRadius: 2, borderColor: on ? "#fff" : C.textMid }} />
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: on ? "#fff" : C.textMid }}>{label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 0.8, color: C.textMuted, marginTop: 14, marginBottom: 8 }}>NOMBRE DE PAGES</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <TouchableOpacity onPress={() => changePages(book.format - BOOK_PAGES.step)} disabled={book.format <= BOOK_PAGES.min}
+              style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center", opacity: book.format <= BOOK_PAGES.min ? 0.35 : 1 }}>
+              <Text style={{ fontSize: 22, fontWeight: "700", color: C.album }}>−</Text>
+            </TouchableOpacity>
+            <View style={{ alignItems: "center" }}>
+              <TextInput
+                value={pagesInput ?? String(book.format)}
+                onFocus={() => setPagesInput(String(book.format))}
+                onChangeText={(t) => setPagesInput(t.replace(/[^0-9]/g, "").slice(0, 3))}
+                onEndEditing={() => { if (pagesInput != null) changePages(pagesInput); setPagesInput(null); }}
+                keyboardType="number-pad"
+                selectTextOnFocus
+                style={{ fontFamily: FONT, fontSize: 26, fontWeight: "800", color: C.text, textAlign: "center", minWidth: 80, padding: 0 }}
+              />
+              <Text style={{ fontSize: 11.5, color: C.textMid }}>pages · de {BOOK_PAGES.min} à {BOOK_PAGES.max}</Text>
+            </View>
+            <TouchableOpacity onPress={() => changePages(book.format + BOOK_PAGES.step)} disabled={book.format >= BOOK_PAGES.max}
+              style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center", opacity: book.format >= BOOK_PAGES.max ? 0.35 : 1 }}>
+              <Text style={{ fontSize: 22, fontWeight: "700", color: C.album }}>+</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 8 }}>Le nombre de pages va de 2 en 2 (30, 32, 34…). Touche le chiffre pour le saisir.</Text>
         </View>
 
         {/* Remplissage */}
@@ -145,7 +186,7 @@ export function PhotoBookScreen({ navigation, route }) {
         {/* Double page (ou couverture seule) */}
         <View style={{ marginTop: 10, alignItems: "center" }}>
           {cur === COVER ? (
-            <BookCover cover={book.cover} size={Math.round(pageW * 1.25)} urlById={urlById} onPress={() => setPicker("cover")} />
+            <BookCover cover={book.cover} size={Math.round(pageW * (landscape ? 1.5 : 1.25))} ratio={ratio} urlById={urlById} onPress={() => setPicker("cover")} />
           ) : (
             <View style={{ flexDirection: "row", backgroundColor: "#ffffff", borderRadius: 6,
               shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.16, shadowRadius: 14, elevation: 4 }}>
@@ -207,7 +248,7 @@ export function PhotoBookScreen({ navigation, route }) {
         {cur !== COVER && (
           <>
             <Text style={sectionStyle}>MISE EN PAGE · PAGE {cur + 1}</Text>
-            <LayoutPicker value={book.pages[cur].layout} onChange={(n) => save(setLayout(book, cur, n))} />
+            <LayoutPicker value={book.pages[cur].layout} landscape={landscape} onChange={(n) => save(setLayout(book, cur, n))} />
             <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 8 }}>Les photos en trop retournent dans l'album, rien n'est perdu.</Text>
           </>
         )}
@@ -216,20 +257,22 @@ export function PhotoBookScreen({ navigation, route }) {
         <Text style={sectionStyle}>TOUTES LES PAGES</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
           <Thumb label="Couv." on={cur === COVER} onPress={() => setCur(COVER)}>
-            <BookCover cover={book.cover} size={26} urlById={urlById} />
+            <BookCover cover={book.cover} size={landscape ? 34 : 26} ratio={ratio} urlById={urlById} />
           </Thumb>
           {spreads.map((ps) => (
             <Thumb key={ps[0]} label={ps.map((p) => p + 1).join("–")} on={ps.includes(cur)} onPress={() => setCur(ps[0])}>
-              {ps.map((pi) => <BookPage key={pi} page={book.pages[pi]} size={26} urlById={urlById} coverFont={book.cover.font} />)}
+              {ps.map((pi) => <BookPage key={pi} page={book.pages[pi]} size={landscape ? 34 : 26} ratio={ratio} urlById={urlById} coverFont={book.cover.font} />)}
             </Thumb>
           ))}
         </ScrollView>
 
-        {/* Impression : plus tard */}
-        <View style={{ marginTop: 20, backgroundColor: C.bgCard, borderRadius: 16, paddingVertical: 13, alignItems: "center", ...SHADOW }}>
-          <Text style={{ fontSize: 14, fontWeight: "600", color: C.textMuted }}>Imprimer ce livre</Text>
-          <Text style={{ fontSize: 10.5, fontWeight: "600", letterSpacing: 0.8, color: C.album, marginTop: 2 }}>BIENTÔT</Text>
-        </View>
+        {/* Impression : ouvre les contrôles avant impression */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate("BookCheck", { albumId })}
+          style={{ marginTop: 20, backgroundColor: C.album, borderRadius: 16, paddingVertical: 14, alignItems: "center", elevation: 3 }}
+        >
+          <Text style={{ fontSize: 14.5, fontWeight: "700", color: "#fff" }}>Imprimer ce livre</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <PhotoPickerSheet

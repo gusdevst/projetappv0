@@ -26,6 +26,7 @@ import { GalleryHomeScreen }      from "../screens/GalleryHomeScreen";
 import { PhotoBookScreen }        from "../screens/PhotoBookScreen";
 import { BookPageEditorScreen }   from "../screens/BookPageEditorScreen";
 import { AuthScreen }             from "../screens/AuthScreen";
+import { BookCheckScreen }        from "../screens/BookCheckScreen";
 import { usePhotoStore }         from "../store/usePhotoStore";
 
 const Stack = createStackNavigator();
@@ -96,6 +97,7 @@ export function AppNavigator() {
       <Stack.Screen name="Progress"    component={ProgressScreen} />
       <Stack.Screen name="PhotoBook"   component={PhotoBookScreen} />
       <Stack.Screen name="BookPageEditor" component={BookPageEditorScreen} />
+      <Stack.Screen name="BookCheck"   component={BookCheckScreen} />
       <Stack.Screen name="Auth"        component={AuthScreen} />
     </Stack.Navigator>
   );

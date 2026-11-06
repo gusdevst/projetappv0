@@ -17,7 +17,7 @@ import { BookCover } from "../components/book/BookPage";
 import AlbumPickerSheet from "../components/book/AlbumPickerSheet";
 import DarkroomCover, { printsFor } from "../components/DarkroomCover";
 import { useBookFonts } from "../components/book/bookFonts";
-import { bookStats } from "../services/photoBook";
+import { bookStats, pageRatio } from "../services/photoBook";
 import { C, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 
@@ -225,7 +225,7 @@ export function GalleryHomeScreen({ navigation }) {
                     onLongPress={() => openBookMenu({ book, album })}
                     style={{ width: CARD_W }}>
                     <View style={{ borderRadius: 8, backgroundColor: C.bgCard, ...SHADOW }}>
-                      <BookCover cover={book.cover} size={CARD_W} urlById={urlById} />
+                      <BookCover cover={book.cover} size={CARD_W} ratio={pageRatio(book)} urlById={urlById} />
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", marginTop: 7 }}>
                       <Text numberOfLines={1} style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: C.text }}>{book.cover.title || album.name}</Text>

@@ -3,7 +3,7 @@
 // page (1 à 4 cadres) + les ids des photos placées dans ses cadres.
 //
 //   book = {
-//     albumId, format: 24,
+//     albumId, format: 30,
 //     cover: { photoId, title, font, size, color, pos },
 //     pages: [ { layout: 2, slots: ["id1", null] }, … ],
 //     updatedAt,
@@ -12,8 +12,28 @@
 // Toutes les fonctions renvoient un NOUVEAU livre (on ne modifie jamais
 // l'ancien) → Zustand voit le changement et l'écran se redessine.
 
-export const BOOK_FORMATS = [24, 32, 48, 64];
+// Un seul format papier : 21 × 28 cm (Gelato, voir PRINT_SPEC dans bookCheck.js).
+// Au choix : "portrait" (vertical, défaut) ou "landscape" (horizontal) — valable pour tout le livre.
+// Nombre de pages : de 30 à 200, de 2 en 2.
+export const BOOK_PAGES = { min: 30, max: 200, step: 2 };
+export const ORIENTATIONS = ["portrait", "landscape"];
 export const BOOK_LAYOUTS = [1, 2, 3, 4];
+
+// Rapport hauteur / largeur d'une page : portrait = 28/21 (4/3), paysage = 21/28 (3/4).
+export const pageRatio = (book) => (book?.orientation === "landscape" ? 3 / 4 : 4 / 3);
+export const isLandscape = (book) => book?.orientation === "landscape";
+
+// Ramène un nombre de pages saisi à une valeur autorisée (paire, entre min et max).
+export function clampPages(n) {
+  const { min, max, step } = BOOK_PAGES;
+  const v = Math.round((Number(n) || min) / step) * step;
+  return Math.min(max, Math.max(min, v));
+}
+
+// Nombre de lignes de photos d'une mise en page. « Milieu » (titre entre deux lignes) exige au moins 2 lignes.
+// Portrait : 1 → 1 ligne, 2 → 2 lignes (l'une au-dessus de l'autre), 3 et 4 → 2 lignes.
+// Paysage : 2 photos côte à côte → 1 seule ligne.
+export const layoutRows = (layout, landscape) => (layout === 1 || (landscape && layout === 2) ? 1 : 2);
 export const DEFAULT_PER_PAGE = 2;
 
 // Réglages de la couverture (les clés ; l'écran les traduit en police / taille / couleur).
@@ -59,9 +79,9 @@ export function resetCrop(book, pageIndex, photoId) {
 const emptyPage = (layout = DEFAULT_PER_PAGE) => ({ layout, slots: Array(layout).fill(null) });
 const touch = (book) => ({ ...book, updatedAt: Date.now() });
 
-// Plus petit format où l'album tient à 2 photos par page (sinon 64).
+// Plus petit nombre de pages où l'album tient à 2 photos par page (30 minimum, 200 maximum).
 export function pickFormat(photoCount) {
-  return BOOK_FORMATS.find((f) => f * DEFAULT_PER_PAGE >= photoCount) ?? BOOK_FORMATS[BOOK_FORMATS.length - 1];
+  return clampPages(Math.ceil(photoCount / DEFAULT_PER_PAGE));
 }
 
 // Nouveau livre pré-rempli dans l'ordre de l'album.
@@ -72,6 +92,7 @@ export function createBook(album) {
   return autofill(
     {
       albumId: album.id,
+      orientation: "portrait",
       format,
       cover: { photoId: ids[0] ?? null, title: album.name, font: "moderne", size: "M", color: "blanc", pos: "bas" },
       pages,
@@ -90,9 +111,21 @@ export function placedMap(book) {
 
 // Changer de format. Moins de pages → les photos des pages coupées retournent dans l'album.
 export function setFormat(book, format) {
+  format = clampPages(format);
   let pages = book.pages.slice(0, format);
   while (pages.length < format) pages.push(emptyPage());
   return touch({ ...book, format, pages });
+}
+
+// Changer d'orientation (vertical / horizontal). Les photos restent, seule la forme des cadres change.
+// Un titre « milieu » n'a plus de sens s'il n'y a plus qu'une ligne de photos : il passe en bas.
+export function setOrientation(book, orientation) {
+  if (!ORIENTATIONS.includes(orientation) || book.orientation === orientation) return book;
+  const landscape = orientation === "landscape";
+  const pages = book.pages.map((p) =>
+    p.title?.pos === "milieu" && layoutRows(p.layout, landscape) < 2 ? { ...p, title: { ...p.title, pos: "bas" } } : p
+  );
+  return touch({ ...book, orientation, pages });
 }
 
 // Changer la mise en page d'une page. Les photos en trop sortent du livre.
@@ -101,7 +134,7 @@ export function setLayout(book, pageIndex, layout) {
     if (pi !== pageIndex) return p;
     const kept = p.slots.filter(Boolean).slice(0, layout);
     // « Milieu » = entre deux lignes de photos → impossible avec 1 photo : le titre passe en bas.
-    const title = layout === 1 && p.title?.pos === "milieu" ? { ...p.title, pos: "bas" } : p.title;
+    const title = layoutRows(layout, isLandscape(book)) < 2 && p.title?.pos === "milieu" ? { ...p.title, pos: "bas" } : p.title;
     return pruneCrops({ ...p, layout, title, slots: Array.from({ length: layout }, (_, i) => kept[i] ?? null) });
   });
   return touch({ ...book, pages });

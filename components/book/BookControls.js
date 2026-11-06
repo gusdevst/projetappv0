@@ -39,8 +39,8 @@ export function NavArrow({ label, disabled, onPress }) {
   );
 }
 
-// 4 boutons « 1 photo · 2 photos · 3 photos · 4 photos ».
-export function LayoutPicker({ value, onChange }) {
+// 4 boutons « 1 photo · 2 photos · 3 photos · 4 photos ». Les mini-pages suivent l'orientation du livre.
+export function LayoutPicker({ value, onChange, landscape }) {
   return (
     <View style={{ flexDirection: "row", gap: 8 }}>
       {BOOK_LAYOUTS.map((n) => {
@@ -49,7 +49,8 @@ export function LayoutPicker({ value, onChange }) {
           <TouchableOpacity key={n} onPress={() => onChange(n)}
             style={{ flex: 1, alignItems: "center", paddingTop: 8, paddingBottom: 6, borderRadius: 14,
               backgroundColor: on ? C.albumSoft : C.bgCard, borderWidth: 2, borderColor: on ? C.album : C.bgCard }}>
-            <BookPage page={{ layout: n, slots: Array(n).fill(null) }} size={34} urlById={{}} />
+            <BookPage page={{ layout: n, slots: Array(n).fill(null) }} size={landscape ? 44 : 32}
+              ratio={landscape ? 3 / 4 : 4 / 3} urlById={{}} />
             <Text style={{ fontSize: 11, marginTop: 4, color: on ? C.album : C.textMuted, fontWeight: on ? "600" : "500" }}>
               {n} photo{n > 1 ? "s" : ""}
             </Text>

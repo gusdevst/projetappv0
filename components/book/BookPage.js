@@ -18,22 +18,27 @@ const ROWS = {
   3: [[0], [1, 2]],
   4: [[0, 1], [2, 3]],
 };
+// Page horizontale : 2 photos côte à côte (une seule ligne). Le reste ne change pas.
+const ROWS_LANDSCAPE = { ...ROWS, 2: [[0, 1]] };
 const ROW_FLEX = { 3: [1.3, 1] }; // la ligne du haut un peu plus grande pour 3 photos
 
 // Taille du titre de page, en part de la largeur de la page.
 export const PAGE_TITLE_SIZE = { S: 0.045, M: 0.06, L: 0.08 };
 
 // page : { layout, slots, title? } · urlById : { id: url }
+// size = LARGEUR de la page · ratio = hauteur / largeur (voir pageRatio dans services/photoBook.js :
+// 4/3 en vertical, 3/4 en horizontal). Sans ratio : page carrée.
 // coverFont : police de la couverture = police du titre de page par défaut.
 // onSlotPress(slotIndex) optionnel (éditeur) · selectedSlot : cadre entouré.
 // editableSlot : cadre recadrable au doigt · onCropChange(slot, crop) · cropPreview : { slot, ...réglages } en direct.
-export function BookPage({ page, size, urlById, selected, onPress, onSlotPress, selectedSlot, coverFont, editableSlot, onCropChange, cropPreview }) {
+export function BookPage({ page, size, ratio = 1, urlById, selected, onPress, onSlotPress, selectedSlot, coverFont, editableSlot, onCropChange, cropPreview }) {
   const mini = size < 60;
   const pad = mini ? 1.5 : size * 0.05;
   const gap = mini ? 1 : Math.max(3, size * 0.02);
+  const layoutRows = ratio < 1 ? ROWS_LANDSCAPE : ROWS;
 
   // Lignes de photos…
-  const rows = ROWS[page.layout].map((row, ri) => (
+  const rows = layoutRows[page.layout].map((row, ri) => (
     <View key={`r${ri}`} style={{ flex: ROW_FLEX[page.layout]?.[ri] ?? 1, flexDirection: "row", gap }}>
       {row.map((si) => {
         const id = page.slots[si];
@@ -85,7 +90,7 @@ export function BookPage({ page, size, urlById, selected, onPress, onSlotPress, 
       onPress={onPress}
       disabled={!onPress}
       style={{
-        width: size, height: size, padding: pad,
+        width: size, height: Math.round(size * ratio), padding: pad,
         backgroundColor: "#ffffff", borderRadius: mini ? 2 : 6,
         borderWidth: selected ? (mini ? 1.5 : 2.5) : 0, borderColor: C.album,
       }}
@@ -96,9 +101,9 @@ export function BookPage({ page, size, urlById, selected, onPress, onSlotPress, 
 }
 
 // Page vide hachurée : « Intérieur de couverture », « Fin du livre ».
-export function BlankPage({ size, label }) {
+export function BlankPage({ size, ratio = 1, label }) {
   return (
-    <View style={{ width: size, height: size, backgroundColor: "#f6f5f1", borderRadius: 6, alignItems: "center", justifyContent: "center", padding: 10 }}>
+    <View style={{ width: size, height: Math.round(size * ratio), backgroundColor: "#f6f5f1", borderRadius: 6, alignItems: "center", justifyContent: "center", padding: 10 }}>
       <Text style={{ fontSize: 10.5, color: C.textMuted, textAlign: "center" }}>{label}</Text>
     </View>
   );
@@ -123,12 +128,12 @@ export const COVER_STYLE = {
 };
 
 // Couverture : photo plein cadre + titre réglable.
-export function BookCover({ cover, size, urlById, onPress }) {
+export function BookCover({ cover, size, ratio = 1, urlById, onPress }) {
   const url = cover.photoId ? urlById[cover.photoId] : null;
   const mini = size < 60;
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={onPress} disabled={!onPress}
-      style={{ width: size, height: size, borderRadius: mini ? 2 : 8, overflow: "hidden", backgroundColor: C.albumSoft }}>
+      style={{ width: size, height: Math.round(size * ratio), borderRadius: mini ? 2 : 8, overflow: "hidden", backgroundColor: C.albumSoft }}>
       {url && <Image source={{ uri: url }} style={{ position: "absolute", width: "100%", height: "100%" }} contentFit="cover" />}
       {onPress && !mini && (
         <View style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
