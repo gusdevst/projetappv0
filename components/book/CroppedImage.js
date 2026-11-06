@@ -29,7 +29,8 @@ function clampShift(v, scale, extent, frame) {
   return Math.min(m, Math.max(-m, v));
 }
 
-export function CroppedImage({ url, crop, editable, onChange }) {
+// onLoaded : appelée quand l'image est chargée (sert au rendu hors écran pour le PDF).
+export function CroppedImage({ url, crop, editable, onChange, onLoaded }) {
   const [box, setBox] = useState(null);       // taille du cadre { w, h }, mesurée à l'affichage
   const [ratio, setRatio] = useState(null);   // proportions de la photo (largeur / hauteur), lues au chargement
   const turned = crop.rot % 180 !== 0;        // quart de tour → on échange largeur et hauteur
@@ -89,7 +90,7 @@ export function CroppedImage({ url, crop, editable, onChange }) {
       transform: [{ translateX: crop.x * w }, { translateY: crop.y * h }, { rotate: `${angle}deg` }, { scale: crop.scale * k }],
     }]}>
       <Image source={{ uri: url }} style={{ width: "100%", height: "100%" }} contentFit="cover"
-        onLoad={(e) => { const { width, height } = e.source ?? {}; if (width && height) setRatio(width / height); }} />
+        onLoad={(e) => { const { width, height } = e.source ?? {}; if (width && height) setRatio(width / height); onLoaded?.(); }} />
     </Animated.View>
   );
 

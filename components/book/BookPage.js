@@ -31,7 +31,8 @@ export const PAGE_TITLE_SIZE = { S: 0.045, M: 0.06, L: 0.08 };
 // coverFont : police de la couverture = police du titre de page par défaut.
 // onSlotPress(slotIndex) optionnel (éditeur) · selectedSlot : cadre entouré.
 // editableSlot : cadre recadrable au doigt · onCropChange(slot, crop) · cropPreview : { slot, ...réglages } en direct.
-export function BookPage({ page, size, ratio = 1, urlById, selected, onPress, onSlotPress, selectedSlot, coverFont, editableSlot, onCropChange, cropPreview }) {
+// flat : pas de coins arrondis (rendu pour l'impression) · onImageLoad : appelée à chaque photo chargée.
+export function BookPage({ page, size, ratio = 1, urlById, selected, onPress, onSlotPress, selectedSlot, coverFont, editableSlot, onCropChange, cropPreview, flat, onImageLoad }) {
   const mini = size < 60;
   const pad = mini ? 1.5 : size * 0.05;
   const gap = mini ? 1 : Math.max(3, size * 0.02);
@@ -60,7 +61,7 @@ export function BookPage({ page, size, ratio = 1, urlById, selected, onPress, on
             }}
           >
             {url
-              ? <CroppedImage url={url} crop={crop} editable={editable} onChange={(c) => onCropChange?.(si, c)} />
+              ? <CroppedImage url={url} crop={crop} editable={editable} onChange={(c) => onCropChange?.(si, c)} onLoaded={onImageLoad} />
               : !mini && <Text style={{ color: "#b5b3a9", fontSize: Math.max(14, size * 0.06) }}>+</Text>}
             {selectedSlot === si && (
               <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderWidth: 3, borderColor: C.album, borderRadius: 3 }} />
@@ -91,7 +92,7 @@ export function BookPage({ page, size, ratio = 1, urlById, selected, onPress, on
       disabled={!onPress}
       style={{
         width: size, height: Math.round(size * ratio), padding: pad,
-        backgroundColor: "#ffffff", borderRadius: mini ? 2 : 6,
+        backgroundColor: "#ffffff", borderRadius: flat ? 0 : mini ? 2 : 6,
         borderWidth: selected ? (mini ? 1.5 : 2.5) : 0, borderColor: C.album,
       }}
     >
@@ -128,13 +129,14 @@ export const COVER_STYLE = {
 };
 
 // Couverture : photo plein cadre + titre réglable.
-export function BookCover({ cover, size, ratio = 1, urlById, onPress }) {
+// flat : pas de coins arrondis (rendu pour l'impression) · onImageLoad : appelée quand la photo est chargée.
+export function BookCover({ cover, size, ratio = 1, urlById, onPress, flat, onImageLoad }) {
   const url = cover.photoId ? urlById[cover.photoId] : null;
   const mini = size < 60;
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={onPress} disabled={!onPress}
-      style={{ width: size, height: Math.round(size * ratio), borderRadius: mini ? 2 : 8, overflow: "hidden", backgroundColor: C.albumSoft }}>
-      {url && <Image source={{ uri: url }} style={{ position: "absolute", width: "100%", height: "100%" }} contentFit="cover" />}
+      style={{ width: size, height: Math.round(size * ratio), borderRadius: flat ? 0 : mini ? 2 : 8, overflow: "hidden", backgroundColor: C.albumSoft }}>
+      {url && <Image source={{ uri: url }} style={{ position: "absolute", width: "100%", height: "100%" }} contentFit="cover" onLoad={onImageLoad} />}
       {onPress && !mini && (
         <View style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
           <Text style={{ fontSize: 10.5, fontWeight: "600", color: C.text }}>Changer la photo</Text>

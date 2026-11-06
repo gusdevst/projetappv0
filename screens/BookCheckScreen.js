@@ -15,6 +15,9 @@ import { useBookFonts } from "../components/book/bookFonts";
 import { SHADOW } from "../components/home/ui";
 import { C, S } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
+import * as Sharing from "expo-sharing";
+import { PrintPageRenderer } from "../components/book/PrintPageRenderer";
+import { useBookPdf } from "../hooks/useBookPdf";
 import { checkBook } from "../services/bookCheck";
 import { pageRatio } from "../services/photoBook";
 
@@ -55,6 +58,15 @@ export function BookCheckScreen({ navigation, route }) {
   useBookFonts();
 
   const [view, setView] = useState("summary");
+  // PDF d'essai (outil de développement : visible seulement en __DEV__).
+  const pdf = useBookPdf(book, useMemo(() => Object.fromEntries(printed.map((p) => [p.id, p.url])), [printed]));
+  const sharePdf = async () => {
+    try {
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(pdf.state.result.uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle: "Livre photo (PDF d'essai)" });
+      }
+    } catch (e) { /* feuille de partage fermée : rien à faire */ }
+  };
 
   const urlById   = useMemo(() => Object.fromEntries(printed.map((p) => [p.id, p.url])), [printed]);
   const photoById = useMemo(() => Object.fromEntries(printed.map((p) => [p.id, p])), [printed]);
@@ -83,6 +95,8 @@ export function BookCheckScreen({ navigation, route }) {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
+      {/* Rendu hors écran des pages pour le PDF d'essai (jamais visible) */}
+      {__DEV__ && <PrintPageRenderer {...pdf.rendererProps} />}
       <ScrollView contentContainerStyle={{ padding: S.pad, paddingTop: 8, paddingBottom: 40 }}>
         {Header}
 
@@ -168,15 +182,71 @@ export function BookCheckScreen({ navigation, route }) {
         {/* ── Vue 3 : après « Continuer » ──────────────────────────────── */}
         {view === "next" && (
           <>
-            <View style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 16, ...SHADOW }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>📄 Créer un PDF d'essai</Text>
-                <Text style={{ fontSize: 10, fontWeight: "700", letterSpacing: 0.8, color: C.album }}>BIENTÔT</Text>
+            {/* PDF d'essai : outil de développement (jamais visible dans une version publiée) */}
+            {__DEV__ && (
+              <View style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 16, ...SHADOW }}>
+                {pdf.state.phase === "working" ? (
+                  <>
+                    <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>📄 Fabrication du PDF…</Text>
+                    <View style={{ height: 10, backgroundColor: C.bgMuted, borderRadius: 6, overflow: "hidden", marginTop: 12 }}>
+                      <View style={{ width: `${Math.round((pdf.state.done / Math.max(1, pdf.state.total)) * 100)}%`, height: "100%", backgroundColor: C.album, borderRadius: 6 }} />
+                    </View>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
+                      <Text style={{ fontSize: 12, color: C.textMuted }}>Page {pdf.state.done} sur {pdf.state.total}</Text>
+                      <Text style={{ fontSize: 12, color: C.textMuted }}>{Math.round((pdf.state.done / Math.max(1, pdf.state.total)) * 100)} %</Text>
+                    </View>
+                    <Text style={{ fontSize: 12.5, color: C.textMid, marginTop: 12 }}>Garde l'app ouverte et l'écran allumé.</Text>
+                    <TouchableOpacity onPress={pdf.cancel}
+                      style={{ height: 46, borderRadius: S.radiusFull, borderWidth: 1.5, borderColor: C.border, alignItems: "center", justifyContent: "center", marginTop: 12 }}>
+                      <Text style={{ color: C.textMid, fontWeight: "700", fontSize: 14.5 }}>Annuler</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : pdf.state.phase === "done" ? (
+                  <>
+                    <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, textAlign: "center" }}>PDF prêt ✓</Text>
+                    <Text style={{ fontSize: 12.5, color: C.textMid, textAlign: "center", marginTop: 4, marginBottom: 14 }}>
+                      {book.cover.title || album.name} · {pdf.state.result.pages} pages · 21 × 28 cm · {pdf.state.result.sizeMo} Mo
+                    </Text>
+                    {pdf.state.slowPages > 0 && (
+                      <Text style={{ fontSize: 12, color: C.album, textAlign: "center", marginBottom: 12 }}>
+                        ⚠ {pdf.state.slowPages} page{pdf.state.slowPages > 1 ? "s" : ""} dessinée{pdf.state.slowPages > 1 ? "s" : ""} avant la fin du chargement des photos : vérifie-les.
+                      </Text>
+                    )}
+                    <TouchableOpacity onPress={sharePdf}
+                      style={{ height: 46, borderRadius: S.radiusFull, backgroundColor: C.album, alignItems: "center", justifyContent: "center", elevation: 3 }}>
+                      <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14.5 }}>Ouvrir / Partager</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => { pdf.reset(); pdf.start(); }}
+                      style={{ height: 46, borderRadius: S.radiusFull, borderWidth: 1.5, borderColor: C.border, alignItems: "center", justifyContent: "center", marginTop: 8 }}>
+                      <Text style={{ color: C.textMid, fontWeight: "700", fontSize: 14.5 }}>Le refaire</Text>
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 16, marginTop: 12 }}>
+                      Ce PDF est un essai : couverture de face seule (sans dos ni 4ᵉ de couverture) et pages intérieures.
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>📄 Créer un PDF d'essai</Text>
+                    <Text style={{ fontSize: 12.5, color: C.textMid, lineHeight: 18, marginTop: 4, marginBottom: 12 }}>
+                      Chaque page est dessinée à la taille d'impression (21 × 28 cm, fond perdu de 4 mm), puis assemblée en un PDF que tu peux regarder et partager. Rien n'est envoyé nulle part.
+                    </Text>
+                    {pdf.state.phase === "error" && (
+                      <Text style={{ fontSize: 12, color: C.red, marginBottom: 10 }}>Échec : {pdf.state.error}</Text>
+                    )}
+                    {pdf.state.phase === "cancelled" && (
+                      <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 10 }}>Annulé.</Text>
+                    )}
+                    <TouchableOpacity onPress={pdf.start}
+                      style={{ height: 46, borderRadius: S.radiusFull, backgroundColor: C.album, alignItems: "center", justifyContent: "center", elevation: 3 }}>
+                      <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14.5 }}>Créer le PDF</Text>
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 10 }}>
+                      ≈ {pdf.totalPages} pages · ça prend un moment, garde l'app ouverte.
+                    </Text>
+                  </>
+                )}
               </View>
-              <Text style={{ fontSize: 12.5, color: C.textMid, lineHeight: 18, marginTop: 4 }}>
-                Le livre sera assemblé page par page en un fichier PDF, que tu pourras regarder et partager. Rien n'est envoyé nulle part.
-              </Text>
-            </View>
+            )}
             <View style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 16, marginTop: 12, opacity: 0.75, ...SHADOW }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>🛒 Commander ce livre</Text>
