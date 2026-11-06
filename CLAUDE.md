@@ -2,7 +2,7 @@
 
 > Fichier de passation. Lu en début de session pour retrouver l'état du projet
 > sans re-scanner tout le code. **À maintenir à jour** à chaque étape importante.
-> Dernière mise à jour : 2026-11-06.
+> Dernière mise à jour : 2026-11-06 (comptes Supabase + livre photo 21×28 cm).
 
 ---
 
@@ -21,11 +21,12 @@ trop-plein de photos sans y passer des heures.
 
 ## 2. État actuel (au 2026-11-06)
 
-- **`main` contient tout** (testé et validé par Augustin) : progression, thème « sauge »,
-  barre de menu, Galerie, livre photo (`d49d903 coup de coeurs`). Fusion en fast-forward
-  le 6 nov. ; `main` est à pousser sur GitHub depuis VS Code.
-- Branche de travail : **`feature/comptes`** (créée le 6 nov. depuis `main`, même commit) —
-  comptes utilisateurs, à démarrer.
+- **`main` contient** (testé, poussé sur GitHub le 6 nov.) : progression, thème « sauge »,
+  barre de menu, Galerie, livre photo carré (`d49d903 coup de coeurs`).
+- Branche de travail : **`feature/comptes`** (créée le 6 nov. depuis `main`) — **comptes Supabase**
+  (connexion e-mail, déconnexion, suppression, sauvegarde de la progression : testés par Augustin)
+  + **livre photo 21×28 cm Gelato** et écran « Vérifier ton livre » (codés, à tester sur simulateur).
+  À fusionner dans `main` après test.
 - Branches déjà fusionnées dans `main`, supprimables : `feature/progression`,
   `feature/themes`, `feature/barre-menu`, `feature/livre-photo`, `octobre27`.
 - Test au quotidien : **simulateur iOS du Mac** (`npx expo start --dev-client`, Fast Refresh).
@@ -49,7 +50,9 @@ NavigationContainer unique · écrans câblés au navigateur · vraies photos
 - Libs clés : expo-media-library, expo-notifications, expo-file-system,
   expo-image, expo-linear-gradient, react-native-reanimated + gesture-handler,
   react-native-webview, **react-native-purchases (RevenueCat — installé mais PAS encore branché)**,
-  **react-native-svg** (icônes), **expo-font + @expo-google-fonts/outfit** (police).
+  **react-native-svg** (icônes), **expo-font + @expo-google-fonts/outfit** (police),
+  **@supabase/supabase-js + react-native-url-polyfill** (comptes, JS pur → pas de rebuild),
+  polices du livre photo (Playfair, Caveat, Bebas, Great Vibes, Fredoka) chargées par `components/book/bookFonts.js`.
 - Police **Outfit** intégrée au build (plugin `expo-font` dans `app.json`, 6 graisses 400→900
   sous le nom « Outfit ») → `fontWeight` marche tel quel. Ajouter un module natif = rebuild
   (`npx expo prebuild --platform ios --clean` puis `npx expo run:ios`).
@@ -72,9 +75,12 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
   pas de bouton retour). Progress, Gallery, Settings existent AUSSI dans la pile (ouverts depuis un
   autre écran, avec bouton retour). Swipe, Bilan… passent par-dessus la barre.
   Depuis un écran de la pile, aller sur l'accueil = `navigate("Main", { screen: "Home", params })`.
-  Un seul NavigationContainer (dans App.js).
+  Un seul NavigationContainer (dans App.js). Écrans de pile ajoutés : `PhotoBook`, `BookPageEditor`,
+  `BookCheck`, `Auth`.
 
 **store/**
+- `useAuthStore.js` — session de connexion Supabase (`session`, `ready`, `init()` appelé dans App.js).
+  Pas de persist : Supabase mémorise la session lui-même (AsyncStorage).
 - `usePhotoStore.js` (~600 l.) — **cerveau de l'app**. État du tri, filtres albums,
   réglages de rappels, flags "vu une fois". Persisté via AsyncStorage.
   Contient aussi le **carnet de bord** `dailyLog`, le chrono de tri, `lifetimeSorted`,
@@ -92,6 +98,13 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 - `RappelsScreen` — réglage des notifications de rappel.
 - `SummaryScreen` — bilan de session.
 - `SettingsScreen` · `PartenairesScreen` — réglages + partenaires impression.
+  `SettingsScreen` : carte « Ton compte » en haut (`AccountCard`), « Supprimer mon compte » dans la section Compte.
+- `GalleryHomeScreen` — onglet Galerie (albums, livres photo, tirages = Coups de cœur, corbeille).
+- `AuthScreen` — connexion / création de compte par e-mail + état « Regarde ta boîte mail ».
+  Apple et Google : **pas encore** (boutons volontairement absents).
+- `PhotoBookScreen` — éditeur de livre photo d'un album (orientation, nombre de pages, couverture, doubles pages).
+  `BookPageEditorScreen` — une page en grand (mise en page, titre, recadrage). `BookCheckScreen` —
+  « Vérifier ton livre » avant impression (3 vues : contrôles · photos de faible qualité · et maintenant ?).
 
 **components/** — briques UI réutilisables :
 - `AppText` — **remplace le `Text` de React Native partout** (applique Outfit). Dans un nouveau
@@ -107,7 +120,11 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 `ZoomableImage`, `RowSetting`, `AlbumFiltersBar`, `SessionTutoOverlay` (overlay tuto),
 `SwipeEdgeHints` (actions sur les bords), icônes dessinées `ExitIcon` / `SwapIcon` / `RankShield`,
 `ProgressCard` (carte accueil), `RankCard` + `BadgesGrid` (écran Progression),
-`DayValidatedToast` + `AchievementUnlocks` (bandeaux / fenêtre de déblocage).
+`DayValidatedToast` + `AchievementUnlocks` (bandeaux / fenêtre de déblocage),
+`AccountCard` (carte compte des Réglages).
+- `book/` — livre photo : `BookPage` (page à n'importe quelle taille, `size` = largeur, `ratio` = hauteur/largeur),
+  `BookCover`, `BlankPage`, `COVER_STYLE`, `BookControls` (`LayoutPicker`, `Chip`…), `PhotoPickerSheet`,
+  `AlbumPickerSheet`, `CroppedImage`, `TiltSlider`, `bookFonts`.
 
 **services/** — logique métier, pas d'UI :
 - `photoLibrary.js` — wrapper expo-media-library (permission, chargement, suppression).
@@ -121,6 +138,13 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 - `dateKey.js` — `dayKey()` (date locale "AAAA-MM-JJ"). Fichier sans dépendance pour
   éviter une boucle d'imports store ↔ services. Le store le ré-exporte.
 - `gpsCache.js` — cache persistant des coordonnées GPS.
+- `supabase.js` — client Supabase (URL + clé **publishable**, session dans AsyncStorage).
+- `auth.js` — connexion, création, renvoi du mail, déconnexion, suppression de compte ; erreurs en français.
+- `progressSync.js` — sauvegarde de la progression (table `progress`) : fusion à la connexion, envoi 5 s
+  après chaque changement. **Seulement des chiffres** (`dailyLog`, `lifetimeSorted`, `achievements`,
+  `shuffleLaunchCount`, `best20Ms`) ; jamais de photos, coups de cœur ni albums (ids propres au téléphone).
+- `photoBook.js` — logique pure du livre (orientation, pages 30→200 par 2, mises en page, recadrage).
+- `bookCheck.js` — contrôles avant impression + `PRINT_SPEC` (specs Gelato).
 
 **hooks/** — `useAndroidBack` (bouton retour Android), `useNotificationReminder`
 (logique d'activation des rappels, partagée).
@@ -138,13 +162,40 @@ Aussi `FONT` ("Outfit"), styles `S`. Ne jamais écrire une couleur en dur : pass
 - App Store Connect : app créée (ascAppId `6786287707`) → cible TestFlight.
 - Build beta : `eas build --profile preview` puis `eas submit`.
 
+**Supabase** (comptes, créé le 6 nov.) : projet `pellicule`, URL `https://xemwkqqpgvefumfvcehj.supabase.co`,
+région Europe. La clé **publishable** (`sb_publishable_…`) est dans `services/supabase.js` : elle est faite
+pour être dans l'app, c'est la **RLS** (sécurité par ligne) qui protège les données.
+**Ne jamais mettre la clé `secret` / `service_role` dans l'app ni dans Git.**
+- Table `progress` (`user_id` pk → `auth.users` on delete cascade, `data` jsonb, `updated_at`), RLS :
+  chaque compte ne voit / crée / modifie que sa ligne.
+- Fonction SQL `public.delete_my_account()` (security definer) : supprime le compte appelant
+  (`delete from auth.users where id = auth.uid()`). Nécessaire au bouton « Supprimer mon compte ».
+- Tableau de bord : Authentication → Users (UID, e-mail, dernière connexion) · Logs → Auth.
+- Confirmation d'e-mail **activée** par défaut. Le lien du mail mène à une page vide (Site URL =
+  localhost) : le compte est bien confirmé, puis « J'ai confirmé, continuer » dans l'app.
+
+**Gelato** (impression, pas encore branché) : produit retenu
+`photobooks-hardcover_pf_210x280-mm-8x11-inch_pt_170-gsm-65lb-coated-silk_cl_4-4_ccl_4-4_bt_glued-left_ct_matt-lamination_prt_1-0_cpt_130-gsm-65-lb-cover-coated-silk_ver`
+(livre photo couverture rigide 21×28 cm, pages 30→200 de 2 en 2). Prix vu : 15,46 € HT + 5,39 $ de
+livraison pour 30 pages. Specs PDF : **un seul PDF** — page 1 = couverture à plat (dos + 4ᵉ + 1ʳᵉ),
+page 2 blanche (garde), pages intérieures une par une (pas en double page), dernière page blanche ;
+fond perdu **4 mm**, marge de sécurité **4 mm**, images **150 dpi min / 300 max**, sRGB accepté,
+PDF/X-4 recommandé, sans traits de coupe, zone code-barres réservée sur la 4ᵉ. Largeur du dos :
+via l'API Gelato `GET /v3/products/{productUid}/cover-dimensions?pageCount=…` (clé API requise,
+à garder côté serveur Supabase). Les pages de documentation de Gelato bloquent la lecture automatique (403).
+
 ---
 
 ## 6. Git — comment on travaille
 
 - Repo : `https://github.com/gusdevst/projetappv0` (public, handle `gusdevst`).
 - **Branche de référence = `main`** (la plus à jour ; `retourbeta` y est déjà intégrée).
-- Branche de travail actuelle : `feature/themes` (un commit par petite étape = points de sauvegarde).
+- Branche de travail actuelle : `feature/comptes` (un commit par petite étape = points de sauvegarde).
+- **Piège de publication** : si VS Code répond « You don't have permissions to push » et propose un fork,
+  répondre **Cancel** (jamais « Create Fork »). Cause rencontrée le 6 nov. : le Trousseau d'accès du Mac
+  gardait un identifiant GitHub `augustindevasselot` (sans droits) pour `github.com` ; il faut le supprimer
+  (Trousseau d'accès → `github.com`) pour que le compte `gusdevst` serve. Deux remotes identiques
+  (`origin`, `upstream`) existent : choisir **origin**.
 - Branches plus anciennes (juin) probablement abandonnées : `fix/stabilisation-beta`,
   `feature/notifications`, `feature/couleurs`. À nettoyer un jour.
 - **Augustin commit et push lui-même depuis VS Code.** Ne pas push depuis le shell.
@@ -170,20 +221,39 @@ Aussi `FONT` ("Outfit"), styles `S`. Ne jamais écrire une couleur en dur : pass
    dans le navigateur). Quelques `TextInput` hors Accueil/Galerie pas encore en Outfit.
 7. **Android : jamais d'ombre (`elevation`) sur un fond transparent** (`${couleur}12`, rgba) →
    rectangle gris. Fond opaque (ex. `C.sage`) ou pas d'ombre.
+8. **Comptes — reste à faire** : connexion **Apple** et **Google** (config chez Apple / Google Cloud +
+   rebuild) ; **« Mot de passe oublié »** et lien de confirmation d'e-mail (il faut relier l'app aux liens
+   des mails : deep link / Site URL) ; textes légaux (« conditions », politique de confidentialité = « bientôt »).
+9. **Texte du tuto à changer avant l'envoi de photos** : « Pellicule n'envoie aucune photo sur un serveur »
+   (Réglages → tuto, Onboarding). Vrai aujourd'hui (seuls e-mail + chiffres de progression partent) ;
+   faux dès que les pages du livre seront envoyées pour impression → texte + accord clair de l'utilisateur.
+10. **Livres de l'ancien format** (24 pages, carrés) : signalés par « Vérifier ton livre » (30 pages min,
+    nombre pair). Les albums de peu de photos donnent beaucoup de pages vides à 30 pages (non bloquant).
+11. **`progressSync`** : `freedMo` et `purgedCount` ne sont **pas** synchronisés (dépendent de la photothèque
+    de chaque téléphone). Coups de cœur / albums / livres non plus (ids de photos propres au téléphone).
 
 ---
 
 ## 8. Prochaines étapes probables
 
-0. **Tester le thème** : TestFlight (iPhone de sa femme) + APK Android (`eas build --profile preview`).
-   Plus tard : choix de la couleur par l'utilisateur (le mécanisme `PALETTES` est prêt ; l'icône de
-   l'app est une image → à régénérer par palette, ou icônes alternatives).
-1. Build TestFlight de `feature/progression` et test sur plusieurs jours
-   (rappels datés, série, déblocages).
-2. Fusionner `feature/progression` dans `main` (`git merge --ff-only`).
-3. Nettoyer le repo (dossiers pollués, `Claude outputs/`) et les branches mortes.
-4. Gamification étape D : points + récompenses partenaires → **nécessite un serveur**.
-5. Brancher RevenueCat (Premium), backend pour l'IA "Album IA".
+1. **Tester sur simulateur** le livre 21×28 (orientation, pages, mises en page) et « Vérifier ton livre »,
+   puis fusionner `feature/comptes` dans `main`.
+2. **Livre photo → impression (Gelato)**, dans l'ordre :
+   a. dessiner chaque page **hors écran** puis l'enregistrer en image à la bonne taille
+      (210×280 mm + 4 mm de fond perdu, ≥ 150 dpi) — bibliothèque native de capture → **rebuild** ;
+      assembler un **PDF d'essai** (bouton « Créer le PDF » de `BookCheckScreen`, barre de progression) ;
+   b. compte Gelato + **clé API** (côté serveur Supabase uniquement) → largeur du dos selon le nombre de
+      pages, couverture à plat ;
+   c. envoi des pages sur Supabase Storage (avec accord clair de l'utilisateur ; changer le texte du tuto),
+      fonction serveur qui crée la commande Gelato ;
+   d. **paiement** : qui encaisse, marge, TVA (€ HT vs livraison en $) — à décider avec Augustin.
+3. **Tirages photo** (Coups de cœur) : même chaîne que le livre, après lui.
+4. Comptes : Apple, Google, mot de passe oublié + liens des mails (avant la mise en ligne).
+5. TestFlight + APK Android (`eas build --profile preview`) de la version avec comptes.
+6. Nettoyer le repo (dossiers pollués, `Claude outputs/`) et les branches mortes.
+7. Gamification étape D : points + récompenses partenaires (Supabase peut servir de serveur).
+8. Brancher RevenueCat (Premium), backend pour l'IA "Album IA".
+9. Plus tard : choix de la couleur par l'utilisateur (le mécanisme `PALETTES` est prêt).
 
 ---
 
@@ -309,3 +379,31 @@ vert, halos aux couleurs du thème), Bilan + fenêtre « Nouveau galon ». Maque
 « Mes livres photo » toujours affichée (＋ → `AlbumPickerSheet`), « Mes tirages photos » = Coups de cœur
 (« N photos à imprimer », impression à brancher plus tard). Ligne « Imprimer tes albums » supprimée.
 Bug corrigé : Coups de cœur vides → `GalleryScreen` ne garde que les photos encore présentes dans la photothèque.
+
+---
+
+## 13. Session 6 nov. 2026 (branche `feature/comptes`) — comptes + livre photo 21×28
+
+**Git** : `feature/progression`, `feature/themes`, `feature/livre-photo` fusionnées dans `main` (fast-forward,
+d49d903), poussée par Augustin. `feature/comptes` créée depuis `main`.
+
+**Comptes (Supabase)** — maquette validée : `maquette-compte-connexion.html` (hors Git).
+- Compte **facultatif**, accessible dans **Réglages** (aucun écran bloquant au lancement).
+- `AuthScreen` : onglets Connexion / Créer un compte ; création → écran « Regarde ta boîte mail » →
+  « J'ai confirmé, continuer ». « Se déconnecter » (confirmation) et « Supprimer mon compte » (fonction SQL).
+- **Sauvegarde de la progression** (`progressSync.js`) : à la connexion, fusion téléphone + compte (max par
+  jour pour `dailyLog`, union des badges avec la date la plus ancienne, plus grand `lifetimeSorted`,
+  meilleur chrono) ; envoi différé 5 s + au passage en arrière-plan (`flushProgress`). Un autre compte sur le
+  même téléphone ne récupère pas la progression locale du premier (`pellicule.sync.lastUserId`).
+- Testé par Augustin : création, déconnexion / reconnexion, ligne dans la table `progress`.
+
+**Livre photo — décisions d'Augustin** (maquettes `maquette-livre-verification.html`,
+`maquette-livre-format-21x28.html`, validées)
+- **Un seul format papier : 21×28 cm**, au choix **vertical ou horizontal** pour tout le livre
+  (`book.orientation`, `pageRatio`). Nombre de pages **30 → 200, de 2 en 2** : compteur − / + ou saisie
+  (remplace les boutons 24/32/48/64). Mises en page 1→4 photos ; **en horizontal, 2 photos côte à côte**
+  (`layoutRows`) ; titre « Milieu » seulement s'il y a ≥ 2 lignes de photos.
+- **« Imprimer ce livre »** ouvre `BookCheckScreen` : couverture, pages vides, photos de faible qualité
+  (taille vs cadre à 150 dpi), nombre de pages accepté (≥ 30, pair), photos de l'album non placées.
+  Alertes **non bloquantes**. Vue « Et maintenant ? » : PDF d'essai et Commander = **BIENTÔT**.
+- Aucun prix affiché pour l'instant (à calculer : coût Gelato + livraison + TVA + marge).
