@@ -2,6 +2,7 @@
 // Actions de compte (Supabase). Pas d'UI ici : les écrans appellent ces fonctions.
 // Chaque fonction renvoie { ok: true, ... } ou { ok: false, message } avec un message en français.
 import { supabase } from "./supabase";
+import { forgetSyncedUser } from "./progressSync";
 
 // Traduit les erreurs Supabase en phrases claires.
 function frenchError(error) {
@@ -53,6 +54,7 @@ export async function signOut() {
 export async function deleteAccount() {
   const { error } = await supabase.rpc("delete_my_account");
   if (error) return { ok: false, message: "Impossible de supprimer le compte pour le moment. Réessaie plus tard." };
+  await forgetSyncedUser();
   await supabase.auth.signOut().catch(() => {});
   return { ok: true };
 }

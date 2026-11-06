@@ -11,6 +11,7 @@ import { AppNavigator } from "./navigation/AppNavigator";
 import { usePhotoStore } from "./store/usePhotoStore";
 import { useAuthStore } from "./store/useAuthStore";
 import { refreshReminders } from "./services/notificationService";
+import { startProgressSync, flushProgress } from "./services/progressSync";
 
 // Import défensif : avant le rebuild incluant react-native-gesture-handler dans
 // le binaire natif, on tombe sur un View standard sans gestures. Une fois le rebuild
@@ -106,6 +107,7 @@ export default function App() {
   useEffect(() => {
     hideAndroidNavBar();
     useAuthStore.getState().init(); // relit la session de connexion (compte) au démarrage
+    startProgressSync();            // sauvegarde de la progression sur le compte (si connecté)
 
     // iOS — app tuée puis ouverte via un tap sur la notification :
     // le listener ci-dessous ne se déclenche pas, on récupère la réponse ici.
@@ -162,6 +164,7 @@ export default function App() {
       if (nextState === "background") {
         usePhotoStore.getState().checkAchievements(); // mémorise les galons / badges atteints
         refreshReminders();
+        flushProgress(); // envoie la progression sans attendre le délai
       }
     });
     return () => sub.remove();
