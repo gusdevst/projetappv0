@@ -39,6 +39,17 @@ export function NavArrow({ label, disabled, onPress }) {
   );
 }
 
+// Bouton d'outil de recadrage (icône + libellé) : Pivoter, Recentrer, Changer, Terminé… accent = en couleur album.
+export function ToolButton({ icon, label, accent, onPress }) {
+  return (
+    <TouchableOpacity onPress={onPress}
+      style={{ flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 14, backgroundColor: accent ? C.albumSoft : C.bgCard, ...SHADOW }}>
+      <Text style={{ fontSize: 19, color: accent ? C.album : C.text }}>{icon}</Text>
+      <Text style={{ fontSize: 11.5, marginTop: 2, color: accent ? C.album : C.text, fontWeight: accent ? "700" : "500" }}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 // 4 boutons « 1 photo · 2 photos · 3 photos · 4 photos ». Les mini-pages suivent l'orientation du livre.
 export function LayoutPicker({ value, onChange, landscape }) {
   return (

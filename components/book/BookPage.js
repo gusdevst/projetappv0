@@ -10,7 +10,7 @@ import { Image } from "expo-image";
 import Text from "../AppText";
 import { C, FONT } from "../../constants/theme";
 import { CroppedImage } from "./CroppedImage";
-import { getCrop, coverBgHex, isLightHex } from "../../services/photoBook";
+import { getCrop, getCoverCrop, coverBgHex, isLightHex } from "../../services/photoBook";
 
 const ROWS = {
   1: [[0]],
@@ -141,32 +141,41 @@ export function coverTitleColor(cover) {
 // Couverture (face avant), dessinée selon cover.style (voir COVER_STYLES dans services/photoBook.js) :
 // pleine · centree · polaroid · bandeau · cadre · titre. cover.bg = couleur de fond.
 // size = largeur · ratio = hauteur / largeur.
+// bleed { l, t, r, b } (pixels, facultatif) : marge de fond perdu autour de la zone utile. Les styles sont
+// dessinés dans la zone utile ; la photo « pleine page » (et le fond) vont jusqu'au bord de la marge.
 // flat : pas de coins arrondis (rendu pour l'impression) · onImageLoad : appelée quand la photo est chargée.
-export function BookCover({ cover, size, ratio = 1, urlById, onPress, flat, onImageLoad }) {
+// La photo suit son recadrage (cover.crop). editable : pincer / glisser pour recadrer (onCropChange(crop) au lâcher) ·
+// cropPreview : réglages appliqués en direct pendant un glissé de curseur (ex. { tilt }).
+export function BookCover({ cover, size, ratio = 1, urlById, onPress, flat, onImageLoad, bleed, editable, onCropChange, cropPreview }) {
   const url = cover.photoId ? urlById[cover.photoId] : null;
   const mini = size < 60;
   const style = cover.style ?? "pleine";
   const W = size, H = Math.round(size * ratio);
 
+  // Zone utile (sans le fond perdu) + petite fonction qui place un rectangle en parts de cette zone.
+  const cx = bleed?.l ?? 0, cy = bleed?.t ?? 0;
+  const cW = W - cx - (bleed?.r ?? 0), cH = H - cy - (bleed?.b ?? 0);
+  const Z = (l, t, w, h) => ({ l: cx + l * cW, t: cy + t * cH, w: w * cW, h: h * cH });
+
   // Zones en pixels : photo, titre, et « carte » blanche du polaroïd.
   let photo = null, titleZone = null, card = null;
   if (style === "pleine" || style === "cadre") photo = { l: 0, t: 0, w: W, h: H };
   else if (style === "centree") {
-    photo = { l: 0.14 * W, t: 0.14 * H, w: 0.72 * W, h: 0.56 * H };
-    titleZone = { l: 0, t: 0.70 * H, w: W, h: 0.30 * H };
+    photo = Z(0.14, 0.14, 0.72, 0.56);
+    titleZone = Z(0, 0.70, 1, 0.30);
   } else if (style === "polaroid") {
-    card = { l: 0.10 * W, t: 0.08 * H, w: 0.80 * W, h: 0.84 * H };
-    photo = { l: 0.14 * W, t: 0.115 * H, w: 0.72 * W, h: 0.64 * H };
-    titleZone = { l: 0.10 * W, t: 0.755 * H, w: 0.80 * W, h: 0.165 * H };
+    card = Z(0.10, 0.08, 0.80, 0.84);
+    photo = Z(0.14, 0.115, 0.72, 0.64);
+    titleZone = Z(0.10, 0.755, 0.80, 0.165);
   } else if (style === "bandeau") {
-    photo = { l: 0, t: 0, w: W, h: 0.68 * H };
-    titleZone = { l: 0, t: 0.68 * H, w: W, h: 0.32 * H };
+    photo = { l: 0, t: 0, w: W, h: cy + 0.68 * cH };
+    titleZone = Z(0, 0.68, 1, 0.32);
   } else if (style === "titre") {
-    titleZone = { l: 0, t: 0, w: W, h: H };
+    titleZone = Z(0, 0, 1, 1);
   }
 
   const font = COVER_STYLE.font[cover.font] ?? COVER_STYLE.font.moderne;
-  const fontSize = Math.round(W * (COVER_STYLE.size[cover.size] ?? 0.14));
+  const fontSize = Math.round(cW * (COVER_STYLE.size[cover.size] ?? 0.14));
   const color = coverTitleColor(cover);
   const onPhoto = style === "pleine" || style === "cadre";
   const textStyle = { textAlign: "center", fontFamily: font.family, fontWeight: font.weight, fontSize,
@@ -180,26 +189,28 @@ export function BookCover({ cover, size, ratio = 1, urlById, onPress, flat, onIm
           backgroundColor: "#ffffff", borderWidth: mini ? 0 : 1, borderColor: "rgba(0,0,0,0.06)" }} />
       )}
       {url && photo && (
-        <Image source={{ uri: url }} contentFit="cover" onLoad={onImageLoad}
-          style={{ position: "absolute", left: photo.l, top: photo.t, width: photo.w, height: photo.h }} />
+        <View style={{ position: "absolute", left: photo.l, top: photo.t, width: photo.w, height: photo.h, overflow: "hidden" }}>
+          <CroppedImage url={url} crop={{ ...getCoverCrop(cover), ...cropPreview }} editable={editable}
+            onChange={onCropChange} onLoaded={onImageLoad} />
+        </View>
       )}
       {style === "cadre" && (
-        <View pointerEvents="none" style={{ position: "absolute", left: 0.07 * W, top: 0.07 * H, right: 0.07 * W, bottom: 0.07 * H,
-          borderWidth: mini ? 0.5 : Math.max(1, W * 0.007), borderColor: "rgba(255,255,255,0.9)" }} />
+        <View pointerEvents="none" style={{ position: "absolute", left: cx + 0.07 * cW, top: cy + 0.07 * cH, width: 0.86 * cW, height: 0.86 * cH,
+          borderWidth: mini ? 0.5 : Math.max(1, cW * 0.007), borderColor: "rgba(255,255,255,0.9)" }} />
       )}
-      {onPress && !mini && photo && (
+      {onPress && !editable && !mini && photo && (
         <View style={{ position: "absolute", top: photo.t + 8, right: W - (photo.l + photo.w) + 8, backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
           <Text style={{ fontSize: 10.5, fontWeight: "600", color: C.text }}>Changer la photo</Text>
         </View>
       )}
       {style === "titre" && !mini && (
-        <View pointerEvents="none" style={{ position: "absolute", left: 0.38 * W, width: 0.24 * W, top: H / 2 - fontSize * 1.5,
-          height: Math.max(1, W * 0.007), backgroundColor: color, opacity: 0.5 }} />
+        <View pointerEvents="none" style={{ position: "absolute", left: cx + 0.38 * cW, width: 0.24 * cW, top: cy + cH / 2 - fontSize * 1.5,
+          height: Math.max(1, cW * 0.007), backgroundColor: color, opacity: 0.5 }} />
       )}
       {!mini && !!cover.title && (onPhoto ? (
         // Le titre est posé sur la photo : en haut, au milieu ou en bas selon le réglage « Position ».
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-          paddingHorizontal: "8%", paddingVertical: "9%", justifyContent: (COVER_STYLE.pos[cover.pos] ?? COVER_STYLE.pos.bas).justify }}>
+        <View pointerEvents="none" style={{ position: "absolute", left: cx, top: cy, width: cW, height: cH,
+          paddingHorizontal: cW * 0.08, paddingVertical: cH * 0.09, justifyContent: (COVER_STYLE.pos[cover.pos] ?? COVER_STYLE.pos.bas).justify }}>
           <Text numberOfLines={2} style={[textStyle, { textShadowColor: "rgba(0,0,0,0.22)", textShadowRadius: 8 }]}>
             {cover.title}
           </Text>
@@ -207,7 +218,7 @@ export function BookCover({ cover, size, ratio = 1, urlById, onPress, flat, onIm
       ) : titleZone && (
         // Le titre a sa zone (sous la photo, dans le bandeau, dans le cadre blanc…) : centré dedans.
         <View pointerEvents="none" style={{ position: "absolute", left: titleZone.l, top: titleZone.t, width: titleZone.w, height: titleZone.h,
-          paddingHorizontal: "7%", justifyContent: "center" }}>
+          paddingHorizontal: titleZone.w * 0.07, justifyContent: "center" }}>
           <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.4} style={textStyle}>{cover.title}</Text>
         </View>
       ))}

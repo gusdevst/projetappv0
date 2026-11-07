@@ -90,7 +90,8 @@ export function CroppedImage({ url, crop, editable, onChange, onLoaded }) {
       transform: [{ translateX: crop.x * w }, { translateY: crop.y * h }, { rotate: `${angle}deg` }, { scale: crop.scale * k }],
     }]}>
       <Image source={{ uri: url }} style={{ width: "100%", height: "100%" }} contentFit="cover"
-        onLoad={(e) => { const { width, height } = e.source ?? {}; if (width && height) setRatio(width / height); onLoaded?.(); }} />
+        onLoad={(e) => { const { width, height } = e.source ?? {}; if (width && height) setRatio(width / height); onLoaded?.(); }}
+        onError={() => onLoaded?.()} />
     </Animated.View>
   );
 

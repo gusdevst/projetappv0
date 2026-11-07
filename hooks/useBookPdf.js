@@ -12,9 +12,28 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { PixelRatio } from "react-native";
 import { captureRef } from "react-native-view-shot";
 import * as FileSystem from "expo-file-system/legacy";
-import { pageGeometry, buildPlan, createPdf, addPdfPage, pdfToBase64 } from "../services/bookPdf";
+import { pageGeometry, coverGeometry, buildPlan, createPdf, addPdfPage, pdfToBase64 } from "../services/bookPdf";
+import { getCoverDimensions } from "../services/gelato";
+import { getShareableUri } from "../services/photoShare";
 
-const IDLE = { phase: "idle", done: 0, total: 0, result: null, error: null, slowPages: 0 };
+const IDLE = { phase: "idle", done: 0, total: 0, result: null, error: null, slowPages: 0, step: "" };
+const FETCH_TIMEOUT_MS = 20000; // récupérer une photo (iCloud…) : au-delà, on garde l'adresse d'origine
+
+// Pour une page, remplace les adresses « ph://… » par les fichiers originaux sur le téléphone
+// (téléchargés depuis iCloud si besoin) : photos en pleine qualité, chargement fiable hors écran.
+async function withOriginalFiles(ids, urlById) {
+  const out = { ...urlById };
+  await Promise.all(ids.map(async (id) => {
+    try {
+      const uri = await Promise.race([
+        getShareableUri(id),
+        new Promise((resolve) => setTimeout(() => resolve(null), FETCH_TIMEOUT_MS)),
+      ]);
+      if (uri) out[id] = uri;
+    } catch (e) { /* on garde l'adresse d'origine */ }
+  }));
+  return out;
+}
 const yieldToUi = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 export function useBookPdf(book, urlById) {
@@ -54,19 +73,31 @@ export function useBookPdf(book, urlById) {
     let slowPages = 0;
 
     try {
+      // Dimensions de la couverture à plat (dos compris), données par Gelato selon le nombre de pages.
+      const dims = await getCoverDimensions(book.format);
+      const coverGeo = coverGeometry(dims, PixelRatio.get());
+
       const doc = await createPdf();
       for (let i = 0; i < plan.length; i++) {
         if (cancelled.current) { setState({ ...IDLE, phase: "cancelled" }); return; }
         const item = plan[i];
         let base64 = null;
         if (item.kind !== "blank") {
-          const { uri, ok } = await renderToJpeg(item);
+          setState((s) => ({ ...s, step: `Page ${i + 1} : récupération des photos…` }));
+          const ids = item.kind === "cover" ? [book.cover.photoId].filter(Boolean) : book.pages[item.pageIndex].slots.filter(Boolean);
+          const urls = await withOriginalFiles(ids, urlById);
+          if (cancelled.current) { setState({ ...IDLE, phase: "cancelled" }); return; }
+          setState((s) => ({ ...s, step: `Page ${i + 1} : dessin…` }));
+          const t0 = Date.now();
+          const job = item.kind === "cover" ? { ...item, urlById: urls, dims, geo: coverGeo } : { ...item, urlById: urls };
+          const { uri, ok } = await renderToJpeg(job);
+          if (__DEV__) console.log(`[pdf] ${item.key} prête en ${Date.now() - t0} ms (photos chargées : ${ok})`);
           if (!ok) slowPages += 1;
           base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
           FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
         }
-        await addPdfPage(doc, geo, base64);
-        setState((s) => ({ ...s, done: i + 1, slowPages }));
+        await addPdfPage(doc, item.kind === "cover" ? coverGeo.pdf : geo.pdf, base64);
+        setState((s) => ({ ...s, done: i + 1, slowPages, step: "" }));
         await yieldToUi();
       }
       setJob(null);

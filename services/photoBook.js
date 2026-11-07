@@ -229,6 +229,16 @@ export function setPageTitle(book, pageIndex, patch) {
   return touch({ ...book, pages });
 }
 
+// Recadrage de la photo de couverture (comme les photos des pages) : cover.crop = { scale, x, y, rot, tilt }.
+export const getCoverCrop = (cover) => ({ ...DEFAULT_CROP, ...(cover?.crop ?? {}) });
+export function setCoverCrop(book, patch) {
+  return setCover(book, { crop: { ...getCoverCrop(book.cover), ...patch } });
+}
+// Remettre la photo au centre, sans zoom ni redressement (le quart de tour est gardé).
+export function resetCoverCrop(book) {
+  return setCoverCrop(book, { ...DEFAULT_CROP, rot: getCoverCrop(book.cover).rot });
+}
+
 // Modifier la couverture : setCover(book, { title: "Été" }).
 export function setCover(book, patch) {
   return touch({ ...book, cover: { ...book.cover, ...patch } });
@@ -260,7 +270,7 @@ export function syncWithAlbum(book, albumPhotoIds) {
   let cover = book.cover;
   if (cover.photoId && !inAlbum.has(cover.photoId)) {
     changed = true;
-    cover = { ...cover, photoId: albumPhotoIds[0] ?? null };
+    cover = { ...cover, photoId: albumPhotoIds[0] ?? null, crop: undefined }; // nouvelle photo : on repart d'un cadrage neuf
   }
   return changed ? touch({ ...book, pages, cover }) : book;
 }

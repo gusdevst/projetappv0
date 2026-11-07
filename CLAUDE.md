@@ -254,7 +254,8 @@ Redéployer : `npx supabase functions deploy gelato-cover --no-verify-jwt` (apr�
    c. envoi des pages sur Supabase Storage (avec accord clair de l'utilisateur ; changer le texte du tuto),
       fonction serveur qui crée la commande Gelato ;
    d. **paiement** : qui encaisse, marge, TVA (€ HT vs livraison en $) — à décider avec Augustin.
-3. **Tirages photo** (Coups de cœur) : même chaîne que le livre, après lui.
+3. **Tirages photo** (Coups de cœur) : même chaîne que le livre, après lui. Débouche sur
+   l'**abonnement mensuel Coups de cœur** (maquette validée le 6 nov., voir §13).
 4. Comptes : Apple, Google, mot de passe oublié + liens des mails (avant la mise en ligne).
 5. TestFlight + APK Android (`eas build --profile preview`) de la version avec comptes.
 6. Nettoyer le repo (dossiers pollués, `Claude outputs/`) et les branches mortes.
@@ -414,3 +415,18 @@ d49d903), poussée par Augustin. `feature/comptes` créée depuis `main`.
   (taille vs cadre à 150 dpi), nombre de pages accepté (≥ 30, pair), photos de l'album non placées.
   Alertes **non bloquantes**. Vue « Et maintenant ? » : PDF d'essai et Commander = **BIENTÔT**.
 - Aucun prix affiché pour l'instant (à calculer : coût Gelato + livraison + TVA + marge).
+
+**Abonnement mensuel Coups de cœur — maquette validée par Augustin** (`maquette-abonnement-coups-de-coeur.html`,
+hors Git, 11 écrans ; **rien de codé**). Entrée = carte « Abonnement » dans la Galerie, section « Mes tirages photos ».
+- Chaque mois (le 1er) : tirage au hasard de **10 coups de cœur** → notification → grille de validation
+  (↻ par photo : au hasard / choisir / retirer ; « Tout retirer au sort ») → **validation obligatoire** → suivi
+  (validée, impression, expédiée, livrée).
+- **Abonnement pour un proche** : même mode de sélection, prénom + adresse + petit mot, **x photos** (5/10/15/20) ;
+  le proche n'a pas de compte. Plusieurs abonnements possibles, pause / résiliation, historique.
+- Choix par défaut posés par Claude, **à confirmer** : format 10×15 cm ; pas validé à temps = rien ne part, mois non
+  facturé ; une photo envoyée ne repart jamais ; moins de 10 ❤️ dispo = écran « Il te manque N coups de cœur ».
+- **Prix décidé (6 nov.)** : **7,99 € / mois par abonnement, livraison incluse** (10 tirages). Total affiché si
+  2 abonnements : 15,98 €. **À décider** : prix pour 5 / 15 / 20 photos (proche). **À vérifier** : marge réelle
+  (coût d'impression + port Gelato + TVA). **À vérifier** aussi : un envoi d'objets réels n'a pas à passer
+  par l'achat intégré Apple (RevenueCat) → paiement carte possible. Texte du tuto « aucune photo sur un serveur »
+  à changer (dette n°9). L'abonnement exige un compte connecté.

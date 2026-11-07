@@ -4,8 +4,8 @@
 //   • buildPlan    : liste des pages du PDF dans l'ordre demandé par Gelato
 //   • assemblePdf  : assemble les images JPEG en un PDF avec les boîtes de rognage / fond perdu
 //
-// Ordre du PDF d'essai : couverture de face · page blanche (garde) · pages intérieures · page blanche de fin.
-// (La couverture à plat avec le dos viendra avec l'API Gelato.)
+// Ordre du PDF (Gelato) : page 1 = couverture à plat (4ᵉ + dos + face) · page blanche (garde) ·
+// pages intérieures une par une · page blanche de fin.
 import { PDFDocument } from "pdf-lib";
 import { PRINT_SPEC } from "./bookCheck";
 
@@ -36,11 +36,32 @@ export function pageGeometry(book, pixelRatio) {
     trimWidthPt: widthPt - 2 * bleedPt,
     trimHeightPt: heightPt - 2 * bleedPt,
     targetPx,
-    pdf: { // taille d'une page du PDF, en points PDF (1/72 pouce)
-      width: (totalWmm / MM_PER_INCH) * PT_PER_INCH,
-      height: (totalHmm / MM_PER_INCH) * PT_PER_INCH,
-      bleed: (PDF_SPEC.bleedMm / MM_PER_INCH) * PT_PER_INCH,
-    },
+    pdf: pdfPageSpec(totalWmm, totalHmm, { x: PDF_SPEC.bleedMm, y: PDF_SPEC.bleedMm, w: trimWmm, h: trimHmm }),
+  };
+}
+
+const mmToPdf = (mm) => (mm / MM_PER_INCH) * PT_PER_INCH;
+
+// Taille d'une page du PDF et de sa zone rognée (trim), en points PDF (1/72 pouce).
+// trim en mm, origine en HAUT à gauche (comme Gelato) ; le PDF compte depuis le BAS : on retourne l'axe y.
+function pdfPageSpec(totalWmm, totalHmm, trim) {
+  return {
+    width: mmToPdf(totalWmm),
+    height: mmToPdf(totalHmm),
+    trim: { x: mmToPdf(trim.x), y: mmToPdf(totalHmm - trim.y - trim.h), w: mmToPdf(trim.w), h: mmToPdf(trim.h) },
+  };
+}
+
+// Géométrie de la couverture à plat (dimensions données par Gelato, voir services/gelato.js).
+// Même principe que pageGeometry : on dessine à (pixels voulus ÷ pixelRatio) points d'écran.
+export function coverGeometry(dims, pixelRatio) {
+  const targetPx = Math.round((dims.total.w / MM_PER_INCH) * PDF_SPEC.dpi);
+  const widthPt = targetPx / pixelRatio;
+  return {
+    widthPt,
+    heightPt: (widthPt * dims.total.h) / dims.total.w,
+    targetPx,
+    pdf: pdfPageSpec(dims.total.w, dims.total.h, dims.edge), // rognage = contour du carton
   };
 }
 
@@ -64,12 +85,13 @@ export async function createPdf() {
   return doc;
 }
 
+// spec : { width, height, trim } en points PDF (geo.pdf d'une page intérieure ou de la couverture).
 // image : base64 d'un JPEG, ou null pour une page blanche.
-export async function addPdfPage(doc, geo, imageBase64) {
-  const { width, height, bleed } = geo.pdf;
+export async function addPdfPage(doc, spec, imageBase64) {
+  const { width, height, trim } = spec;
   const page = doc.addPage([width, height]);
   page.setBleedBox(0, 0, width, height);
-  page.setTrimBox(bleed, bleed, width - 2 * bleed, height - 2 * bleed);
+  page.setTrimBox(trim.x, trim.y, trim.w, trim.h);
   if (imageBase64) {
     const img = await doc.embedJpg(imageBase64);
     page.drawImage(img, { x: 0, y: 0, width, height });
