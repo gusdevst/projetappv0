@@ -253,6 +253,22 @@ export function GalleryHomeScreen({ navigation }) {
             sub={`${keptCount} photo${keptCount > 1 ? "s" : ""} à imprimer`}
             onPress={() => open({ section: "kept" })}
           />
+          {/* Abonnement mensuel : les coups de cœur par la poste (maquette validée) */}
+          <Card
+            width={CARD_W}
+            cover={
+              <View style={{ height: COVER_H, borderRadius: 11, backgroundColor: C.sage2, alignItems: "center", justifyContent: "center" }}>
+                <Icon name="mail" size={30} color={C.accent} />
+                <View style={{ position: "absolute", top: 5, right: 5, backgroundColor: C.album, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1.5 }}>
+                  <Text style={{ fontSize: 8.5, fontWeight: "700", color: "#fff" }}>NOUVEAU</Text>
+                </View>
+              </View>
+            }
+            title="Abonnement"
+            sub="10 tirages par mois"
+            subLines={2}
+            onPress={() => navigation.navigate("SubscriptionIntro")}
+          />
         </View>
 
         <View style={{ gap: 10, marginTop: 14 }}>

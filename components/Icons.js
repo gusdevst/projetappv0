@@ -85,6 +85,10 @@ const ICONS = {
     <Path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
     <Circle cx="12" cy="15.5" r="1.3" />
   </>),
+  mail: (c) => (<>
+    <Rect x="3" y="5" width="18" height="14" rx="2.5" />
+    <Path d="M3 8l9 6 9-6" />
+  </>),
   filter: (c) => <Path d="M4 5h16l-6 8v6l-4-2v-4z" />,
   chevronRight: (c) => <Path d="M9 5l7 7-7 7" />,
   close: (c) => <Path d="M6 6l12 12M18 6L6 18" />,

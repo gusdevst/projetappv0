@@ -2,7 +2,7 @@
 
 > Fichier de passation. Lu en début de session pour retrouver l'état du projet
 > sans re-scanner tout le code. **À maintenir à jour** à chaque étape importante.
-> Dernière mise à jour : 2026-11-06 (comptes Supabase + livre photo 21×28 cm).
+> Dernière mise à jour : 2026-11-07 (livre photo : couverture, PDF Gelato ; commande en standby).
 
 ---
 
@@ -19,14 +19,17 @@ trop-plein de photos sans y passer des heures.
 
 ---
 
-## 2. État actuel (au 2026-11-06)
+## 2. État actuel (au 2026-11-07)
 
 - **`main` contient** (testé, poussé sur GitHub le 6 nov.) : progression, thème « sauge »,
   barre de menu, Galerie, livre photo carré (`d49d903 coup de coeurs`).
 - Branche de travail : **`feature/comptes`** (créée le 6 nov. depuis `main`) — **comptes Supabase**
   (connexion e-mail, déconnexion, suppression, sauvegarde de la progression : testés par Augustin)
-  + **livre photo 21×28 cm Gelato** et écran « Vérifier ton livre » (codés, à tester sur simulateur).
+  + **livre photo 21×28 cm Gelato** : format, 6 styles de couverture + 26 fonds + recadrage, couverture
+  à plat, « Vérifier ton livre », **PDF d'essai aux specs Gelato (validé par Augustin le 7 nov.)**.
   À fusionner dans `main` après test.
+- ⏸ **STANDBY (décision d'Augustin, 7 nov.)** : la suite de « livre photo → commande » (prix, écran
+  « Commander », paiement, envoi du fichier, commande Gelato). Détail et reprise : §8 et §13.
 - Branches déjà fusionnées dans `main`, supprimables : `feature/progression`,
   `feature/themes`, `feature/barre-menu`, `feature/livre-photo`, `octobre27`.
 - Test au quotidien : **simulateur iOS du Mac** (`npx expo start --dev-client`, Fast Refresh).
@@ -52,7 +55,8 @@ NavigationContainer unique · écrans câblés au navigateur · vraies photos
   react-native-webview, **react-native-purchases (RevenueCat — installé mais PAS encore branché)**,
   **react-native-svg** (icônes), **expo-font + @expo-google-fonts/outfit** (police),
   **@supabase/supabase-js + react-native-url-polyfill** (comptes, JS pur → pas de rebuild),
-  polices du livre photo (Playfair, Caveat, Bebas, Great Vibes, Fredoka) chargées par `components/book/bookFonts.js`.
+  polices du livre photo (Playfair, Caveat, Bebas, Great Vibes, Fredoka) chargées par `components/book/bookFonts.js`,
+  **react-native-view-shot** (natif → rebuild : « photographie » les pages hors écran) + **pdf-lib** (assemble le PDF).
 - Police **Outfit** intégrée au build (plugin `expo-font` dans `app.json`, 6 graisses 400→900
   sous le nom « Outfit ») → `fontWeight` marche tel quel. Ajouter un module natif = rebuild
   (`npx expo prebuild --platform ios --clean` puis `npx expo run:ios`).
@@ -102,9 +106,13 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 - `GalleryHomeScreen` — onglet Galerie (albums, livres photo, tirages = Coups de cœur, corbeille).
 - `AuthScreen` — connexion / création de compte par e-mail + état « Regarde ta boîte mail ».
   Apple et Google : **pas encore** (boutons volontairement absents).
-- `PhotoBookScreen` — éditeur de livre photo d'un album (orientation, nombre de pages, couverture, doubles pages).
-  `BookPageEditorScreen` — une page en grand (mise en page, titre, recadrage). `BookCheckScreen` —
-  « Vérifier ton livre » avant impression (3 vues : contrôles · photos de faible qualité · et maintenant ?).
+- `PhotoBookScreen` — éditeur de livre photo d'un album : format (1 ligne : orientation + pages − / +, maintenir
+  pour défiler), couverture (style · couleur de fond · titre, listes **dépliables** ; bouton « ✂ Recadrer la photo » ;
+  aperçu « Couverture à plat »), doubles pages (**glisser pour tourner**), bande « Toutes les pages » (liste
+  défilante `FlatList` de react-native-gesture-handler, suit la page affichée).
+  `BookPageEditorScreen` — une page en grand (mise en page, titre, recadrage ; glisser = page suivante).
+  `BookCheckScreen` — « Vérifier ton livre » avant impression (3 vues : contrôles · photos de faible qualité ·
+  et maintenant ?). **« Créer le PDF » (PDF d'essai) visible seulement en `__DEV__`.**
 
 **components/** — briques UI réutilisables :
 - `AppText` — **remplace le `Text` de React Native partout** (applique Outfit). Dans un nouveau
@@ -123,8 +131,10 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 `DayValidatedToast` + `AchievementUnlocks` (bandeaux / fenêtre de déblocage),
 `AccountCard` (carte compte des Réglages).
 - `book/` — livre photo : `BookPage` (page à n'importe quelle taille, `size` = largeur, `ratio` = hauteur/largeur),
-  `BookCover`, `BlankPage`, `COVER_STYLE`, `BookControls` (`LayoutPicker`, `Chip`…), `PhotoPickerSheet`,
-  `AlbumPickerSheet`, `CroppedImage`, `TiltSlider`, `bookFonts`.
+  `BookCover` (6 styles, zone utile + fond perdu, photo recadrable), `BlankPage`, `COVER_STYLE`,
+  `coverTitleColor`, `BookControls` (`LayoutPicker`, `Chip`, `ToolButton`…), `PhotoPickerSheet`,
+  `AlbumPickerSheet`, `CroppedImage`, `TiltSlider`, `bookFonts`, `FlatCover` (4ᵉ + dos + face avant, à partir
+  des dimensions Gelato), `PrintPageRenderer` (dessine une page hors écran à la taille d'impression).
 
 **services/** — logique métier, pas d'UI :
 - `photoLibrary.js` — wrapper expo-media-library (permission, chargement, suppression).
@@ -143,11 +153,20 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 - `progressSync.js` — sauvegarde de la progression (table `progress`) : fusion à la connexion, envoi 5 s
   après chaque changement. **Seulement des chiffres** (`dailyLog`, `lifetimeSorted`, `achievements`,
   `shuffleLaunchCount`, `best20Ms`) ; jamais de photos, coups de cœur ni albums (ids propres au téléphone).
-- `photoBook.js` — logique pure du livre (orientation, pages 30→200 par 2, mises en page, recadrage).
+- `photoBook.js` — logique pure du livre (orientation, pages 30→200 par 2, mises en page, recadrage des pages
+  ET de la couverture, `COVER_STYLES`, `COVER_BGS` = 26 couleurs, `setCoverStyle` → titre repasse en « auto »).
 - `bookCheck.js` — contrôles avant impression + `PRINT_SPEC` (specs Gelato).
+- `gelato.js` — dimensions de la couverture à plat (appelle la fonction `gelato-cover`, cache mémoire + téléphone).
+- `bookPdf.js` — géométrie des pages (mm → pixels → points PDF), plan du PDF, assemblage `pdf-lib`
+  (boîtes de rognage / fond perdu). Ordre : couverture à plat · garde blanche · pages · page blanche de fin.
+- `photoShare.js` — fichier original d'une photo (`getShareableUri`, aussi utilisé pour le PDF : photos HD, iCloud).
 
 **hooks/** — `useAndroidBack` (bouton retour Android), `useNotificationReminder`
-(logique d'activation des rappels, partagée).
+(logique d'activation des rappels, partagée), `useBookPdf` (fabrique le PDF d'essai : dessin hors écran →
+capture JPEG → PDF → fichier partageable ; progression, annulation, étape affichée).
+
+**supabase/** — `config.toml` + `functions/` : `gelato-cover` (dimensions de couverture), `gelato-price`
+(coût d'impression et livraison Gelato ; ajoutée le 6 nov., **non testée par Claude**). Fonctions Deno côté serveur.
 
 **constants/** — `theme.js` : **plusieurs palettes** (`PALETTES.ardoise` = ancienne bleue,
 `PALETTES.sauge` = nouvelle). L'interrupteur `THEME_ACTIF` choisit celle utilisée → `C`.
@@ -174,7 +193,7 @@ pour être dans l'app, c'est la **RLS** (sécurité par ligne) qui protège les 
 - Confirmation d'e-mail **activée** par défaut. Le lien du mail mène à une page vide (Site URL =
   localhost) : le compte est bien confirmé, puis « J'ai confirmé, continuer » dans l'app.
 
-**Gelato** (impression, pas encore branché) : produit retenu
+**Gelato** (impression ; PDF conforme aux specs, **commande pas encore branchée — standby**) : produit retenu
 `photobooks-hardcover_pf_210x280-mm-8x11-inch_pt_170-gsm-65lb-coated-silk_cl_4-4_ccl_4-4_bt_glued-left_ct_matt-lamination_prt_1-0_cpt_130-gsm-65-lb-cover-coated-silk_ver`
 (livre photo couverture rigide 21×28 cm, pages 30→200 de 2 en 2). Prix vu : 15,46 € HT + 5,39 $ de
 livraison pour 30 pages. Specs PDF : **un seul PDF** — page 1 = couverture à plat (dos + 4ᵉ + 1ʳᵉ),
@@ -190,6 +209,8 @@ Réponse testée (mm) : `pagesCount` = pages demandées + 4 · couverture à pla
 478×326 (30 p.) · dos `spineSize.width` 6 mm (30 p.), 9 (60), 11 (100), 19 (200) · panneaux 208×286 à 20 mm
 du haut ; dos arrière / dos / dos avant séparés par des charnières de 8 mm ; face avant à `left` = 250 (30 p.).
 Redéployer : `npx supabase functions deploy gelato-cover --no-verify-jwt` (après `login` + `link`).
+`gelato-price` (coût d'impression + livraison, options `?pageCount=`, `?all=1`, `?country=FR`, `?quote=1`) est dans le
+dépôt, déployée de la même façon ; réponse brute de Gelato, **à lire et nettoyer** quand on reprendra les prix.
 
 ---
 
@@ -238,22 +259,32 @@ Redéployer : `npx supabase functions deploy gelato-cover --no-verify-jwt` (apr�
     nombre pair). Les albums de peu de photos donnent beaucoup de pages vides à 30 pages (non bloquant).
 11. **`progressSync`** : `freedMo` et `purgedCount` ne sont **pas** synchronisés (dépendent de la photothèque
     de chaque téléphone). Coups de cœur / albums / livres non plus (ids de photos propres au téléphone).
+12. **Fonctions Gelato ouvertes** (`gelato-cover`, `gelato-price` déployées avec `--no-verify-jwt`) : elles ne
+    montrent jamais la clé, mais n'importe qui peut les appeler. **Exiger un compte connecté avant la mise en ligne.**
+13. **PDF d'essai** : réservé à `__DEV__`. Un livre de 200 pages pèse lourd en mémoire (tester 30-60 pages d'abord).
+    Le rendu hors écran peut varier selon l'appareil ; les photos sont lues depuis les **fichiers originaux**
+    (`getShareableUri`, iCloud inclus) avec un délai de 15 s par page avant de capturer quand même.
+14. **Intérieur de couverture** : affiché en page blanche hachurée « Intérieur de couverture » dans l'aperçu.
+    C'est voulu : chez Gelato, la page 2 du fichier (garde) et la dernière page restent **blanches** (non imprimées).
+    Libellé à reprendre (« Garde (non imprimée) ») si Augustin le souhaite — **ne pas changer ses textes sans accord**.
 
 ---
 
 ## 8. Prochaines étapes probables
 
-1. **Tester sur simulateur** le livre 21×28 (orientation, pages, mises en page) et « Vérifier ton livre »,
-   puis fusionner `feature/comptes` dans `main`.
-2. **Livre photo → impression (Gelato)**, dans l'ordre :
-   a. dessiner chaque page **hors écran** puis l'enregistrer en image à la bonne taille
-      (210×280 mm + 4 mm de fond perdu, ≥ 150 dpi) — bibliothèque native de capture → **rebuild** ;
-      assembler un **PDF d'essai** (bouton « Créer le PDF » de `BookCheckScreen`, barre de progression) ;
-   b. compte Gelato + **clé API** (côté serveur Supabase uniquement) → largeur du dos selon le nombre de
-      pages, couverture à plat ;
-   c. envoi des pages sur Supabase Storage (avec accord clair de l'utilisateur ; changer le texte du tuto),
-      fonction serveur qui crée la commande Gelato ;
-   d. **paiement** : qui encaisse, marge, TVA (€ HT vs livraison en $) — à décider avec Augustin.
+1. **Fusionner `feature/comptes` dans `main`** (comptes + livre 21×28 testés par Augustin ; pousser depuis VS Code).
+2. ⏸ **Livre photo → commande (Gelato) — EN STANDBY depuis le 7 nov.** Déjà fait : produit, clé API (secret
+   Supabase), dimensions de couverture, couverture à plat, PDF d'essai conforme (validé), fonction de prix.
+   **Reste, dans l'ordre :**
+   a. **Prix** : afficher un prix = coût Gelato (`gelato-price`) + livraison + TVA + **marge** ;
+   b. écran **« Commander »** (récap, adresse de livraison, prix) après « Vérifier ton livre » — **compte connecté exigé** ;
+   c. **paiement** (ex. Stripe ; un livre physique n'a pas à passer par l'achat intégré Apple) ;
+   d. **envoi du PDF** sur Supabase Storage (espace privé, accord clair de l'utilisateur, **changer le texte du tuto**) ;
+   e. fonction serveur qui **crée la commande Gelato** (d'abord en « brouillon » sans impression, puis une vraie
+      commande test) + suivi de commande dans l'app ;
+   f. sécurité (JWT sur les fonctions) et légal (conditions de vente, confidentialité, TVA).
+   **3 décisions d'Augustin avant de reprendre** : sa **marge**, **qui encaisse** (compte Stripe), **pays de
+   livraison** (France seule au début ?).
 3. **Tirages photo** (Coups de cœur) : même chaîne que le livre, après lui. Débouche sur
    l'**abonnement mensuel Coups de cœur** (maquette validée le 6 nov., voir §13).
 4. Comptes : Apple, Google, mot de passe oublié + liens des mails (avant la mise en ligne).
@@ -416,8 +447,26 @@ d49d903), poussée par Augustin. `feature/comptes` créée depuis `main`.
   Alertes **non bloquantes**. Vue « Et maintenant ? » : PDF d'essai et Commander = **BIENTÔT**.
 - Aucun prix affiché pour l'instant (à calculer : coût Gelato + livraison + TVA + marge).
 
+**Suite du livre photo (6-7 nov.)** — maquettes validées : `maquette-livre-pdf-essai.html`,
+`maquette-livre-couverture-styles.html` (hors Git).
+- **Couverture** : 6 styles (Pleine page · Photo centrée · Polaroïd · Bandeau · Cadre fin · Titre seul) et **26 couleurs
+  de fond** (`cover.style`, `cover.bg`) ; le fond sert aussi au dos et à la 4ᵉ de couverture. Le titre est en
+  couleur **« auto »** (clair sur fond foncé, foncé sur fond clair, blanc sur la photo) dès qu'on change de style ;
+  « Position » seulement pour Pleine page / Cadre fin. **Photo de couverture recadrable** (`cover.crop`, comme les
+  pages : zoom, déplacer, pivoter, redresser, recentrer). Livres existants = Pleine page, fond crème.
+- **UI compacte** (demandée par Augustin pour gagner de la place) : style, couleur de fond = une ligne (vignette +
+  nom + « Changer ▾ ») qui **déplie** la liste ; format + pages sur **une ligne** (pastilles vertical / horizontal,
+  « 21 × 28 cm », − 30 +, maintenir − / + pour défiler de 2 en 2, toucher le chiffre pour saisir).
+- **Glisser pour tourner les pages** dans l'aperçu et dans l'éditeur de page (désactivé pendant un recadrage).
+- **Couverture à plat** (4ᵉ + dos + face) : dimensions demandées à Gelato (`gelato-cover`) selon le nombre de pages
+  (30 p. → 478×326 mm, dos 6 mm). Aperçu en bas de la section Couverture ; dos = fond + titre à la verticale.
+- **PDF d'essai** (dev seulement) : chaque page dessinée hors écran à 150 dpi, fond perdu 4 mm → capture JPEG →
+  PDF avec boîtes de rognage. Photos prises depuis les fichiers originaux. **Augustin confirme que le PDF respecte
+  les specs Gelato.**
+- **Décision d'Augustin (7 nov.) : la suite (prix → commande → paiement) est mise en standby** ; voir §8.
+
 **Abonnement mensuel Coups de cœur — maquette validée par Augustin** (`maquette-abonnement-coups-de-coeur.html`,
-hors Git, 11 écrans ; **rien de codé**). Entrée = carte « Abonnement » dans la Galerie, section « Mes tirages photos ».
+hors Git, 11 écrans). Entrée = carte « Abonnement » dans la Galerie, section « Mes tirages photos ».
 - Chaque mois (le 1er) : tirage au hasard de **10 coups de cœur** → notification → grille de validation
   (↻ par photo : au hasard / choisir / retirer ; « Tout retirer au sort ») → **validation obligatoire** → suivi
   (validée, impression, expédiée, livrée).
@@ -430,3 +479,16 @@ hors Git, 11 écrans ; **rien de codé**). Entrée = carte « Abonnement » dans
   (coût d'impression + port Gelato + TVA). **À vérifier** aussi : un envoi d'objets réels n'a pas à passer
   par l'achat intégré Apple (RevenueCat) → paiement carte possible. Texte du tuto « aucune photo sur un serveur »
   à changer (dette n°9). L'abonnement exige un compte connecté.
+- **Fournisseur de tirages** : pas de lien API pour l'instant, Augustin imprimera **à la main au début**
+  (donc plus besoin de Gelato pour les tirages ; la marge reste à vérifier avec le futur fournisseur).
+- **Code — ordre de développement** (une étape à la fois, validée par Augustin) :
+  1. ✅ codée, **à tester** : carte « Abonnement » (`GalleryHomeScreen`) + `SubscriptionIntroScreen` (écran 2)
+     + `constants/subscription.js` (prix 7,99 €, 10 photos, format, jours) + icône `mail`. Le bouton
+     « Démarrer l'abonnement » affiche encore « Bientôt disponible ».
+  2. ✅ codée, **à tester** : `SubscriptionSetupScreen` (écrans 3-4, onglets Pour moi / Pour un proche) +
+     `store/useSubscriptionStore.js` (persisté ; `subs[]`). Exige d'être connecté (sinon renvoi vers `Auth`).
+     « S'abonner » enregistre **sans paiement** ; adresse = un seul champ texte libre ; prix seulement pour
+     10 photos (`SUB_PRICE_BY_COUNT`) → 5/15/20 photos : bouton grisé tant que le prix n'est pas fixé.
+  3. Sélection du mois + changer une photo + valider (6-8)
+  · 4. Mes abonnements, suivi, « pas assez de ❤️ » (9-11) · 5. Notification du 1er du mois (5)
+  · 6. Serveur : envoi des photos validées vers Supabase (table + Storage) pour impression manuelle, paiement.
