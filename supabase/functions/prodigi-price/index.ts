@@ -12,6 +12,8 @@
 //   GET .../functions/v1/prodigi-price?sku=...&quote=1&all=1                    → devis 30 → 200 pages, de 2 en 2
 //   GET .../functions/v1/prodigi-price?sku=...&spine=1&pageCount=30             → largeur du dos
 //   Options : &country=FR (défaut FR) · &currency=EUR (défaut EUR)
+//             &copies=10 → nombre d'exemplaires du devis (défaut 1) : sert à chiffrer 5, 10, 15, 20 magnets / tirages d'un coup,
+//             livraison groupée comprise. Pour un produit sans pages (magnet, tirage), mettre &pageCount=2 (ignoré).
 //
 // Réponse : réponses brutes de Prodigi (on les lit d'abord telles quelles, on les nettoiera ensuite).
 //
@@ -50,6 +52,8 @@ Deno.serve(async (req) => {
   if (!/^[A-Z]{2}$/.test(country) || !/^[A-Z]{3}$/.test(currency)) {
     return json({ ok: false, error: "country = 2 lettres (ex. FR), currency = 3 lettres (ex. EUR)." }, 400);
   }
+
+  const copies = Math.min(500, Math.max(1, parseInt(q.get("copies") ?? "1", 10) || 1));
 
   const headers = { "X-API-Key": apiKey, "Content-Type": "application/json", Accept: "application/json" };
 
@@ -125,7 +129,7 @@ Deno.serve(async (req) => {
           res = await call(`${base}/quotes`, {
             destinationCountryCode: country,
             currencyCode: currency,
-            items: [{ sku, copies: 1, attributes, assets }],
+            items: [{ sku, copies, attributes, assets }],
           });
         }
         const raw = await parse(res);
@@ -140,7 +144,7 @@ Deno.serve(async (req) => {
   }
 
   return json({
-    ok: results.length > 0, env, sku, country, currency,
+    ok: results.length > 0, env, sku, country, currency, copies,
     mode: wantSpine ? "spine" : "quote",
     printAreas, attributes,
     results, errors,

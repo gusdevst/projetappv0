@@ -12,6 +12,7 @@ import { usePhotoStore } from "./store/usePhotoStore";
 import { useAuthStore } from "./store/useAuthStore";
 import { refreshReminders } from "./services/notificationService";
 import { startProgressSync, flushProgress } from "./services/progressSync";
+import { startSubscriptionNotifications, refreshSubscriptionNotifications, SUB_NOTIF_ACTION } from "./services/subscriptionNotifications";
 
 // Import défensif : avant le rebuild incluant react-native-gesture-handler dans
 // le binaire natif, on tombe sur un View standard sans gestures. Une fois le rebuild
@@ -99,24 +100,35 @@ function launchDailySession() {
   return true;
 }
 
+// ── Tap sur la notification « Ta sélection du mois est prête » (abonnement Coups de cœur) ──
+// Ouvre la sélection du mois de cet abonnement. Retourne false si l'app n'est pas encore
+// prête (navigation montée + permission photo accordée) : on réessaiera plus tard.
+function openSubscriptionFromNotif(subId) {
+  if (!navigationRef.isReady() || usePhotoStore.getState().permission !== "granted") return false;
+  navigationRef.navigate("SubscriptionMonth", subId ? { subId } : undefined);
+  return true;
+}
+
 export default function App() {
   const checkPermission  = usePhotoStore((s) => s.checkPermission);
   const loadLibrary      = usePhotoStore((s) => s.loadLibrary);
   const pendingNotifTap  = useRef(false);
+  const pendingSubTap    = useRef(null); // { subId } d'un tap sur la notif d'abonnement arrivé trop tôt
 
   useEffect(() => {
     hideAndroidNavBar();
     useAuthStore.getState().init(); // relit la session de connexion (compte) au démarrage
     startProgressSync();            // sauvegarde de la progression sur le compte (si connecté)
+    startSubscriptionNotifications(); // notification du 1er du mois (abonnement Coups de cœur)
 
     // iOS — app tuée puis ouverte via un tap sur la notification :
     // le listener ci-dessous ne se déclenche pas, on récupère la réponse ici.
     Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (
-        response?.notification?.request?.content?.data?.action ===
-        "start_menage_random"
-      ) {
+      const data = response?.notification?.request?.content?.data;
+      if (data?.action === "start_menage_random") {
         pendingNotifTap.current = true;
+      } else if (data?.action === SUB_NOTIF_ACTION) {
+        pendingSubTap.current = { subId: data.subId };
       }
     });
 
@@ -124,6 +136,11 @@ export default function App() {
     // le killed state via ce listener).
     const sub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
+        const data = response?.notification?.request?.content?.data;
+        if (data?.action === SUB_NOTIF_ACTION) {
+          if (!openSubscriptionFromNotif(data.subId)) pendingSubTap.current = { subId: data.subId };
+          return;
+        }
         if (
           response?.notification?.request?.content?.data?.action ===
           "start_menage_random"
@@ -146,6 +163,10 @@ export default function App() {
           pendingNotifTap.current = false;
           launchDailySession();
         }
+        // Idem pour un tap sur la notification de l'abonnement.
+        if (pendingSubTap.current && openSubscriptionFromNotif(pendingSubTap.current.subId)) {
+          pendingSubTap.current = null;
+        }
       }
     })();
 
@@ -164,6 +185,7 @@ export default function App() {
       if (nextState === "background") {
         usePhotoStore.getState().checkAchievements(); // mémorise les galons / badges atteints
         refreshReminders();
+        refreshSubscriptionNotifications(); // prochain 1er du mois (abonnement Coups de cœur)
         flushProgress(); // envoie la progression sans attendre le délai
       }
     });

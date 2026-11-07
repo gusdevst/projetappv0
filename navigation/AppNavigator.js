@@ -29,6 +29,10 @@ import { AuthScreen }             from "../screens/AuthScreen";
 import { BookCheckScreen }        from "../screens/BookCheckScreen";
 import { SubscriptionIntroScreen } from "../screens/SubscriptionIntroScreen";
 import { SubscriptionSetupScreen } from "../screens/SubscriptionSetupScreen";
+import { SubscriptionMonthScreen } from "../screens/SubscriptionMonthScreen";
+import { SubscriptionListScreen } from "../screens/SubscriptionListScreen";
+import { SubscriptionTrackingScreen } from "../screens/SubscriptionTrackingScreen";
+import { SubscriptionHistoryScreen } from "../screens/SubscriptionHistoryScreen";
 import { usePhotoStore }         from "../store/usePhotoStore";
 
 const Stack = createStackNavigator();
@@ -102,6 +106,10 @@ export function AppNavigator() {
       <Stack.Screen name="BookCheck"   component={BookCheckScreen} />
       <Stack.Screen name="SubscriptionIntro" component={SubscriptionIntroScreen} />
       <Stack.Screen name="SubscriptionSetup" component={SubscriptionSetupScreen} />
+      <Stack.Screen name="SubscriptionMonth" component={SubscriptionMonthScreen} />
+      <Stack.Screen name="SubscriptionList" component={SubscriptionListScreen} />
+      <Stack.Screen name="SubscriptionTracking" component={SubscriptionTrackingScreen} />
+      <Stack.Screen name="SubscriptionHistory" component={SubscriptionHistoryScreen} />
       <Stack.Screen name="Auth"        component={AuthScreen} />
     </Stack.Navigator>
   );

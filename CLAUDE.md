@@ -475,7 +475,8 @@ hors Git, 11 écrans). Entrée = carte « Abonnement » dans la Galerie, section
 - Choix par défaut posés par Claude, **à confirmer** : format 10×15 cm ; pas validé à temps = rien ne part, mois non
   facturé ; une photo envoyée ne repart jamais ; moins de 10 ❤️ dispo = écran « Il te manque N coups de cœur ».
 - **Prix décidé (6 nov.)** : **7,99 € / mois par abonnement, livraison incluse** (10 tirages). Total affiché si
-  2 abonnements : 15,98 €. **À décider** : prix pour 5 / 15 / 20 photos (proche). **À vérifier** : marge réelle
+  2 abonnements : 15,98 €. **Grille (7 nov.)** : 5 photos 4,99 € · 10 : 7,99 € · 15 : 10,99 € · 20 : 13,99 €
+  (+3 € par tranche de 5 dès 10 ; modifiable dans `constants/subscription.js`). **À vérifier** : marge réelle
   (coût d'impression + port Gelato + TVA). **À vérifier** aussi : un envoi d'objets réels n'a pas à passer
   par l'achat intégré Apple (RevenueCat) → paiement carte possible. Texte du tuto « aucune photo sur un serveur »
   à changer (dette n°9). L'abonnement exige un compte connecté.
@@ -487,8 +488,78 @@ hors Git, 11 écrans). Entrée = carte « Abonnement » dans la Galerie, section
      « Démarrer l'abonnement » affiche encore « Bientôt disponible ».
   2. ✅ codée, **à tester** : `SubscriptionSetupScreen` (écrans 3-4, onglets Pour moi / Pour un proche) +
      `store/useSubscriptionStore.js` (persisté ; `subs[]`). Exige d'être connecté (sinon renvoi vers `Auth`).
-     « S'abonner » enregistre **sans paiement** ; adresse = un seul champ texte libre ; prix seulement pour
-     10 photos (`SUB_PRICE_BY_COUNT`) → 5/15/20 photos : bouton grisé tant que le prix n'est pas fixé.
-  3. Sélection du mois + changer une photo + valider (6-8)
-  · 4. Mes abonnements, suivi, « pas assez de ❤️ » (9-11) · 5. Notification du 1er du mois (5)
-  · 6. Serveur : envoi des photos validées vers Supabase (table + Storage) pour impression manuelle, paiement.
+     « S'abonner » enregistre **sans paiement** ; adresse avec **recherche en tapant** (`components/AddressInput.js` +
+     `services/addressSearch.js`, API publique Géoplateforme/BAN, France, sans clé ; introuvable → saisie manuelle
+     gardée) + « Nom sur l'enveloppe » + complément facultatif (`sub.recipient`, `sub.address` 2ᵉ ligne) ; prix par nombre de
+     photos dans `SUB_PRICE_BY_COUNT` (un nombre sans prix = bouton grisé).
+  3. ✅ codée, **à tester** : `SubscriptionMonthScreen` (écrans 6-7-8 + 11 « Il te manque N coups de cœur ») ;
+     logique pure dans `services/printSelection.js` (tirage, ↻ au hasard, remise d'aplomb, photos déjà validées
+     exclues ; testée à part) ; store : `selections[subId]["2026-11"] = {photoIds, size, status draft|validated}`.
+     Tirage créé à la 1re ouverture du mois (pas encore le 1er automatique). Valider = figé **sur le téléphone**
+     (rien envoyé). La carte « Abonnement » de la Galerie ouvre cet écran si on a un abonnement, sinon la
+     présentation (provisoire : l'étape 4 la fera ouvrir « Mes abonnements »). Bandeau 💡 de l'écran 11 retiré
+     (règle « moins de N photos → on envoie ce qu'on a ou on saute » pas décidée : bloqué si moins de N).
+  4. ✅ codée, **à tester** : `SubscriptionListScreen` (écran 10 « Mes abonnements » : cartes, total, pause,
+     résiliation = statut `cancelled`, historique gardé), `SubscriptionTrackingScreen` (écran 9, ouvert après
+     « Valider »), `SubscriptionHistoryScreen`. La carte Galerie ouvre « Mes abonnements » (ou la présentation
+     si aucun abonnement). Étapes de suivi dans `services/printSelection.js` (`STAGES`, `selection.stage`,
+     absent = « validée ») : **personne ne les fait avancer pour l'instant** (viendra du serveur / d'Augustin).
+     « Livrée : autour du… » = validation + 7 jours (estimation).
+  5. ✅ codée, **à tester sur vrai téléphone/simulateur** : `services/subscriptionNotifications.js` — notification
+     locale « Ta sélection de <mois> est prête » le **1er à 9 h** (une par abonnement actif ; `Sélection pour
+     <prénom>` pour un proche). Seul le **prochain** 1er est programmé, reprogrammé au lancement, en arrière-plan et à
+     chaque changement d'abonnement ; plafond 4 (iOS = 64 notifs, ~60 prises par les rappels de tri). Tap → écran
+     « Sélection du mois » de l'abonnement (`App.js`, `data.action = "subscription_month"`). La permission est
+     demandée à l'abonnement. `notificationService` n'annule plus que les rappels de tri (avant : tout).
+     **Dates au choix (7 nov.)** : par abonnement, `selectionDay` (jour de réception = notif à 9 h, 1 par défaut) et
+     `sendDay` (jour d'envoi à l'impression = dernier jour pour valider, 25 par défaut, toujours après), 1 → 28 ;
+     choisies au réglage et modifiables dans « Mes abonnements » (`components/SubDaysFields.js`, `subDays(sub)` donne
+     les défauts). **Bouton « Tester la notification (mode dev) »** dans « Mes abonnements » (`__DEV__` seulement :
+     notif dans 5 s). Le tirage n'attend pas `selectionDay` (ouvrable avant).
+     **Pas gérés** : abonnement avec « Je valide chaque envoi » désactivé (aucune notif, aucun envoi auto),
+     rappel avant le 25 si non validé. Le tirage reste créé à la 1re ouverture (pas à 9 h le 1er).
+  6. ✅ codée, **à tester après avoir lancé le SQL** : « Valider et envoyer » (`SubscriptionMonthScreen`) demande l'accord
+     (« seront envoyées à Pellicule pour être imprimées »), envoie les photos originales (`services/printOrders.js`,
+     `submitSelection`) dans le dossier privé `print-photos/<compte>/<abonnement>/<mois>/` puis écrit une ligne dans
+     la table `print_orders` ; **la sélection n'est figée que si tout est parti** (sinon elle reste modifiable +
+     message). `syncOrderStatuses()` relit `status` (validated / printing / shipped / delivered) à l'ouverture de
+     « Mes abonnements », du suivi et de l'historique → le suivi de l'app avance quand Augustin change `status`
+     dans Supabase. **SQL à coller une fois** dans Supabase → SQL Editor : `supabase/sql/print_orders.sql`
+     (table + dossier + sécurité RLS). Impression à la main : Table Editor → `print_orders` (adresse, nom, petit
+     mot, chemins) + Storage → `print-photos`. Photos envoyées **telles quelles** (HEIC possible sur iPhone, pas de
+     réduction : aucun module natif ajouté, pas de rebuild).
+     **Pas fait** : **paiement** (aujourd'hui une validation = tirages gratuits), suppression des fichiers après
+     impression, suppression des fichiers à la suppression du compte (`delete_my_account` ne vide pas le dossier),
+     envoi automatique si « Je valide chaque envoi » est désactivé. **Texte du tuto à changer** (dette n°9) : il dit
+     encore « Pellicule n'envoie aucune photo sur un serveur » → faux dès maintenant ; proposition à valider avec
+     Augustin avant de modifier (Réglages → tuto, Onboarding).
+  **Décisions d'Augustin (7 nov.)** : texte du tuto **gardé tel quel** (aujourd'hui inexact pour l'abonnement ;
+  si besoin le préciser « pour le tri ») ; **information données personnelles** ajoutée au réglage de l'abonnement
+  (bloc « Tes données » : photos + nom + adresse envoyés à l'imprimeur, supprimés après impression ; pour un proche :
+  accord de la personne) — **à compléter avant la mise en ligne** : politique de confidentialité + adresse de contact
+  pour demander la suppression (pas encore de page ni de contact) ; **paiement en standby** ; **nettoyage** :
+  Augustin supprime lui-même les photos dans Supabase → Storage (`print-photos`) après impression (supprimer par le
+  Storage, pas par SQL : le SQL ne retire pas le fichier).
+  **Magnets : RELANCÉ (7 nov.), version « je fabrique moi-même », ✅ codé, à tester** — type d'envoi au choix à
+  l'abonnement : **tirages photo** (10 × 15 cm, 5/10/15/20, 4,99 → 13,99 €) ou **magnets** (**9 magnets carrés de
+  5 × 5 cm, 9,90 € / mois**, livraison comprise ; pour moi ou pour un proche). `constants/subscription.js` :
+  `SUB_PRODUCTS` (libellés + `spec` = taille finale en mm / recadrage centré / disposition 3×3, à adapter selon le
+  futur partenaire), `SUB_PRICES` par produit, `productOf(sub)` (anciens abonnements = tirages). `sub.product` ;
+  choix par cartes dans `SubscriptionSetupScreen` ; la sélection du mois affiche 9 photos en grille 3×3 + note
+  « recadrées au centre » ; la commande (`print_orders`) a deux colonnes en plus, `product` et `spec` (**relancer
+  `supabase/sql/print_orders.sql`** : il ajoute les colonnes sans rien casser). Partenaire d'impression
+  **pas choisi** (Augustin, Gelato, Prodigi…) : l'app envoie déjà tout ce qu'il faut.
+  **Hypothèses à challenger (analyse Gemini d'Augustin, non vérifiée)** : coûts matière (feuille aimantée A4 à
+  0,40 €, papier, encre) et port (lettre suivie ~2,10 €) à confirmer par devis ; marge calculée sur le prix **TTC**
+  (9,90 € TTC = 8,25 € HT) ; **temps de fabrication ignoré** (3-5 min par commande → ~30 h/mois pour 500 abonnés,
+  pas « quelques heures ») ; 9 magnets 5 × 5 n'occupent que 45 % d'une A4 (20 par feuille) → 2 commandes par feuille ;
+  finition (collage papier/aimant sans protection, découpe nette 5 × 5 à coins arrondis) ; prix Cheerz à re-vérifier
+  (12,90 € + port selon Gemini, 16,90 € le coffret Smartbox d'après notre recherche) ; Prodigi `M-MAG-FRI-3X2`
+  (magnet 7,6 × 5,1 cm) mesuré à **2,40 € pièce + 7,73 € de port** depuis le Royaume-Uni → pas compétitif à 9,90 €.
+  Anciennes notes de l'analyse Prodigi : option « photo standard » ou « magnets » par abonnement. Prodigi `M-MAG-FRI-3X2`
+  = magnet 7,6 × 5,1 cm, **2,40 € pièce + 7,73 € de port pour 1** (Royal Mail Airmail non suivi, **depuis le
+  Royaume-Uni**, TVA/douane France à vérifier) → trop cher à l'unité pour 7,99 €. Existe aussi `M-MAG-FRI-4X6`
+  (15,2 × 10,2 cm). Format carré « 6 × 6 » voulu pour concurrencer Cheerz (9 magnets) : SKU **non trouvé**, à copier
+  depuis le catalogue Prodigi. `supabase/functions/prodigi-price` : option `&copies=N` ajoutée **en local, pas
+  déployée** (à faire : `npx supabase functions deploy prodigi-price --no-verify-jwt`).
+  · 7. Paiement (standby ; carte via Stripe ? pas l'achat intégré Apple pour des objets réels, à vérifier).

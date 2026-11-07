@@ -10,7 +10,7 @@ import Text from "../components/AppText";
 import BackButton from "../components/BackButton";
 import { SHADOW } from "../components/home/ui";
 import { C } from "../constants/theme";
-import { SUB_PRICE_LABEL, SUB_PHOTOS } from "../constants/subscription";
+import { SUB_PRICE_LABEL, SUB_PHOTOS, SUB_MAGNETS, SUB_MAGNETS_PRICE_LABEL } from "../constants/subscription";
 import { usePhotoStore } from "../store/usePhotoStore";
 
 const POLA_W = 104;
@@ -80,6 +80,9 @@ export function SubscriptionIntroScreen({ navigation }) {
           <Text style={{ fontSize: 28, fontWeight: "800", color: C.text }}>{SUB_PRICE_LABEL}</Text>
           <Text style={{ fontSize: 12.5, color: C.textMid }}>/ mois · {SUB_PHOTOS} tirages, livraison comprise</Text>
         </View>
+        <Text style={{ fontSize: 12.5, color: C.textMid, marginTop: 2 }}>
+          ou <Text style={{ fontWeight: "700", color: C.text }}>{SUB_MAGNETS_PRICE_LABEL}</Text> / mois · {SUB_MAGNETS} magnets 5 × 5 cm
+        </Text>
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => navigation.navigate("SubscriptionSetup")}

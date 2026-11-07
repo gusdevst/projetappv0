@@ -20,6 +20,7 @@ import { useBookFonts } from "../components/book/bookFonts";
 import { bookStats, pageRatio } from "../services/photoBook";
 import { C, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
+import { useSubscriptionStore } from "../store/useSubscriptionStore";
 
 const formatSize = (mo) => (mo < 1024 ? `${mo.toFixed(0)} Mo` : `${(mo / 1024).toFixed(1)} Go`);
 
@@ -90,6 +91,7 @@ export function GalleryHomeScreen({ navigation }) {
   const createAlbum   = usePhotoStore((s) => s.createAlbum);
   const renameAlbum   = usePhotoStore((s) => s.renameAlbum);
   const deleteAlbum   = usePhotoStore((s) => s.deleteAlbum);
+  const hasSub        = useSubscriptionStore((s) => s.subs.some((x) => x.status !== "cancelled")); // abonné → la carte ouvre « Mes abonnements »
   const books         = usePhotoStore((s) => s.books);
   const deleteBook    = usePhotoStore((s) => s.deleteBook);
   useBookFonts(); // titres des couvertures dans leur police
@@ -265,9 +267,9 @@ export function GalleryHomeScreen({ navigation }) {
               </View>
             }
             title="Abonnement"
-            sub="10 tirages par mois"
+            sub="Tirages ou magnets"
             subLines={2}
-            onPress={() => navigation.navigate("SubscriptionIntro")}
+            onPress={() => navigation.navigate(hasSub ? "SubscriptionList" : "SubscriptionIntro")}
           />
         </View>
 

@@ -82,6 +82,17 @@ function planDates(slots, skipToday) {
   return dates.sort((a, b) => a - b);
 }
 
+// Annule les rappels de TRI seulement (data.action = "start_menage_random").
+// Les notifications de l'abonnement « Coups de cœur » (services/subscriptionNotifications.js) restent.
+async function cancelTriReminders() {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    scheduled
+      .filter((n) => n.content?.data?.action === "start_menage_random")
+      .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
+  );
+}
+
 // ── Demande la permission ────────────────────────────────────────────────────
 export async function requestPermission() {
   const { status: existing } = await Notifications.getPermissionsAsync();
@@ -93,7 +104,7 @@ export async function requestPermission() {
 // ── Programme le rappel ──────────────────────────────────────────────────────
 // stats = { remainingCount, randomCount, notificationHour, notificationMinute }
 export async function scheduleReminder(frequency, stats = {}) {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await cancelTriReminders();
   if (frequency === "off") return { success: true };
 
   const granted = await requestPermission();
@@ -153,7 +164,7 @@ export async function scheduleReminder(frequency, stats = {}) {
     // Fallback pour les versions d'expo-notifications sans SchedulableTriggerInputTypes
     try {
       if (dated) {
-        await Notifications.cancelAllScheduledNotificationsAsync(); // repart propre si le 1er essai a échoué en cours de route
+        await cancelTriReminders(); // repart propre si le 1er essai a échoué en cours de route
         for (let i = 0; i < dates.length; i++) {
           await Notifications.scheduleNotificationAsync({ content: { ...content, body: bodyFor(i) }, trigger: dates[i] });
         }
@@ -172,7 +183,7 @@ export async function scheduleReminder(frequency, stats = {}) {
 
 // ── Annule tous les rappels ───────────────────────────────────────────────────
 export async function cancelReminders() {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await cancelTriReminders();
 }
 
 // ── Reprogramme les rappels avec les données du moment ───────────────────────
