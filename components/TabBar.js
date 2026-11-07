@@ -9,6 +9,7 @@ import Text from "./AppText";
 import Icon from "./Icons";
 import { C } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
+import { useSubscriptionTodo } from "../hooks/useSubscriptionTodo";
 
 // nom de l'onglet → icône + libellé
 const TABS = {
@@ -23,6 +24,7 @@ export function TabBar({ state, navigation }) {
   const homeMode = usePhotoStore((s) => s.homeMode);
   const toggleHomeMode = usePhotoStore((s) => s.toggleHomeMode);
   const modeColor = homeMode === "album" ? C.album : C.accent;
+  const subTodo = useSubscriptionTodo(); // sélections d'abonnement à valider → point sur « Galerie »
 
   const go = (route, focused) => {
     const ev = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
@@ -46,7 +48,12 @@ export function TabBar({ state, navigation }) {
         accessibilityState={{ selected: focused }}
         style={{ flex: 1, alignItems: "center", gap: 5, paddingTop: 15 }}
       >
-        <Icon name={t.icon} size={27} color={color} strokeWidth={focused ? 2.1 : 1.9} />
+        <View>
+          <Icon name={t.icon} size={27} color={color} strokeWidth={focused ? 2.1 : 1.9} />
+          {route.name === "GalleryTab" && subTodo > 0 && (
+            <View style={{ position: "absolute", top: -2, right: -4, width: 11, height: 11, borderRadius: 6, backgroundColor: C.album, borderWidth: 2, borderColor: C.bgCard }} />
+          )}
+        </View>
         <Text style={{ fontSize: 11.5, fontWeight: focused ? "600" : "400", color }} numberOfLines={1}>{t.label}</Text>
       </TouchableOpacity>
     );

@@ -29,6 +29,7 @@ import { AuthScreen }             from "../screens/AuthScreen";
 import { BookCheckScreen }        from "../screens/BookCheckScreen";
 import { SubscriptionIntroScreen } from "../screens/SubscriptionIntroScreen";
 import { SubscriptionSetupScreen } from "../screens/SubscriptionSetupScreen";
+import { SubscriptionMagnetsScreen } from "../screens/SubscriptionMagnetsScreen";
 import { SubscriptionMonthScreen } from "../screens/SubscriptionMonthScreen";
 import { SubscriptionListScreen } from "../screens/SubscriptionListScreen";
 import { SubscriptionTrackingScreen } from "../screens/SubscriptionTrackingScreen";
@@ -105,6 +106,7 @@ export function AppNavigator() {
       <Stack.Screen name="BookPageEditor" component={BookPageEditorScreen} />
       <Stack.Screen name="BookCheck"   component={BookCheckScreen} />
       <Stack.Screen name="SubscriptionIntro" component={SubscriptionIntroScreen} />
+      <Stack.Screen name="SubscriptionMagnets" component={SubscriptionMagnetsScreen} />
       <Stack.Screen name="SubscriptionSetup" component={SubscriptionSetupScreen} />
       <Stack.Screen name="SubscriptionMonth" component={SubscriptionMonthScreen} />
       <Stack.Screen name="SubscriptionList" component={SubscriptionListScreen} />

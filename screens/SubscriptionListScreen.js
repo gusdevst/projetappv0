@@ -40,7 +40,7 @@ function DashedRow({ label, onPress }) {
   );
 }
 
-export function SubscriptionListScreen({ navigation }) {
+export function SubscriptionListScreen({ navigation, route }) {
   const allSubs    = useSubscriptionStore((s) => s.subs);
   const selections = useSubscriptionStore((s) => s.selections);
   const updateSub  = useSubscriptionStore((s) => s.updateSub);
@@ -51,7 +51,7 @@ export function SubscriptionListScreen({ navigation }) {
   const next  = monthName(nextMonthKey(month));
   const hasSelf = subs.some((x) => x.kind === "self");
   useEffect(() => { syncOrderStatuses(); }, []); // statuts d'impression à jour (table print_orders)
-  const [daysSubId, setDaysSubId] = useState(null); // abonnement dont on change les dates
+  const [daysSubId, setDaysSubId] = useState(route?.params?.editDaysFor ?? null); // abonnement dont on change les dates
   const daysSub = subs.find((x) => x.id === daysSubId);
 
   const totalCents = subs.filter((x) => x.status === "active").reduce((a, x) => a + priceCentsFor(x.count, x.product), 0);

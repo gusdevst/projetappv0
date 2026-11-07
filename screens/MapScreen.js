@@ -1,7 +1,9 @@
 // screens/MapScreen.js
 // Affiche les photos géolocalisées sur une carte Leaflet.
-// Multi-sélection : cliquer sur plusieurs clusters les sélectionne tous (toggle).
-// Le CTA "Trier" lance le tri sur l'union de toutes les photos sélectionnées.
+// Par défaut (aucun lieu touché) : sélection AUTOMATIQUE = les lieux visibles sur la carte, qui suit le
+// déplacement et le zoom. Pour choisir soi-même : toucher un ou plusieurs lieux (toggle) ; la sélection
+// manuelle prend alors le dessus. « Tout désélectionner » revient à la sélection automatique.
+// Le CTA "Trier" lance le tri sur les photos de la sélection (automatique ou manuelle).
 //
 // Chargement GPS :
 //   L'état du scan (geoPhotos, geoScanStatus, geoScanProgress) vit dans le
@@ -35,6 +37,9 @@ export function MapScreen({ navigation, route }) {
   const scanGeo         = usePhotoStore((s) => s.scanGeo);
 
   const [selectedKeys, setSelectedKeys] = useState(new Set());
+  // Lieux actuellement visibles sur la carte (envoyés par la carte à chaque déplacement / zoom).
+  // null = la carte ne l'a pas encore dit → on prend tous les lieux.
+  const [visibleKeys, setVisibleKeys] = useState(null);
   const webviewRef = useRef(null);
   // La WebView est-elle prête à recevoir des commandes JS ?
   const mapReadyRef = useRef(false);
@@ -86,17 +91,22 @@ export function MapScreen({ navigation, route }) {
     label: `${c.lat.toFixed(2)}, ${c.lng.toFixed(2)}`,
   })), [clusters]);
 
-  // Photos affichées = union de tous les clusters sélectionnés (ou tous si aucun)
+  // Lieux de la sélection automatique : ceux visibles sur la carte.
+  const visibleClusters = useMemo(
+    () => (visibleKeys ? clusters.filter((c) => visibleKeys.has(c.key)) : clusters),
+    [clusters, visibleKeys]
+  );
+
+  // Photos affichées = lieux touchés (sélection manuelle) ; sinon lieux visibles sur la carte (automatique).
   const displayedPhotos = useMemo(() => {
-    if (selectedKeys.size === 0) return photosWithGeo;
-    const selected = clusters.filter((c) => selectedKeys.has(c.key));
+    const selected = selectedKeys.size === 0 ? visibleClusters : clusters.filter((c) => selectedKeys.has(c.key));
     const seen = new Set();
     const result = [];
     selected.forEach((c) => c.photos.forEach((p) => {
       if (!seen.has(p.id)) { seen.add(p.id); result.push(p); }
     }));
     return result;
-  }, [selectedKeys, clusters, photosWithGeo]);
+  }, [selectedKeys, clusters, visibleClusters]);
 
   // ─── Mises à jour de la carte SANS la recharger ──────────────────────────
   // Avant : le HTML dépendait des marqueurs → à chaque lot de 20 photos scannées
@@ -186,11 +196,24 @@ export function MapScreen({ navigation, route }) {
 
     markers.forEach(addMarkerToMap);
 
+    // Dit à l'app quels lieux sont visibles (après chaque déplacement / zoom, une fois la carte immobile).
+    var reportTimer=null;
+    function reportVisible(){
+      clearTimeout(reportTimer);
+      reportTimer=setTimeout(function(){
+        var b=map.getBounds();
+        var keys=markers.filter(function(m){return b.contains([m.lat,m.lng]);}).map(function(m){return m.key;});
+        window.ReactNativeWebView.postMessage(JSON.stringify({visible:keys}));
+      },250);
+    }
+    map.on('moveend',reportVisible);
+
     function setMarkers(list){
       Object.keys(markerMap).forEach(function(k){ map.removeLayer(markerMap[k]); });
       markerMap={};
       markers=list;
       markers.forEach(addMarkerToMap);
+      reportVisible();
     }
 
     function updateSelection(keys){
@@ -200,12 +223,14 @@ export function MapScreen({ navigation, route }) {
         if(g) markerMap[k].setIcon(makeIcon(g,selectedKeys.has(k)));
       });
     }
+    reportVisible();
   </script></body></html>`; }
 
   const onMessage = (e) => {
     try {
       const data = JSON.parse(e.nativeEvent.data);
-      if (data.key) toggleCluster(data.key);
+      if (Array.isArray(data.visible)) setVisibleKeys(new Set(data.visible));
+      else if (data.key) toggleCluster(data.key);
     } catch {}
   };
 
@@ -213,11 +238,13 @@ export function MapScreen({ navigation, route }) {
 
   function addAsFilter() {
     if (displayedPhotos.length === 0) return;
-    const label = selectionCount > 0
-      ? `${selectionCount} lieu${selectionCount > 1 ? "x" : ""}`
-      : "Tous les lieux";
+    const auto = selectionCount === 0;
+    const n = auto ? visibleClusters.length : selectionCount;
+    const label = `${n} lieu${n > 1 ? "x" : ""}${auto ? " visible" + (n > 1 ? "s" : "") : ""}`;
+    const keys = (auto ? visibleClusters.map((c) => c.key) : [...selectedKeys]).sort().join("|");
+    let h = 5381; for (let i = 0; i < keys.length; i++) h = ((h << 5) + h + keys.charCodeAt(i)) | 0; // court identifiant du jeu de lieux
     addAlbumFilter({
-      id: `lieu-${[...selectedKeys].sort().join("|") || "all"}`,
+      id: `lieu-${auto ? "zone" : "choix"}-${(h >>> 0).toString(36)}`,
       type: "lieu",
       label,
       photoIds: displayedPhotos.map((p) => p.id),
@@ -240,7 +267,7 @@ export function MapScreen({ navigation, route }) {
               ? "Chargement du cache GPS…"
               : selectionCount > 0
               ? `${selectionCount} lieu${selectionCount > 1 ? "x" : ""} sélectionné${selectionCount > 1 ? "s" : ""} · ${displayedPhotos.length} photos`
-              : `${photosWithGeo.length} photo(s) géolocalisée(s)`}
+              : `${visibleClusters.length} lieu${visibleClusters.length > 1 ? "x" : ""} visible${visibleClusters.length > 1 ? "s" : ""} · ${displayedPhotos.length} photo${displayedPhotos.length > 1 ? "s" : ""}`}
           </Text>
         </View>
         {selectionCount > 0 && (
@@ -303,7 +330,7 @@ export function MapScreen({ navigation, route }) {
 
           {selectionCount === 0 && (
             <Text style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginTop: 8, fontStyle: "italic" }}>
-              Appuie sur un ou plusieurs lieux pour les sélectionner
+              Déplace ou zoome la carte : on trie les lieux visibles. Touche des lieux pour choisir toi-même.
             </Text>
           )}
 
@@ -339,7 +366,7 @@ export function MapScreen({ navigation, route }) {
               }}
             >
               <Text style={{ color: "#fff", fontWeight: "600", fontSize: 15 }}>
-                🧹 Trier {selectionCount > 0 ? `ces ${displayedPhotos.length}` : "toutes les"} photos
+                {displayedPhotos.length === 0 ? "Aucune photo dans la zone visible" : `🧹 Trier ces ${displayedPhotos.length} photo${displayedPhotos.length > 1 ? "s" : ""}`}
               </Text>
             </TouchableOpacity>
 

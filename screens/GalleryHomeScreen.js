@@ -21,6 +21,9 @@ import { bookStats, pageRatio } from "../services/photoBook";
 import { C, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
+import SubscriptionRow from "../components/SubscriptionRow";
+import { useKeptUrls } from "../components/ProductArt";
+import { monthKey, monthName, subStatus } from "../services/printSelection";
 
 const formatSize = (mo) => (mo < 1024 ? `${mo.toFixed(0)} Mo` : `${(mo / 1024).toFixed(1)} Go`);
 
@@ -91,7 +94,12 @@ export function GalleryHomeScreen({ navigation }) {
   const createAlbum   = usePhotoStore((s) => s.createAlbum);
   const renameAlbum   = usePhotoStore((s) => s.renameAlbum);
   const deleteAlbum   = usePhotoStore((s) => s.deleteAlbum);
-  const hasSub        = useSubscriptionStore((s) => s.subs.some((x) => x.status !== "cancelled")); // abonné → la carte ouvre « Mes abonnements »
+  const subs          = useSubscriptionStore((s) => s.subs);
+  const selections    = useSubscriptionStore((s) => s.selections);
+  const updateSub     = useSubscriptionStore((s) => s.updateSub);
+  const liveSubs      = useMemo(() => subs.filter((x) => x.status !== "cancelled"), [subs]); // résiliés = hors de la liste
+  const hasSub        = liveSubs.length > 0; // abonné → section « Mes abonnements » à la place de la carte « Abonnement »
+  const subUrls       = useKeptUrls(9);      // vignettes des abonnements : les vrais coups de cœur
   const books         = usePhotoStore((s) => s.books);
   const deleteBook    = usePhotoStore((s) => s.deleteBook);
   useBookFonts(); // titres des couvertures dans leur police
@@ -150,6 +158,37 @@ export function GalleryHomeScreen({ navigation }) {
   const inAnyAlbum = new Set(albums.flatMap((a) => a.photoIds));
   const sansAlbum = printed.filter((p) => !inAnyAlbum.has(p.id));
   const trashSize = deleted.reduce((a, p) => a + (p.size || 0), 0);
+
+  // ── Abonnements en cours : ouvrir une ligne, menu ··· ──
+  const subMonth = monthKey();
+  function openSub(x) {
+    const st = subStatus(x, selections[x.id]?.[subMonth]);
+    if (st.kind === "paused") navigation.navigate("SubscriptionList");
+    else if (st.kind === "validated") navigation.navigate("SubscriptionTracking", { subId: x.id, month: subMonth });
+    else navigation.navigate("SubscriptionMonth", { subId: x.id });
+  }
+  function openSubMenu(x) {
+    const label = `${x.product === "magnets" ? "Magnets" : "Tirages"} · ${x.kind === "self" ? "pour moi" : x.name}`;
+    const st = subStatus(x, selections[x.id]?.[subMonth]);
+    const paused = x.status === "paused";
+    Alert.alert(label, undefined, [
+      ...(paused ? [] : [st.kind === "validated"
+        ? { text: "Voir le suivi", onPress: () => openSub(x) }
+        : { text: `Voir ma sélection de ${monthName(subMonth)}`, onPress: () => openSub(x) }]),
+      { text: "Changer les dates d'envoi", onPress: () => navigation.navigate("SubscriptionList", { editDaysFor: x.id }) },
+      paused
+        ? { text: "Reprendre l'abonnement", onPress: () => updateSub(x.id, { status: "active" }) }
+        : { text: "Mettre en pause", onPress: () => updateSub(x.id, { status: "paused" }) },
+      {
+        text: "Résilier", style: "destructive",
+        onPress: () => Alert.alert("Résilier ?", `L'abonnement « ${label} » s'arrête. Les envois déjà validés restent dans l'historique.`, [
+          { text: "Annuler", style: "cancel" },
+          { text: "Résilier", style: "destructive", onPress: () => updateSub(x.id, { status: "cancelled" }) },
+        ]),
+      },
+      { text: "Annuler", style: "cancel" },
+    ]);
+  }
 
   // ── Menu ··· d'un album (repris de l'ancien accueil) ──
   const [renameTarget, setRenameTarget] = useState(null);
@@ -255,8 +294,8 @@ export function GalleryHomeScreen({ navigation }) {
             sub={`${keptCount} photo${keptCount > 1 ? "s" : ""} à imprimer`}
             onPress={() => open({ section: "kept" })}
           />
-          {/* Abonnement mensuel : les coups de cœur par la poste (maquette validée) */}
-          <Card
+          {/* Sans abonnement : la carte « Abonnement » est la porte d'entrée (avec un abonnement : section ci-dessous) */}
+          {!hasSub && <Card
             width={CARD_W}
             cover={
               <View style={{ height: COVER_H, borderRadius: 11, backgroundColor: C.sage2, alignItems: "center", justifyContent: "center" }}>
@@ -269,9 +308,32 @@ export function GalleryHomeScreen({ navigation }) {
             title="Abonnement"
             sub="Tirages ou magnets"
             subLines={2}
-            onPress={() => navigation.navigate(hasSub ? "SubscriptionList" : "SubscriptionIntro")}
-          />
+            onPress={() => navigation.navigate("SubscriptionIntro")}
+          />}
         </View>
+
+        {/* Mes abonnements : un par ligne, avec ce qu'il y a à faire et le menu ··· (maquette validée le 8 nov.) */}
+        {hasSub && (
+          <>
+            <SectionTitle title="Mes abonnements" right={
+              <TouchableOpacity onPress={() => navigation.navigate("SubscriptionList")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.accent }}>Gérer ›</Text>
+              </TouchableOpacity>
+            } />
+            <View style={{ gap: 9 }}>
+              {liveSubs.map((x, i) => (
+                <SubscriptionRow key={x.id} sub={x} st={subStatus(x, selections[x.id]?.[subMonth])}
+                  urls={subUrls.slice((i * 3) % 9, ((i * 3) % 9) + 3)}
+                  onPress={() => openSub(x)} onMenu={() => openSubMenu(x)} />
+              ))}
+              <TouchableOpacity onPress={() => navigation.navigate("SubscriptionIntro")} activeOpacity={0.8}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderStyle: "dashed", borderColor: C.album, borderRadius: 15, paddingVertical: 12 }}>
+                <Text style={{ fontSize: 17, color: C.album, marginTop: -2 }}>+</Text>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: C.album }}>Ajouter un abonnement</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
 
         <View style={{ gap: 10, marginTop: 14 }}>
           {sansAlbum.length > 0 && (

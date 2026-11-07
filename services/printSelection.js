@@ -4,6 +4,8 @@
 // - `size` = nombre de photos voulu ce mois-ci (baisse de 1 si on retire une photo sans la remplacer)
 // - une photo déjà validée pour un abonnement n'est plus jamais proposée à cet abonnement
 
+import { subDays } from "../constants/subscription";
+
 const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 
 // "2026-11" (mois local)
@@ -27,6 +29,23 @@ const SHORT = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août
 export function shortDate(ts) {
   const d = new Date(ts);
   return `${d.getDate()} ${SHORT[d.getMonth()]}`;
+}
+
+export const monthShort = (key) => SHORT[Number(key.slice(5, 7)) - 1] ?? "";
+
+// Où en est un abonnement CE mois-ci ? (pour la pastille d'état de la Galerie et le point de l'onglet)
+//   paused    : en pause
+//   validated : sélection validée (stageIdx = avancement du suivi)
+//   soon      : pas encore le jour de réception (selectionDay) : « Prochaine sélection le … »
+//   todo      : sélection à valider avant sendDay
+export function subStatus(sub, sel, now = new Date()) {
+  const { selectionDay, sendDay } = subDays(sub);
+  const mShort = monthShort(monthKey(now));
+  const base = { selectionDay, sendDay, monthShort: mShort };
+  if (sub.status === "paused") return { kind: "paused", ...base };
+  if (sel?.status === "validated") return { kind: "validated", stageIdx: stageIndex(sel), ...base };
+  if (now.getDate() < selectionDay) return { kind: "soon", ...base };
+  return { kind: "todo", ...base };
 }
 
 // Étapes de suivi d'une sélection validée. `sel.stage` (absent = "validated") sera mis à jour

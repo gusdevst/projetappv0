@@ -556,6 +556,14 @@ hors Git, 11 écrans). Entrée = carte « Abonnement » dans la Galerie, section
   finition (collage papier/aimant sans protection, découpe nette 5 × 5 à coins arrondis) ; prix Cheerz à re-vérifier
   (12,90 € + port selon Gemini, 16,90 € le coffret Smartbox d'après notre recherche) ; Prodigi `M-MAG-FRI-3X2`
   (magnet 7,6 × 5,1 cm) mesuré à **2,40 € pièce + 7,73 € de port** depuis le Royaume-Uni → pas compétitif à 9,90 €.
+  **Maquette « magnets mis en avant » VALIDÉE (7 nov.), ✅ codée, à tester** : `maquette-abonnement-magnets.html`
+  (hors Git). `components/ProductArt.js` (`MagnetTile`, `MagnetGrid`, `MagnetCluster`, `PrintTile`,
+  `useKeptUrls` = les vrais coups de cœur, aplats sauge à défaut) remplace les émojis ; `SubscriptionIntroScreen`
+  refait (visuel de magnets éparpillés, deux offres, magnets en grand + NOUVEAU, présélectionnés, « Voir le détail ›»
+  quand la carte magnets est déjà sélectionnée) ; nouvel écran `SubscriptionMagnetsScreen` (détail : grille 3×3,
+  3 atouts, prix, « Plutôt des tirages photo ? ») ; `SubscriptionSetupScreen` : choix avec vignettes, magnets
+  présélectionnés (`route.params.product`). Photos Cheerz fournies = inspiration seulement (non reprises) ; pastille
+  NOUVEAU à retirer après le lancement (à faire).
   Anciennes notes de l'analyse Prodigi : option « photo standard » ou « magnets » par abonnement. Prodigi `M-MAG-FRI-3X2`
   = magnet 7,6 × 5,1 cm, **2,40 € pièce + 7,73 € de port pour 1** (Royal Mail Airmail non suivi, **depuis le
   Royaume-Uni**, TVA/douane France à vérifier) → trop cher à l'unité pour 7,99 €. Existe aussi `M-MAG-FRI-4X6`
@@ -563,3 +571,30 @@ hors Git, 11 écrans). Entrée = carte « Abonnement » dans la Galerie, section
   depuis le catalogue Prodigi. `supabase/functions/prodigi-price` : option `&copies=N` ajoutée **en local, pas
   déployée** (à faire : `npx supabase functions deploy prodigi-price --no-verify-jwt`).
   · 7. Paiement (standby ; carte via Stripe ? pas l'achat intégré Apple pour des objets réels, à vérifier).
+
+**Carte « Tri par lieu » (`MapScreen`, 7 nov.) — ✅ codé, à tester** : par défaut (aucun lieu touché) la sélection est
+**automatique = les lieux visibles sur la carte**, qui suit le déplacement et le zoom (la carte Leaflet dans la
+WebView envoie `{visible:[clés]}` à chaque `moveend`, 250 ms après l'arrêt). Toucher des lieux = sélection manuelle
+(prioritaire) ; « Tout désélectionner » revient à l'automatique. Bouton « Trier ces N photos » (grisé si 0 dans la zone) ;
+« Ajouter comme filtre » (mode Album) garde la sélection automatique (« N lieux visibles », id court par hachage).
+La vue initiale est inchangée (centrée sur le 1er lieu, zoom 6) donc la sélection de départ est la zone autour de lui.
+
+**Galerie — abonnements en cours (8 nov.) : maquette VALIDÉE, ✅ codée, à tester** :
+`maquette-galerie-abonnements.html` (hors Git). `GalleryHomeScreen` : avec au moins un abonnement non résilié, la carte
+« Abonnement » est remplacée par la section **« Mes abonnements »** (`components/SubscriptionRow.js` : vignette
+magnets/tirages avec les vrais coups de cœur, « Magnets · pour moi » / « Tirages · <prénom> », prix, pastille d'état,
+« ··· »), « Gérer › » (→ `SubscriptionList`) et « + Ajouter un abonnement » (→ présentation). État calculé par
+`subStatus()` (`services/printSelection.js`) : `paused` « En pause », `validated` « ✓ Validée · en préparation » /
+« ✓ En impression »…, `soon` « Prochaine sélection le <jour> » (avant le jour de réception choisi), `todo` « À valider
+avant le <jour d'envoi> ». Toucher une ligne : sélection du mois, suivi si validée, liste si en pause. Menu « ··· » :
+voir la sélection / le suivi, changer les dates (ouvre `SubscriptionList` avec `route.params.editDaysFor`),
+pause / reprendre, résilier (confirmation). **Point orange sur l'onglet Galerie** (`TabBar`,
+`hooks/useSubscriptionTodo.js`) tant qu'un abonnement actif est « à valider ». Sans abonnement : carte inchangée.
+
+**Sélection du mois — photo en grand (8 nov.) : ✅ codé, à tester** (`SubscriptionMonthScreen`) : toucher une photo de la grille
+l'ouvre en grand (calque dans l'écran, pas un `Modal`, pour que la feuille « Remplacer cette photo » s'ouvre par-dessus).
+Magnets : aperçu **carré recadré au centre** (« Aperçu du magnet 5 × 5 cm ») ; tirages : photo entière. Boutons :
+« Changer cette photo » (ouvre la feuille : une autre au hasard / choisir moi-même / retirer ; la grande vue montre ensuite la
+nouvelle photo) et « Retour à la grille » (aussi ✕ et bouton retour Android). Sélection validée : seulement « Retour à la grille ».
+Pas de défilement gauche/droite entre photos (idée possible).
+

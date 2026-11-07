@@ -8,8 +8,8 @@
 // Pour l'instant la validation reste sur le téléphone : l'envoi pour impression viendra plus tard.
 
 import { useEffect, useMemo, useState } from "react";
-import { View, ScrollView, TouchableOpacity, StatusBar, Alert, Modal, Pressable, ActivityIndicator, useWindowDimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View, ScrollView, TouchableOpacity, StatusBar, Alert, Modal, Pressable, ActivityIndicator, BackHandler, useWindowDimensions } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import Text from "../components/AppText";
 import Icon from "../components/Icons";
@@ -25,9 +25,9 @@ import { submitSelection, NOT_SIGNED_IN } from "../services/printOrders";
 const GAP = 6;
 
 // Une photo de la grille : cœur en haut à gauche, ↻ en bas à droite (sauf si validée).
-function Cell({ uri, size, onRefresh }) {
+function Cell({ uri, size, onRefresh, onPress }) {
   return (
-    <View style={{ width: size, height: size, borderRadius: 10, overflow: "hidden", backgroundColor: C.bgMuted }}>
+    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={{ width: size, height: size, borderRadius: 10, overflow: "hidden", backgroundColor: C.bgMuted }}>
       <Image source={{ uri }} contentFit="cover" style={{ width: size, height: size }} />
       <View style={{ position: "absolute", left: 5, top: 5 }}>
         <Icon name="heart" size={14} color="#fff" filled />
@@ -38,12 +38,13 @@ function Cell({ uri, size, onRefresh }) {
           <Icon name="refresh" size={14} color={C.text} strokeWidth={2.4} />
         </TouchableOpacity>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
 export function SubscriptionMonthScreen({ navigation, route }) {
   const { width: SW } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const CELL = (SW - 32 - GAP * 2) / 3;
 
   const allSubs    = useSubscriptionStore((s) => s.subs);
@@ -95,6 +96,13 @@ export function SubscriptionMonthScreen({ navigation, route }) {
   const [mode, setMode]     = useState("menu");
   const closeSheet = () => { setTarget(null); setMode("menu"); };
   const [upload, setUpload] = useState(null); // envoi des photos en cours : { done, total } (sinon null)
+  const [viewIdx, setViewIdx] = useState(null); // photo ouverte en grand (position dans la sélection), sinon null
+  // Android : le bouton retour referme d'abord la photo en grand.
+  useEffect(() => {
+    if (viewIdx === null) return undefined;
+    const h = BackHandler.addEventListener("hardwareBackPress", () => { setViewIdx(null); return true; });
+    return () => h.remove();
+  }, [viewIdx]);
 
   if (!sub) {
     return (
@@ -128,6 +136,7 @@ export function SubscriptionMonthScreen({ navigation, route }) {
     save(next);
   }
   function removeOne() {
+    setViewIdx(null);
     const next = photoIds.filter((_, i) => i !== target);
     closeSheet();
     save(next, Math.max(0, (sel?.size ?? sub.count) - 1));
@@ -249,7 +258,7 @@ export function SubscriptionMonthScreen({ navigation, route }) {
 
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: GAP, marginTop: 12 }}>
               {photoIds.map((id, i) => (
-                <Cell key={id} uri={alive.get(id)} size={CELL} onRefresh={validated ? null : () => { setTarget(i); setMode("menu"); }} />
+                <Cell key={id} uri={alive.get(id)} size={CELL} onPress={() => setViewIdx(i)} onRefresh={validated ? null : () => { setTarget(i); setMode("menu"); }} />
               ))}
             </View>
 
@@ -293,6 +302,53 @@ export function SubscriptionMonthScreen({ navigation, route }) {
           )}
         </>
       )}
+
+      {/* ── Photo en grand : retour à la grille, ou changer la photo (feuille « Remplacer cette photo ») ── */}
+      {viewIdx !== null && !!photoIds[viewIdx] && (() => {
+        const magnets = sub.product === "magnets";
+        const W = SW - 32;
+        return (
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 50, backgroundColor: "rgba(20,22,18,0.95)", paddingTop: insets.top + 10, paddingBottom: Math.max(insets.bottom, 18) + 6, paddingHorizontal: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>
+                {magnets ? "Magnet" : "Photo"} {viewIdx + 1} sur {photoIds.length}
+              </Text>
+              <TouchableOpacity onPress={() => setViewIdx(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" }}>
+                <Icon name="close" size={18} color="#fff" strokeWidth={2.4} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              {magnets ? (
+                // Magnet carré : on montre exactement ce qui sera imprimé (recadré au centre)
+                <View style={{ width: W, height: W, borderRadius: W * 0.06, overflow: "hidden", backgroundColor: C.bgMuted }}>
+                  <Image source={{ uri: alive.get(photoIds[viewIdx]) }} contentFit="cover" style={{ width: W, height: W }} />
+                </View>
+              ) : (
+                <Image source={{ uri: alive.get(photoIds[viewIdx]) }} contentFit="contain" style={{ width: W, height: "80%", borderRadius: 6 }} />
+              )}
+              {magnets && (
+                <Text style={{ fontSize: 11.5, color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 12 }}>
+                  Aperçu du magnet 5 × 5 cm, recadré au centre
+                </Text>
+              )}
+            </View>
+
+            {!validated && (
+              <TouchableOpacity activeOpacity={0.85} onPress={() => { setTarget(viewIdx); setMode("menu"); }}
+                style={{ height: 50, borderRadius: 25, backgroundColor: C.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <Icon name="refresh" size={17} color="#fff" strokeWidth={2.4} />
+                <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>Changer cette photo</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setViewIdx(null)}
+              style={{ height: 50, borderRadius: 25, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.4)", alignItems: "center", justifyContent: "center", marginTop: 10 }}>
+              <Text style={{ color: "#fff", fontSize: 15, fontWeight: "600" }}>Retour à la grille</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
 
       {/* ── Écran 7 : changer une photo (feuille du bas) ── */}
       <Modal visible={target !== null} transparent animationType="slide" onRequestClose={closeSheet}>
