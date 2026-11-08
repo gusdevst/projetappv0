@@ -516,6 +516,11 @@ export function SwipeScreen({ navigation, route }) {
 
       </View>
 
+      {/* Barre de suivi discrète, en bas sous les boutons (celle du haut se voit peu) */}
+      <View pointerEvents="none" style={{ position: "absolute", bottom: 18, left: 48, right: 48, height: 3, borderRadius: 2, zIndex: 10, backgroundColor: "rgba(255,255,255,0.14)" }}>
+        <View style={{ height: 3, borderRadius: 2, width: `${pct}%`, backgroundColor: isAlbum ? C.albumSoft : C.sage2, opacity: 0.75 }} />
+      </View>
+
       {/* Modal picker d'album (long-press sur 📕) */}
       <Modal
         visible={showAlbumPicker}

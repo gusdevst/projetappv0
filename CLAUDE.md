@@ -679,3 +679,6 @@ prise (WhatsApp, web, vieux transferts) et qu'on s'est rabattu sur la date de mo
 posé à chaque chargement de la photothèque ; une photo déjà mémorisée avant ce changement n'a pas le repère → affichée comme date de prise
 jusqu'au prochain chargement). Sans date exploitable : année seule. **La photo en grand de la Galerie (`GalleryScreen`) affiche aussi la date complète / « Reçue le … »** (le repère est relu dans la photothèque à jour).
 
+**Mode swipe — barre de suivi en bas (9 nov.) : ✅ codé, à tester** (`SwipeScreen`) : en plus de la fine barre tout en haut (peu visible, gardée),
+une barre **discrète** (3 px, fond blanc 14 %, remplissage sauge / terracotta à 75 %) sous les boutons d'action, à 18 px du bas, même avancement (`pct`).
+
