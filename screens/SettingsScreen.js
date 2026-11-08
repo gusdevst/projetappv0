@@ -12,6 +12,7 @@ import BackButton from "../components/BackButton";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { AccountCard } from "../components/AccountCard";
+import SharpnessDevTest from "../components/dev/SharpnessDevTest";
 import { deleteAccount } from "../services/auth";
 
 // ── Données de configuration ──────────────────────────────────────────────────
@@ -446,6 +447,9 @@ export function SettingsScreen({ navigation, route }) {
             }}
             right={<Text style={{ color: C.textMuted }}>›</Text>} />
         )}
+
+        {/* [DEV] Test du module de netteté (photos floues, étape 1). __DEV__ seulement. */}
+        {__DEV__ && <SharpnessDevTest />}
 
         {/* ── Section Compte ───────────────────────────────────────────────── */}
         <Section title="Compte" />

@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["PelliculeSharpnessModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.pelliculesharpness.PelliculeSharpnessModule"]
+  }
+}
