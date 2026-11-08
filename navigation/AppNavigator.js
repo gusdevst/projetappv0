@@ -74,6 +74,8 @@ export function AppNavigator() {
     return (
       <Stack.Navigator screenOptions={{ headerShown: false, cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS }}>
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        {/* Page « compte » du tuto : « Créer mon compte » ouvre l'écran de connexion actuel (e-mail) */}
+        <Stack.Screen name="Auth" component={AuthScreen} />
       </Stack.Navigator>
     );
   }

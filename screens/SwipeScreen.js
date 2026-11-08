@@ -350,11 +350,6 @@ export function SwipeScreen({ navigation, route }) {
         </Animated.View>
       )}
 
-      {/* Barre de progression */}
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, zIndex: 20, backgroundColor: "rgba(255,255,255,0.18)" }}>
-        <View style={{ height: 3, width: `${pct}%`, backgroundColor: isAlbum ? C.albumSoft : C.sage2 }} />
-      </View>
-
       {/* Header */}
       <View style={{
         position: "absolute", top: 0, left: 0, right: 0, zIndex: 15,
@@ -516,7 +511,7 @@ export function SwipeScreen({ navigation, route }) {
 
       </View>
 
-      {/* Barre de suivi discrète, en bas sous les boutons (celle du haut se voit peu) */}
+      {/* Barre de suivi discrète, en bas sous les boutons (la barre du haut a été retirée à la demande d'Augustin) */}
       <View pointerEvents="none" style={{ position: "absolute", bottom: 18, left: 48, right: 48, height: 3, borderRadius: 2, zIndex: 10, backgroundColor: "rgba(255,255,255,0.14)" }}>
         <View style={{ height: 3, borderRadius: 2, width: `${pct}%`, backgroundColor: isAlbum ? C.albumSoft : C.sage2, opacity: 0.75 }} />
       </View>

@@ -2,12 +2,13 @@
 // screens/SettingsScreen.js
 // ─────────────────────────────────────────────
 import { useState, useMemo } from "react";
-import { View, ScrollView, TouchableOpacity, Modal, StatusBar, Alert } from "react-native";
+import { View, ScrollView, TouchableOpacity, Modal, StatusBar, Alert, Dimensions } from "react-native";
 import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S } from "../constants/theme";
 import { RowSetting } from "../components/RowSetting";
-import { SwipeDemo } from "../components/SwipeDemo";
+import { SlideContent } from "../components/TutorialSlide";
+import { TUTORIAL_SLIDES } from "../constants/tutorialSlides";
 import BackButton from "../components/BackButton";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useAuthStore } from "../store/useAuthStore";
@@ -16,48 +17,6 @@ import SharpnessDevTest from "../components/dev/SharpnessDevTest";
 import { deleteAccount } from "../services/auth";
 
 // ── Données de configuration ──────────────────────────────────────────────────
-
-const TUTORIAL_SLIDES = [
-  {
-    emoji: "🎞️",
-    title: "Bienvenue sur Pellicule",
-    desc: "Tes souvenirs méritent mieux. On va t'aider à trier ta photothèque sans douleur — photo par photo.",
-  },
-  {
-    demo: "swipe", // mini-écran de tri avec les actions sur les bords
-    title: "Swipe ou clic pour décider",
-    desc: "Swipe la photo vers une action, ou clique directement sur l'action écrite au bord. Chaque direction est personnalisable dans les paramètres.",
-  },
-  {
-    emoji: "❤️",
-    title: "Coup de cœur",
-    desc: "Appuie sur le bouton ❤️ pendant le tri pour ajouter une photo à tes coups de cœur. Retrouve-les dans le menu principal.",
-  },
-  {
-    emoji: "🖼️",
-    title: "Imprime tes souvenirs",
-    desc: "Une photo imprimée prend vie : accrochée chez toi, offerte ou glissée dans un album, elle se regarde vraiment. Pellicule t'aidera bientôt à transformer tes plus belles photos en tirages, albums et cadres.",
-  },
-  {
-    emoji: "🗑",
-    title: "Vider la corbeille",
-    desc: "Les photos supprimées vont dans la Corbeille. Tu confirmes la suppression définitive depuis le menu principal.",
-  },
-  {
-    emoji: "🔔",
-    title: "Garde le rythme",
-    desc: "Active un rappel automatique pour penser à trier tes photos chaque jour. Choisis la fréquence et l'heure dans les Réglages, et reçois une petite notification au bon moment.",
-  },
-  {
-    emoji: "🔒",
-    title: "Tes photos restent privées",
-    desc: "Tout se passe sur ton téléphone. Pellicule n'envoie aucune photo sur un serveur.",
-  },  {
-    emoji: "📕",
-    title: "Créer un album",
-    desc: "Choisis le mode Album pour sélectionner des photos et les regrouper dans un album souvenir.",
-  },
-];
 
 // Actions proposées en mode MÉNAGE.
 const SWIPE_ACTIONS_MENAGE = [
@@ -535,20 +494,11 @@ export function SettingsScreen({ navigation, route }) {
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 }}>
           <View style={{ backgroundColor: C.bgCard, borderRadius: S.radiusLg, padding: 28, width: "100%" }}>
 
-            {/* Slide actuel */}
-            <View style={{ alignItems: "center", marginBottom: 24 }}>
-              {TUTORIAL_SLIDES[tutorialIdx].demo === "swipe" ? (
-                <SwipeDemo style={{ marginBottom: 16 }} />
-              ) : (
-                <Text style={{ fontSize: 52, marginBottom: 16 }}>{TUTORIAL_SLIDES[tutorialIdx].emoji}</Text>
-              )}
-              <Text style={{ fontSize: 20, fontWeight: "600", color: C.text, textAlign: "center", marginBottom: 10 }}>
-                {TUTORIAL_SLIDES[tutorialIdx].title}
-              </Text>
-              <Text style={{ fontSize: 14, color: C.textMuted, textAlign: "center", lineHeight: 21 }}>
-                {TUTORIAL_SLIDES[tutorialIdx].desc}
-              </Text>
-            </View>
+            {/* Page actuelle : mêmes pages que l'onboarding (constants/tutorialSlides.js) */}
+            <ScrollView style={{ maxHeight: Math.round(Dimensions.get("window").height * 0.58) }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 4 }}>
+              <SlideContent slide={TUTORIAL_SLIDES[tutorialIdx]} compact />
+            </ScrollView>
+            <View style={{ height: 20 }} />
 
             {/* Indicateur de progression */}
             <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginBottom: 24 }}>

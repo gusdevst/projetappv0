@@ -96,7 +96,10 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
   `rev` = compteur de publications, `whatsapp` = albums WhatsApp trouvés). Alimenté par `photoAnalysisQueue`.
 
 **screens/** (13)
-- `OnboardingScreen` · `PermissionDeniedScreen` — arrivée + permissions.
+- `OnboardingScreen` · `PermissionDeniedScreen` — arrivée + permissions. L'onboarding affiche les **8 pages de
+  `constants/tutorialSlides.js`** (rendues par `components/TutorialSlide.js`, **les mêmes que Réglages → « Tutoriel »**) :
+  bouton rappels (demande les notifications, « Plus tard » possible), page compte (ouvre `Auth`, ajouté à la pile d'onboarding),
+  dernière page = accès aux photos. Modifier un texte du tuto = modifier `tutorialSlides.js`.
 - `HomeScreen` (~906 l.) · `TriModeScreen` — accueil + choix du mode de tri.
 - `SwipeScreen` (~668 l.) — le tri par swipe (cœur de l'app).
 - `GalleryScreen` (~864 l.) · `MomentScreen` — galerie / albums / moments.
@@ -283,9 +286,9 @@ dépôt, déployée de la même façon ; réponse brute de Gelato, **à lire et 
 8. **Comptes — reste à faire** : connexion **Apple** et **Google** (config chez Apple / Google Cloud +
    rebuild) ; **« Mot de passe oublié »** et lien de confirmation d'e-mail (il faut relier l'app aux liens
    des mails : deep link / Site URL) ; textes légaux (« conditions », politique de confidentialité = « bientôt »).
-9. **Texte du tuto à changer avant l'envoi de photos** : « Pellicule n'envoie aucune photo sur un serveur »
-   (Réglages → tuto, Onboarding). Vrai aujourd'hui (seuls e-mail + chiffres de progression partent) ;
-   faux dès que les pages du livre seront envoyées pour impression → texte + accord clair de l'utilisateur.
+9. ✅ **Texte du tuto « Pellicule n'envoie aucune photo sur un serveur »** : remplacé le 8 nov. (nouveau tuto, §14) par
+   « Le tri reste sur ton téléphone. Une photo n'en sort que si tu la valides pour l'impression. » (à tester).
+   Reste à faire avant la mise en ligne : politique de confidentialité + contact de suppression (voir §13).
 10. **Livres de l'ancien format** (24 pages, carrés) : signalés par « Vérifier ton livre » (30 pages min,
     nombre pair). Les albums de peu de photos donnent beaucoup de pages vides à 30 pages (non bloquant).
 11. **`progressSync`** : `freedMo` et `purgedCount` ne sont **pas** synchronisés (dépendent de la photothèque
@@ -728,8 +731,8 @@ prise (WhatsApp, web, vieux transferts) et qu'on s'est rabattu sur la date de mo
 posé à chaque chargement de la photothèque ; une photo déjà mémorisée avant ce changement n'a pas le repère → affichée comme date de prise
 jusqu'au prochain chargement). Sans date exploitable : année seule. **La photo en grand de la Galerie (`GalleryScreen`) affiche aussi la date complète / « Reçue le … »** (le repère est relu dans la photothèque à jour).
 
-**Mode swipe — barre de suivi en bas (9 nov.) : ✅ codé, à tester** (`SwipeScreen`) : en plus de la fine barre tout en haut (peu visible, gardée),
-une barre **discrète** (3 px, fond blanc 14 %, remplissage sauge / terracotta à 75 %) sous les boutons d'action, à 18 px du bas, même avancement (`pct`).
+**Mode swipe — barre de suivi en bas (9 nov.) : ✅ codé, à tester** (`SwipeScreen`) : une barre **discrète** (3 px, fond blanc 14 %, remplissage sauge / terracotta à 75 %) sous les boutons d'action, à 18 px du bas (avancement `pct`).
+**La fine barre du haut a été retirée (8 nov., demande d'Augustin) : il ne reste que celle du bas.**
 
 **Abonnements sur Supabase — table `subscriptions` (9 nov.) : ✅ codé, à tester APRÈS avoir lancé `supabase/sql/subscriptions.sql`** (question d'Augustin :
 « que se passe-t-il dans Supabase quand l'user s'abonne / met en pause ? » → avant : RIEN, tout restait sur le téléphone ; seule la validation d'une sélection
@@ -790,6 +793,15 @@ format avec score exact, ligne « À mettre dans constants/blurConfig.js »). Le
 **Essai annulé (8 nov.)** : renvoyer 4 mesures du module natif (laplacien global, zone la plus nette, rapports fin/moyen et moyen/gros) pour mieux
 classer les photos à scène atypique. Annulé à la demande d'Augustin (**pas de rebuild** voulu) : tout est revenu au dernier commit, sauf le seuil
 WhatsApp. Reprendre = rebuild iOS + Android + `BLUR_ALGO_VERSION = 2`.
+
+**Tuto d'onboarding refait (8 nov.) — ✅ codé, à tester** (maquette validée : `Claude outputs/maquette-tuto-onboarding.html`).
+8 pages : bienvenue · un geste par photo (+ partage à un proche d'un swipe, réglable) · rappels (+ série 🔥, « Plus tard ») · bouton central ⇄
+(créer ses albums → livre photo) · le ❤️ → Chambre noire · la Chambre noire (pastilles « bientôt » sur les tirages et la commande des livres :
+**à retirer au fur et à mesure**) · compte facultatif (3 puces : suivre sa progression, imprimer, s'abonner ; « Créer mon compte » / « Plus tard ») ·
+autorisations (photos, notifications) + phrase de confidentialité. Une phrase par ligne. Pages = `constants/tutorialSlides.js` ;
+visuels dessinés dans `components/TutorialSlide.js` (barre du bas, guirlande de la Chambre noire) ; icône `user` ajoutée à `Icons`.
+Réglages → « Tutoriel » utilise les mêmes pages (contenu seul, sans boutons d'action). Titre de la page 4 gardé : « Deux modes, un seul bouton »
+(proposition « Crée tes albums » non tranchée). Apple / Google : à ajouter sur la page compte quand ces connexions existeront.
 
 **Autres changements de la session** : bilan de tri (`SummaryScreen`) → bouton « Vider » sur la brique « Supprimées » ; mode Album de l'accueil →
 brique « Créer un livre photo » retirée (les livres se créent depuis la Galerie, Chambre noire).

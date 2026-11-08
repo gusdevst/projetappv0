@@ -91,6 +91,10 @@ const ICONS = {
     <Path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
     <Circle cx="12" cy="15.5" r="1.3" />
   </>),
+  user: (c) => (<>
+    <Circle cx="12" cy="8.5" r="3.6" />
+    <Path d="M4.5 20c.8-4 3.8-6 7.5-6s6.7 2 7.5 6" />
+  </>),
   refresh: (c) => <Path d="M20 11a8 8 0 0 0-14-4L4 9M4 4v5h5M4 13a8 8 0 0 0 14 4l2-2M20 20v-5h-5" />,
   mail: (c) => (<>
     <Rect x="3" y="5" width="18" height="14" rx="2.5" />
