@@ -12,6 +12,7 @@ import { usePhotoStore } from "./store/usePhotoStore";
 import { useAuthStore } from "./store/useAuthStore";
 import { refreshReminders } from "./services/notificationService";
 import { startProgressSync, flushProgress } from "./services/progressSync";
+import { startSubscriptionSync, flushSubscriptions } from "./services/subscriptionSync";
 import { startSubscriptionNotifications, refreshSubscriptionNotifications, SUB_NOTIF_ACTION } from "./services/subscriptionNotifications";
 
 // Import défensif : avant le rebuild incluant react-native-gesture-handler dans
@@ -120,6 +121,7 @@ export default function App() {
     useAuthStore.getState().init(); // relit la session de connexion (compte) au démarrage
     startProgressSync();            // sauvegarde de la progression sur le compte (si connecté)
     startSubscriptionNotifications(); // notification du 1er du mois (abonnement Coups de cœur)
+    startSubscriptionSync();          // abonnements sauvegardés sur le compte (table `subscriptions`)
 
     // iOS — app tuée puis ouverte via un tap sur la notification :
     // le listener ci-dessous ne se déclenche pas, on récupère la réponse ici.
@@ -187,6 +189,7 @@ export default function App() {
         refreshReminders();
         refreshSubscriptionNotifications(); // prochain 1er du mois (abonnement Coups de cœur)
         flushProgress(); // envoie la progression sans attendre le délai
+        flushSubscriptions(); // idem pour les abonnements
       }
     });
     return () => sub.remove();

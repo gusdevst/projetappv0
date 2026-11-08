@@ -682,3 +682,20 @@ jusqu'au prochain chargement). Sans date exploitable : année seule. **La photo 
 **Mode swipe — barre de suivi en bas (9 nov.) : ✅ codé, à tester** (`SwipeScreen`) : en plus de la fine barre tout en haut (peu visible, gardée),
 une barre **discrète** (3 px, fond blanc 14 %, remplissage sauge / terracotta à 75 %) sous les boutons d'action, à 18 px du bas, même avancement (`pct`).
 
+**Abonnements sur Supabase — table `subscriptions` (9 nov.) : ✅ codé, à tester APRÈS avoir lancé `supabase/sql/subscriptions.sql`** (question d'Augustin :
+« que se passe-t-il dans Supabase quand l'user s'abonne / met en pause ? » → avant : RIEN, tout restait sur le téléphone ; seule la validation d'une sélection
+écrivait `print_orders` + photos). Maintenant `services/subscriptionSync.js` (`startSubscriptionSync()` dans `App.js`, `flushSubscriptions()` au passage en
+arrière-plan) : **envoi** différé 3 s à chaque changement d'abonnement (créer, pause, reprise, résiliation, dates, adresse) vers `subscriptions` (1 ligne par
+abonnement : produit, nombre, adresse, dates, `status` active / paused / cancelled, `validate_each`…), seulement les abonnements du compte connecté ;
+**récupération** à la connexion / au lancement : abonnements du compte absents du téléphone remis (nouveau téléphone) + historique des envois depuis
+`print_orders` (sélections « validées » restaurées **sans photos** : `photoCount`, `restored: true` — pour ne pas revalider un mois déjà envoyé) ;
+en cas de doublon **le téléphone gagne**. Augustin voit ses abonnés dans Table Editor → `subscriptions`. Fonctions pures testées : `toRow`, `fromRow`,
+`mergeRemoteSubs`, `restoreSelections`. **Limites** : les marques « déjà imprimée » restent propres au téléphone (ids de photos) ; le store des abonnements
+n'est pas filtré par compte (un 2ᵉ compte sur le même téléphone verrait les abonnements du 1er) ; pas de paiement.
+
+**SQL Supabase — où sont les sources (9 nov.)** : dans le dépôt, `supabase/sql/` : `print_orders.sql` (commandes + dossier `print-photos`),
+`subscriptions.sql` (abonnements), `compte_et_progression.sql` (**copie de secours reconstituée** de `progress` + `delete_my_account`, créées le 6 nov.
+sans fichier : à lancer seulement si perdues). Les « requêtes sauvegardées » du SQL Editor de Supabase ne sont que des brouillons : ce qui compte, c'est que
+le SQL a été **exécuté** (tables et fonctions restent). Vérifié par l'API le 9 nov. : tables `progress`, `print_orders` (avec `product`, `spec`) et
+`subscriptions` présentes. **Non vérifiables de l'extérieur** : le dossier `print-photos` (Storage) et la fonction `delete_my_account` (Database → Functions).
+

@@ -30,7 +30,7 @@ export function SubscriptionTrackingScreen({ navigation, route }) {
 
   const idx  = stageIndex(sel);
   const mois = monthName(month);
-  const n    = sel.photoIds.length;
+  const n    = sel.photoCount ?? sel.photoIds.length; // photoCount : envoi retrouvé depuis un autre téléphone
   const who  = sub.kind === "self" ? "Pour moi" : `Pour ${sub.name}`;
 
   // Détail sous chaque étape.

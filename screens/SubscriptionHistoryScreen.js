@@ -46,7 +46,7 @@ export function SubscriptionHistoryScreen({ navigation, route }) {
             {items.map(({ sub, month, sel }) => (
               <ListRow key={`${sub.id}-${month}`} icon="mail"
                 title={`${monthName(month)} ${month.slice(0, 4)} · ${sub.kind === "self" ? "Pour moi" : sub.name}`}
-                sub={`${sel.photoIds.length} photo${sel.photoIds.length > 1 ? "s" : ""} · ${STAGES[stageIndex(sel)].label}`}
+                sub={`${sel.photoCount ?? sel.photoIds.length} photo${(sel.photoCount ?? sel.photoIds.length) > 1 ? "s" : ""} · ${STAGES[stageIndex(sel)].label}`}
                 onPress={() => navigation.navigate("SubscriptionTracking", { subId: sub.id, month })} />
             ))}
           </View>

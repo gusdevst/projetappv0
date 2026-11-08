@@ -265,7 +265,7 @@ export function SubscriptionMonthScreen({ navigation, route }) {
             <View style={{ flexDirection: "row", gap: 10, alignItems: "center", backgroundColor: C.sage, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12 }}>
               <Text style={{ fontSize: 14 }}>{validated ? "✅" : "⏳"}</Text>
               <Text style={{ flex: 1, fontSize: 12, color: C.green }}>
-                {validated ? "Sélection validée. L'impression est en préparation." : <>À valider avant le <Text style={{ fontWeight: "700", color: C.green }}>{subDays(sub).sendDay} {monthName(month)}</Text></>}
+                {validated ? (sel?.restored ? "Sélection validée et envoyée depuis un autre téléphone." : "Sélection validée. L'impression est en préparation.") : <>À valider avant le <Text style={{ fontWeight: "700", color: C.green }}>{subDays(sub).sendDay} {monthName(month)}</Text></>}
               </Text>
             </View>
 
