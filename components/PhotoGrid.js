@@ -8,10 +8,12 @@
 //   gap              — espacement entre photos (défaut 6)
 //   onLongPress      — appelé quand l'user appuie longuement sur une photo (active la sélection multiple)
 //   selectedIds      — Set<string> des IDs sélectionnés ; si fourni, affiche le mode sélection
+//   badgeFor         — (photo) => texte | null ; petite pastille en bas à gauche (ex. « Imprimée »)
 
 import { View, TouchableOpacity, useWindowDimensions } from "react-native";
 import Text from "./AppText";
 import { Image } from "expo-image";
+import Icon from "./Icons";
 
 import { C } from "../constants/theme";
 export function PhotoGrid({
@@ -19,6 +21,7 @@ export function PhotoGrid({
   onPress,
   onLongPress,
   selectedIds,
+  badgeFor,
   columns = 2,
   containerPadding = 14,
   gap = 6,
@@ -60,6 +63,13 @@ export function PhotoGrid({
               }}
               resizeMode="cover"
             />
+            {/* Pastille d'information (ex. « Imprimée ») */}
+            {!!badgeFor?.(p) && (
+              <View style={{ position: "absolute", left: 6, bottom: 6, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(35,39,31,0.74)", borderRadius: 9, paddingHorizontal: 7, paddingVertical: 3 }}>
+                <Icon name="printer" size={11} color="#fff" strokeWidth={2.2} />
+                <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>{badgeFor(p)}</Text>
+              </View>
+            )}
             {/* Pastille ✓ bleue sur les photos sélectionnées */}
             {isSelected && (
               <View style={{

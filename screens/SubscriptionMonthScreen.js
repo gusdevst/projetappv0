@@ -17,7 +17,8 @@ import BackButton from "../components/BackButton";
 import { ListRow, SHADOW } from "../components/home/ui";
 import { C } from "../constants/theme";
 import { subDays, productOf } from "../constants/subscription";
-import { monthKey, monthName, sentIdsFor, pickRandom, reconcile, replaceAt } from "../services/printSelection";
+import { monthKey, monthName, pickRandom, reconcile, replaceAt } from "../services/printSelection";
+import { usePrintedPhotos } from "../hooks/usePrintedPhotos";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { submitSelection, NOT_SIGNED_IN } from "../services/printOrders";
@@ -72,12 +73,12 @@ export function SubscriptionMonthScreen({ navigation, route }) {
     return out;
   }, [kept, libraryPhotos]);
 
-  // Photos proposables à cet abonnement : coups de cœur vivants, jamais déjà validés pour lui.
+  // Photos proposables : coups de cœur vivants, jamais déjà imprimées (marque sur la photo, tous abonnements confondus).
+  const printed = usePrintedPhotos();
   const poolIds = useMemo(() => {
     if (!sub) return [];
-    const sent = sentIdsFor(selections[sub.id]);
-    return [...alive.keys()].filter((id) => !sent.has(id));
-  }, [alive, selections, sub]);
+    return [...alive.keys()].filter((id) => !printed[id]);
+  }, [alive, printed, sub]);
   const poolKey = poolIds.join("|");
 
   const notEnough = !!sub && !sel && poolIds.length < sub.count;
@@ -172,7 +173,13 @@ export function SubscriptionMonthScreen({ navigation, route }) {
         Alert.alert("Connecte-toi d'abord", "Ta session a expiré. Reconnecte-toi, puis valide à nouveau.",
           [{ text: "Annuler", style: "cancel" }, { text: "Se connecter", onPress: () => navigation.navigate("Auth") }]);
       } else {
-        Alert.alert("Envoi impossible", "Vérifie ta connexion internet et réessaie. Ta sélection n'a pas été validée.");
+        // Message selon la vraie cause (avant : toujours « vérifie ta connexion »). Le détail technique n'est affiché
+        // qu'en mode développement.
+        const msg =
+          e?.kind === "network" ? "Vérifie ta connexion internet et réessaie."
+          : e?.kind === "photo" ? "Une des photos est introuvable sur ton téléphone. Remplace-la, puis réessaie."
+          : "Le serveur a refusé l'envoi. Réessaie dans un instant.";
+        Alert.alert("Envoi impossible", `${msg} Ta sélection n'a pas été validée.${__DEV__ ? `\n\nDétail (dev) : ${e?.message ?? e}` : ""}`);
       }
     }
   }
@@ -191,6 +198,12 @@ export function SubscriptionMonthScreen({ navigation, route }) {
           <Text style={{ fontSize: 19, fontWeight: "600", color: C.text }}>Sélection de {monthName(month)}</Text>
           <Text style={{ fontSize: 11.5, color: C.textMuted }}>{who} · {sub.count} {sub.product === "magnets" ? productOf(sub).units : `photo${sub.count > 1 ? "s" : ""}`}</Text>
         </View>
+        {/* Gérer cet abonnement : historique, dates, pause, résiliation */}
+        <TouchableOpacity onPress={() => navigation.navigate("SubscriptionManage", { subId: sub.id })} activeOpacity={0.8}
+          style={[{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.bgCard, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 12 }, SHADOW]}>
+          <Icon name="gear" size={14} color={C.accent} strokeWidth={2.1} />
+          <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.accent }}>Gérer</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Un onglet par abonnement */}

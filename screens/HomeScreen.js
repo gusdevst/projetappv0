@@ -27,6 +27,7 @@ import { getAlbums, getAlbumAssetIds } from "../services/photoLibrary";
 import { RangeCalendarPicker, dateLabel } from "../components/RangeCalendarPicker";
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
 import { ProgressCard } from "../components/ProgressCard";
+import TimePickerSheet from "../components/TimePickerSheet";
 import { BadgeUnlockBanner, RankUnlockModal } from "../components/AchievementUnlocks";
 
 // C_ALBUM utilise désormais la valeur centralisée dans theme.js
@@ -185,6 +186,10 @@ export function HomeScreen({ navigation, route }) {
   const albums                 = usePhotoStore((state) => state.albums);
   const books                  = usePhotoStore((state) => state.books);
   const notificationFrequency  = usePhotoStore((state) => state.notificationFrequency);
+  const notificationHour       = usePhotoStore((state) => state.notificationHour);
+  const notificationMinute     = usePhotoStore((state) => state.notificationMinute);
+  const notificationHour2      = usePhotoStore((state) => state.notificationHour2);
+  const notificationMinute2    = usePhotoStore((state) => state.notificationMinute2);
   const albumFilters      = usePhotoStore((state) => state.albumFilters);
   const removeAlbumFilter = usePhotoStore((state) => state.removeAlbumFilter);
   const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
@@ -242,8 +247,33 @@ export function HomeScreen({ navigation, route }) {
   }, [route?.params?.startMode]);
 
   // Rappels push : proposés une seule fois au 1er usage du mode aléatoire.
-  const { notificationsEnabled, notifPromptSeen, markPromptSeen, enableReminders } =
+  const { notificationsEnabled, notifPromptSeen, markPromptSeen, enableReminders, updateReminderTime } =
     useNotificationReminder();
+
+  // ── Rappel dans la carte « Cette semaine » : info + heure modifiable ─────
+  const [timeSheetOpen, setTimeSheetOpen] = useState(false);
+  const [savingTime, setSavingTime] = useState(false);
+  const hm = (h, m) => `${h}h${String(m).padStart(2, "0")}`;
+  const reminderLabel =
+    notificationFrequency === "twice_daily" ? `${hm(notificationHour, notificationMinute)} · ${hm(notificationHour2, notificationMinute2)}`
+    : notificationFrequency === "every2days" ? "tous les 2 jours"
+    : notificationFrequency === "weekly" ? `chaque semaine à ${hm(notificationHour, notificationMinute)}`
+    : `chaque jour à ${hm(notificationHour, notificationMinute)}`;
+  // Toucher la ligne : 1 heure (quotidien / hebdo) → on règle ici ; 2 heures ou « tous les 2 jours » → écran Rappels.
+  function onReminderPress() {
+    if (notificationsEnabled && (notificationFrequency === "twice_daily" || notificationFrequency === "every2days")) {
+      navigation.navigate("Rappels");
+    } else {
+      setTimeSheetOpen(true);
+    }
+  }
+  async function confirmReminderTime(h, m) {
+    setSavingTime(true);
+    const res = await updateReminderTime(h, m);
+    setSavingTime(false);
+    if (res?.success) setTimeSheetOpen(false);
+    else Alert.alert("Notifications bloquées", "Pour recevoir des rappels, autorise les notifications de Pellicule dans les Réglages de ton téléphone.");
+  }
 
   // Demande à l'utilisateur s'il veut activer les rappels (1re activation aléatoire).
   function maybePromptNotifications() {
@@ -491,11 +521,6 @@ export function HomeScreen({ navigation, route }) {
                 : `${count} photo${count > 1 ? "s" : ""}`}
               ctaDisabled={loading || count === 0}
               onLaunch={handleCTA}
-              trashCount={deleted.length}
-              trashSizeLabel={formatSize(deletedSize)}
-              onOpenTrash={() => navigation.navigate("Gallery", { section: "deleted" })}
-              onEmptyTrash={handleEmptyTrash}
-              emptying={emptying}
             />
           );
         })()}
@@ -645,7 +670,18 @@ export function HomeScreen({ navigation, route }) {
 
               {/* Progression de la semaine. Tap → écran Progression. */}
               <View style={{ marginTop: 14 }}>
-                <ProgressCard dailyLog={dailyLog} onPress={() => navigation.navigate("ProgressTab")} />
+                <ProgressCard
+                  dailyLog={dailyLog}
+                  onPress={() => navigation.navigate("ProgressTab")}
+                  reminderOn={notificationsEnabled}
+                  reminderLabel={reminderLabel}
+                  onReminderPress={onReminderPress}
+                  trashCount={deleted.length}
+                  trashSizeLabel={formatSize(deletedSize)}
+                  onOpenTrash={() => navigation.navigate("Gallery", { section: "deleted" })}
+                  onEmptyTrash={handleEmptyTrash}
+                  emptying={emptying}
+                />
               </View>
             </View>
           );
@@ -837,6 +873,18 @@ export function HomeScreen({ navigation, route }) {
       {/* Galons & badges : bandeau badge + fenêtre nouveau galon */}
       <BadgeUnlockBanner />
       <RankUnlockModal />
+
+      {/* Heure du rappel (depuis la carte « Cette semaine ») */}
+      <TimePickerSheet
+        visible={timeSheetOpen}
+        title={notificationsEnabled ? "Heure du rappel" : "Activer le rappel quotidien"}
+        hour={notificationHour}
+        minute={notificationMinute}
+        busy={savingTime}
+        confirmLabel={notificationsEnabled ? "Confirmer" : "Activer"}
+        onCancel={() => setTimeSheetOpen(false)}
+        onConfirm={confirmReminderTime}
+      />
     </SafeAreaView>
   );
 }

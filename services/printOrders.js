@@ -18,10 +18,18 @@ const MIME = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", heic: "i
 
 export const NOT_SIGNED_IN = "NOT_SIGNED_IN";
 
+// Erreur typée : kind = "network" (pas de connexion) · "photo" (fichier introuvable) · "server" (refus du serveur :
+// table / colonne / dossier / droits). L'écran choisit son message selon `kind`.
+function fail(kind, message) {
+  const e = new Error(message);
+  e.kind = kind;
+  return e;
+}
+const isNetworkError = (e) => /network request failed|failed to fetch|timed out|offline|internet/i.test(String(e?.message ?? e));
 // Fichier original d'une photo du téléphone (téléchargé depuis iCloud si besoin).
 async function originalFile(photoId) {
   const info = await MediaLibrary.getAssetInfoAsync(photoId, { shouldDownloadFromNetwork: true });
-  if (!info?.localUri) throw new Error("Photo introuvable sur le téléphone.");
+  if (!info?.localUri) throw fail("photo", "Photo introuvable sur le téléphone.");
   const ext = (info.localUri.split("?")[0].split(".").pop() || "jpg").toLowerCase();
   return { uri: info.localUri, ext: MIME[ext] ? ext : "jpg" };
 }
@@ -37,9 +45,14 @@ export async function submitSelection({ sub, month, photoIds, onProgress }) {
   const paths = [];
   for (let i = 0; i < photoIds.length; i++) {
     onProgress?.(i, photoIds.length);
-    const { uri, ext } = await originalFile(photoIds[i]);
+    let file;
+    try { file = await originalFile(photoIds[i]); }
+    catch (e) { throw e.kind ? e : fail("photo", e?.message ?? "Photo illisible."); }
+    const { uri, ext } = file;
     const path = `${uid}/${sub.id}/${month}/${i + 1}.${ext}`;
-    const res = await FileSystem.uploadAsync(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`, uri, {
+    let res;
+    try {
+      res = await FileSystem.uploadAsync(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`, uri, {
       httpMethod: "POST",
       uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT, // le fichier part tel quel, sans le charger en mémoire
       headers: {
@@ -49,7 +62,10 @@ export async function submitSelection({ sub, month, photoIds, onProgress }) {
         "x-upsert": "true", // un 2e essai remplace la photo déjà déposée
       },
     });
-    if (res.status < 200 || res.status >= 300) throw new Error(`Photo ${i + 1} refusée (${res.status}) : ${res.body?.slice?.(0, 120)}`);
+    } catch (e) {
+      throw fail(isNetworkError(e) ? "network" : "server", `Envoi de la photo ${i + 1} : ${e?.message ?? e}`);
+    }
+    if (res.status < 200 || res.status >= 300) throw fail("server", `Photo ${i + 1} refusée (${res.status}) : ${res.body?.slice?.(0, 160)}`);
     paths.push(path);
   }
 
@@ -69,7 +85,7 @@ export async function submitSelection({ sub, month, photoIds, onProgress }) {
     },
     { onConflict: "user_id,sub_id,month" }
   );
-  if (error) throw error;
+  if (error) throw fail(isNetworkError(error) ? "network" : "server", `Commande refusée (${error.code ?? "?"}) : ${error.message}`);
   onProgress?.(photoIds.length, photoIds.length);
   return paths;
 }

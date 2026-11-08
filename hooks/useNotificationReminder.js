@@ -7,6 +7,7 @@
 //   notifPromptSeen        → a-t-on déjà proposé d'activer les rappels ?
 //   markPromptSeen()       → mémorise qu'on a déjà posé la question
 //   enableReminders(freq?) → demande la permission + programme le rappel + sauvegarde
+//   updateReminderTime(h, m) → change l'heure du rappel (l'active en quotidien s'il était coupé)
 //                            freq par défaut : "daily" à 9h (heure modifiable dans Réglages)
 
 import { useMemo } from "react";
@@ -18,6 +19,8 @@ export function useNotificationReminder() {
   const setNotificationFrequency = usePhotoStore((s) => s.setNotificationFrequency);
   const notificationHour         = usePhotoStore((s) => s.notificationHour);
   const notificationMinute       = usePhotoStore((s) => s.notificationMinute);
+  const setNotificationHour      = usePhotoStore((s) => s.setNotificationHour);
+  const setNotificationMinute    = usePhotoStore((s) => s.setNotificationMinute);
   const notificationHour2        = usePhotoStore((s) => s.notificationHour2);
   const notificationMinute2      = usePhotoStore((s) => s.notificationMinute2);
   const notifPromptSeen          = usePhotoStore((s) => s.notifPromptSeen);
@@ -60,6 +63,23 @@ export function useNotificationReminder() {
     return result;
   };
 
+  // Change l'heure du rappel (1er créneau). Si les rappels étaient coupés, active le rappel quotidien à cette heure.
+  // Retourne { success, reason? } comme enableReminders.
+  const updateReminderTime = async (hour, minute) => {
+    const freq = notificationsEnabled ? notificationFrequency : "daily";
+    const result = await scheduleReminder(freq, {
+      remainingCount, randomCount,
+      notificationHour: hour, notificationMinute: minute,
+      notificationHour2, notificationMinute2,
+    });
+    if (result.success) {
+      setNotificationFrequency(freq);
+      setNotificationHour(hour);
+      setNotificationMinute(minute);
+    }
+    return result;
+  };
+
   const markPromptSeen = () => setNotifPromptSeen(true);
 
   return {
@@ -67,5 +87,6 @@ export function useNotificationReminder() {
     notifPromptSeen,
     markPromptSeen,
     enableReminders,
+    updateReminderTime,
   };
 }

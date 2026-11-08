@@ -31,6 +31,9 @@ import { ExitIcon } from "../components/ExitIcon";
 import { BadgeUnlockBanner } from "../components/AchievementUnlocks";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { sharePhoto } from "../services/photoShare";
+import { usePrintedPhotos } from "../hooks/usePrintedPhotos";
+import { shortDate } from "../services/printSelection";
+import { photoDateLabel } from "../services/photoDate";
 import { addPhotosToPelliculeAlbum } from "../services/photoLibrary";
 
 const { width: SW, height: SH } = Dimensions.get("window");
@@ -87,6 +90,9 @@ export function GalleryScreen({ navigation, route }) {
     return storedPhotos.filter((p) => byId.has(p.id)).map((p) => ({ ...p, url: byId.get(p.id).url }));
   }, [section, storedPhotos, libraryPhotos]);
   const albums               = usePhotoStore((s) => s.albums);
+  // Photos déjà imprimées (abonnement) : elles restent dans les coups de cœur, avec la mention « Imprimée ».
+  const printedMap           = usePrintedPhotos();
+  const printedBadge         = section === "kept" ? (p) => (printedMap[p.id] ? "Imprimée" : null) : undefined;
   const emptyTrash           = usePhotoStore((s) => s.emptyTrash);
   const restorePhoto         = usePhotoStore((s) => s.restorePhoto);
   const createAlbum          = usePhotoStore((s) => s.createAlbum);
@@ -509,6 +515,7 @@ export function GalleryScreen({ navigation, route }) {
           // ── Vue grille par défaut (kept / deleted) ────────────────────────
           <PhotoGrid
             photos={photos}
+            badgeFor={printedBadge}
             onPress={(p) => handlePhotoPress(p, photos)}
             onLongPress={section !== "deleted" ? enterSelectionMode : undefined}
             selectedIds={selectionMode && section !== "deleted" ? selectedIds : undefined}
@@ -657,9 +664,19 @@ export function GalleryScreen({ navigation, route }) {
           {/* Actions en bas + bouton sortie */}
           {selected && (
             <View style={{ paddingHorizontal: 20, paddingBottom: 36, paddingTop: 8, backgroundColor: "rgba(0,0,0,0.6)" }}>
-              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14, textAlign: "center", marginBottom: 14 }}>
-                {selected.location ? `${selected.location} · ${selected.year}` : selected.year}
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14, textAlign: "center", marginBottom: section === "kept" && printedMap[selected.id] ? 4 : 14 }}>
+                {(() => {
+                  // Date complète (« 12 mars 2024 » / « Reçue le … »). Le repère « reçue » vient de la photothèque à jour.
+                  const lib = libraryPhotos.find((p) => p.id === selected.id);
+                  const date = photoDateLabel({ ...selected, creationTime: selected.creationTime ?? lib?.creationTime, dateIsReceived: lib?.dateIsReceived ?? selected.dateIsReceived });
+                  return selected.location ? `${selected.location} · ${date}` : date;
+                })()}
               </Text>
+              {section === "kept" && !!printedMap[selected.id] && (
+                <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 12, textAlign: "center", marginBottom: 14 }}>
+                  🖨 Déjà imprimée le {shortDate(printedMap[selected.id].at)}{printedMap[selected.id].product === "magnets" ? " (magnets)" : ""}
+                </Text>
+              )}
 
               <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
                 {/* Bouton sortie (ExitIcon, comme le swipe) — discret, à gauche */}

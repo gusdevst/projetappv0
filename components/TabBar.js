@@ -50,8 +50,11 @@ export function TabBar({ state, navigation }) {
       >
         <View>
           <Icon name={t.icon} size={27} color={color} strokeWidth={focused ? 2.1 : 1.9} />
+          {/* Pastille avec le nombre de sélections d'abonnement à valider */}
           {route.name === "GalleryTab" && subTodo > 0 && (
-            <View style={{ position: "absolute", top: -2, right: -4, width: 11, height: 11, borderRadius: 6, backgroundColor: C.album, borderWidth: 2, borderColor: C.bgCard }} />
+            <View style={{ position: "absolute", top: -6, right: -11, minWidth: 17, height: 17, borderRadius: 9, paddingHorizontal: 4, backgroundColor: C.album, borderWidth: 2, borderColor: C.bgCard, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff", lineHeight: 12 }}>{subTodo > 9 ? "9+" : subTodo}</Text>
+            </View>
           )}
         </View>
         <Text style={{ fontSize: 11.5, fontWeight: focused ? "600" : "400", color }} numberOfLines={1}>{t.label}</Text>

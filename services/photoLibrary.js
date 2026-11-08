@@ -211,6 +211,8 @@ function mapAssetToPhoto(asset) {
     : (asset.modificationTime > ONE_YEAR_MS ? asset.modificationTime : asset.creationTime);
   const date = new Date(creationTime);
   const year = String(date.getFullYear());
+  // Pas de date de prise de vue → on a pris la date de modification = date d'arrivée : l'écran dit « Reçue le … ».
+  const dateIsReceived = !(asset.creationTime > ONE_YEAR_MS) && asset.modificationTime > ONE_YEAR_MS;
 
   return {
     id: asset.id,
@@ -218,6 +220,7 @@ function mapAssetToPhoto(asset) {
     filename: asset.filename ?? "",
     creationTime, // ms epoch (corrigé si absent, cf. plus haut) — utilisé par photoAnalysis pour clusters/doublons
     year,
+    dateIsReceived, // true = date d'arrivée (pas de date de prise de vue) → affichée « Reçue le … » (services/photoDate.js)
     size: Number(approxSizeMo.toFixed(1)),
     width: asset.width,
     height: asset.height,

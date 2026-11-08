@@ -1,10 +1,9 @@
 // screens/GalleryHomeScreen.js
-// Onglet « Galerie » : une seule page (pas de barre de choix).
-// 1. Mes albums : grille de 3 (menu ··· : renommer / imprimer / supprimer), ＋ dans le titre.
-// 2. Mes livres photo : étagère horizontale, ＋ dans le titre (feuille « Quel album ? »).
-// 3. Mes tirages photos : Coups de cœur (l'impression viendra plus tard).
-// Puis « Sans album » et la Corbeille (seulement si elles contiennent des photos).
-// Toucher une carte ouvre son contenu dans GalleryScreen (avec flèche retour).
+// Onglet « Galerie » (maquette validée « Pellicule + Chambre noire ») : une seule page, rien à ouvrir pour tout voir.
+// 1. PELLICULE — « Mes albums » en LISTE (mosaïque, nom, nombre de photos, menu ···), ＋ dans le titre, puis « Sans album ».
+// 2. CHAMBRE NOIRE — bloc rouge sombre pleine largeur : tout ce qu'on fait imprimer, déjà visible :
+//    Coups de cœur (guirlande de tirages), Livres photo (étagère de couvertures), Abonnements (lignes avec leur état).
+// Toucher un élément ouvre seulement SON détail. La corbeille n'est plus ici : elle vit dans la carte « Cette semaine » de l'accueil.
 
 import { useMemo, useState } from "react";
 import { View, ScrollView, TouchableOpacity, StatusBar, Alert, Modal, TextInput, useWindowDimensions } from "react-native";
@@ -18,14 +17,14 @@ import AlbumPickerSheet from "../components/book/AlbumPickerSheet";
 import DarkroomCover, { printsFor } from "../components/DarkroomCover";
 import { useBookFonts } from "../components/book/bookFonts";
 import { bookStats, pageRatio } from "../services/photoBook";
-import { C, FONT } from "../constants/theme";
+import { LinearGradient } from "expo-linear-gradient";
+import { C, FONT, DARKROOM as D } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import SubscriptionRow from "../components/SubscriptionRow";
 import { useKeptUrls } from "../components/ProductArt";
 import { monthKey, monthName, subStatus } from "../services/printSelection";
-
-const formatSize = (mo) => (mo < 1024 ? `${mo.toFixed(0)} Mo` : `${(mo / 1024).toFixed(1)} Go`);
+import { usePrintedPhotos } from "../hooks/usePrintedPhotos";
 
 // "il y a 3 j", "il y a 2 sem.", "il y a 4 mois"
 function timeAgo(ts) {
@@ -60,34 +59,25 @@ function Cover({ urls, height }) {
   );
 }
 
-function Card({ width, cover, title, titleIcon, sub, subLines = 1, onPress, onMenu }) {
+// Petit titre en capitales dans la Chambre noire (« COUPS DE CŒUR », « LIVRES PHOTO »…) + action à droite.
+function DarkLabel({ title, right, onRight }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85}
-      style={[{ width, backgroundColor: C.bgCard, borderRadius: 16, padding: 7 }, SHADOW]}>
-      {cover}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 7, marginHorizontal: 3 }}>
-        {titleIcon}
-        <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "500", color: C.text }} numberOfLines={1}>{title}</Text>
-      </View>
-      <View style={{ flexDirection: "row", alignItems: "center", marginHorizontal: 3, marginBottom: 2 }}>
-        <Text style={{ flex: 1, fontSize: 11, color: C.textMuted }} numberOfLines={subLines}>{sub}</Text>
-        {onMenu && (
-          <TouchableOpacity onPress={onMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={{ fontSize: 16, fontWeight: "600", color: C.textMuted, letterSpacing: 1 }}>···</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </TouchableOpacity>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: 20, marginBottom: 9, marginHorizontal: 2 }}>
+      <Text style={{ fontSize: 10.5, fontWeight: "700", letterSpacing: 1.2, color: D.halo }}>{title}</Text>
+      {!!right && (
+        <TouchableOpacity onPress={onRight} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={{ fontSize: 12.5, fontWeight: "600", color: D.paper }}>{right}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
 export function GalleryHomeScreen({ navigation }) {
   const { width: SW } = useWindowDimensions();
   const CARD_W = (SW - 32 - 20) / 3; // 3 cartes par ligne (2 espaces de 10)
-  const COVER_H = CARD_W;              // vignette carrée
 
   const kept          = usePhotoStore((s) => s.kept);
-  const deleted       = usePhotoStore((s) => s.deleted);
   const printed       = usePhotoStore((s) => s.printed);
   const albums        = usePhotoStore((s) => s.albums);
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
@@ -118,10 +108,14 @@ export function GalleryHomeScreen({ navigation }) {
     return kept.filter((p) => byId.has(p.id)).map((p) => ({ ...p, url: byId.get(p.id).url }));
   }, [kept, libraryPhotos]);
   const keptCount = keptAlive.length;
-  // Carte Coups de cœur plus large : 2 colonnes de la grille (titre lisible en entier).
-  const HEART_W   = CARD_W * 2 + 10;
-  const HEART_IMG = HEART_W - 14; // largeur du dessin (carte moins son padding)
-  const keptUrls  = keptAlive.slice(-printsFor(HEART_IMG, COVER_H)).reverse().map((p) => p.url); // derniers ❤️ → guirlande
+  const printedMap = usePrintedPhotos();
+  const keptPrinted = keptAlive.filter((p) => printedMap[p.id]).length; // déjà imprimées (restent dans les coups de cœur)
+  // Guirlande de la Chambre noire : les derniers ❤️ pas encore imprimés (sinon, les derniers tout court).
+  const HEART_W = SW - 32;   // pleine largeur du bloc
+  const HEART_H = 150; // plus haut : les tirages de la guirlande sont plus grands, donc les photos se voient
+  const toPrint = keptAlive.filter((p) => !printedMap[p.id]);
+  const garland = toPrint.length ? toPrint : keptAlive;
+  const keptUrls = garland.slice(-printsFor(HEART_W, HEART_H)).reverse().map((p) => p.url);
   // Couverture d'album = les 3 dernières photos ajoutées encore présentes.
   const coverUrls = (ids) => {
     const out = [];
@@ -137,6 +131,8 @@ export function GalleryHomeScreen({ navigation }) {
     .map((b) => ({ book: b, album: albums.find((a) => a.id === b.albumId) }))
     .filter((x) => x.album)
     .sort((x, y) => (y.book.updatedAt || 0) - (x.book.updatedAt || 0));
+  // La tuile « Créer un livre » prend exactement la forme d'une couverture (celle du 1er livre, sinon 21×28 vertical).
+  const bookRatio = bookList.length ? pageRatio(bookList[0].book) : 4 / 3;
   function openBookMenu({ book, album }) {
     Alert.alert(book.cover.title || album.name, `Livre de ${book.format} pages · album « ${album.name} »`, [
       { text: "Ouvrir", onPress: () => navigation.navigate("PhotoBook", { albumId: album.id }) },
@@ -157,13 +153,12 @@ export function GalleryHomeScreen({ navigation }) {
 
   const inAnyAlbum = new Set(albums.flatMap((a) => a.photoIds));
   const sansAlbum = printed.filter((p) => !inAnyAlbum.has(p.id));
-  const trashSize = deleted.reduce((a, p) => a + (p.size || 0), 0);
 
   // ── Abonnements en cours : ouvrir une ligne, menu ··· ──
   const subMonth = monthKey();
   function openSub(x) {
     const st = subStatus(x, selections[x.id]?.[subMonth]);
-    if (st.kind === "paused") navigation.navigate("SubscriptionList");
+    if (st.kind === "paused") navigation.navigate("SubscriptionManage", { subId: x.id });
     else if (st.kind === "validated") navigation.navigate("SubscriptionTracking", { subId: x.id, month: subMonth });
     else navigation.navigate("SubscriptionMonth", { subId: x.id });
   }
@@ -175,7 +170,7 @@ export function GalleryHomeScreen({ navigation }) {
       ...(paused ? [] : [st.kind === "validated"
         ? { text: "Voir le suivi", onPress: () => openSub(x) }
         : { text: `Voir ma sélection de ${monthName(subMonth)}`, onPress: () => openSub(x) }]),
-      { text: "Changer les dates d'envoi", onPress: () => navigation.navigate("SubscriptionList", { editDaysFor: x.id }) },
+      { text: "Changer les dates d'envoi", onPress: () => navigation.navigate("SubscriptionManage", { subId: x.id, editDays: true }) },
       paused
         ? { text: "Reprendre l'abonnement", onPress: () => updateSub(x.id, { status: "active" }) }
         : { text: "Mettre en pause", onPress: () => updateSub(x.id, { status: "paused" }) },
@@ -227,126 +222,124 @@ export function GalleryHomeScreen({ navigation }) {
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar backgroundColor={C.bg} barStyle="dark-content" />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 30 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
         <Text style={{ fontSize: 24, fontWeight: "600", color: C.text, marginBottom: 14 }}>Galerie</Text>
 
-        {/* 1. Mes albums : grille de 3 */}
-        <SectionTitle title="Mes albums" right={<PlusButton onPress={() => { setNewName(""); setNewOpen(true); }} />} />
-        {sortedAlbums.length === 0 ? (
-          <Text style={{ fontSize: 12.5, color: C.textMuted, marginHorizontal: 2 }}>Crée ton premier album avec le ＋.</Text>
-        ) : (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {sortedAlbums.map((a) => (
-              <Card
-                key={a.id}
-                width={CARD_W}
-                cover={<Cover urls={coverUrls(a.photoIds)} height={COVER_H} />}
-                title={a.name}
-                sub={`${a.photoIds.length} photo${a.photoIds.length > 1 ? "s" : ""}${a.updatedAt ? ` · ${timeAgo(a.updatedAt)}` : ""}`}
-                onPress={() => open({ section: "album", albumId: a.id })}
-                onMenu={() => openAlbumMenu(a)}
-              />
-            ))}
+        {/* 1. PELLICULE : mes albums, en liste */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginTop: 8, marginBottom: 6, marginHorizontal: 2 }}>
+          <View>
+            <Text style={{ fontSize: 10, fontWeight: "700", letterSpacing: 1.4, color: C.album }}>PELLICULE</Text>
+            <Text style={{ fontSize: 17, fontWeight: "700", color: C.text }}>Mes albums</Text>
           </View>
-        )}
-
-        {/* 2. Mes livres photo : étagère horizontale (toujours affichée) */}
-        <SectionTitle title="Mes livres photo" right={<PlusButton onPress={() => setBookPickerOpen(true)} />} />
-        {bookList.length === 0 ? (
-          <Text style={{ fontSize: 12.5, color: C.textMuted, marginHorizontal: 2 }}>Transforme un album en vrai livre avec le ＋.</Text>
-        ) : (
-          <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 4 }}>
-              {bookList.map(({ book, album }) => {
-                const ids = album.photoIds.filter((id) => urlById[id]);
-                const pct = Math.round(bookStats(book, ids).fillRatio * 100);
-                return (
-                  <TouchableOpacity key={book.albumId} activeOpacity={0.85}
-                    onPress={() => navigation.navigate("PhotoBook", { albumId: album.id })}
-                    onLongPress={() => openBookMenu({ book, album })}
-                    style={{ width: CARD_W }}>
-                    <View style={{ borderRadius: 8, backgroundColor: C.bgCard, ...SHADOW }}>
-                      <BookCover cover={book.cover} size={CARD_W} ratio={pageRatio(book)} urlById={urlById} />
-                    </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: 7 }}>
-                      <Text numberOfLines={1} style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: C.text }}>{book.cover.title || album.name}</Text>
-                      <TouchableOpacity onPress={() => openBookMenu({ book, album })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                        <Text style={{ fontSize: 15, color: C.textMuted, fontWeight: "700" }}>···</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={{ fontSize: 11.5, color: C.textMuted }}>{book.format} pages · {pct} % rempli</Text>
-                    {!!book.updatedAt && <Text style={{ fontSize: 11, color: C.textMuted }}>{timeAgo(book.updatedAt)}</Text>}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </>
-        )}
-
-        {/* 3. Mes tirages photos : les Coups de cœur (impression à venir) */}
-        <SectionTitle title="Mes tirages photos" />
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <Card
-            width={HEART_W}
-            cover={<DarkroomCover urls={keptUrls} width={HEART_IMG} height={COVER_H} />}
-            titleIcon={<Icon name="heart" size={13} color={C.red} filled />}
-            title="Coups de cœur"
-            sub={`${keptCount} photo${keptCount > 1 ? "s" : ""} à imprimer`}
-            onPress={() => open({ section: "kept" })}
-          />
-          {/* Sans abonnement : la carte « Abonnement » est la porte d'entrée (avec un abonnement : section ci-dessous) */}
-          {!hasSub && <Card
-            width={CARD_W}
-            cover={
-              <View style={{ height: COVER_H, borderRadius: 11, backgroundColor: C.sage2, alignItems: "center", justifyContent: "center" }}>
-                <Icon name="mail" size={30} color={C.accent} />
-                <View style={{ position: "absolute", top: 5, right: 5, backgroundColor: C.album, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1.5 }}>
-                  <Text style={{ fontSize: 8.5, fontWeight: "700", color: "#fff" }}>NOUVEAU</Text>
-                </View>
-              </View>
-            }
-            title="Abonnement"
-            sub="Tirages ou magnets"
-            subLines={2}
-            onPress={() => navigation.navigate("SubscriptionIntro")}
-          />}
+          <PlusButton onPress={() => { setNewName(""); setNewOpen(true); }} />
         </View>
-
-        {/* Mes abonnements : un par ligne, avec ce qu'il y a à faire et le menu ··· (maquette validée le 8 nov.) */}
-        {hasSub && (
-          <>
-            <SectionTitle title="Mes abonnements" right={
-              <TouchableOpacity onPress={() => navigation.navigate("SubscriptionList")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.accent }}>Gérer ›</Text>
-              </TouchableOpacity>
-            } />
-            <View style={{ gap: 9 }}>
-              {liveSubs.map((x, i) => (
-                <SubscriptionRow key={x.id} sub={x} st={subStatus(x, selections[x.id]?.[subMonth])}
-                  urls={subUrls.slice((i * 3) % 9, ((i * 3) % 9) + 3)}
-                  onPress={() => openSub(x)} onMenu={() => openSubMenu(x)} />
-              ))}
-              <TouchableOpacity onPress={() => navigation.navigate("SubscriptionIntro")} activeOpacity={0.8}
-                style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderStyle: "dashed", borderColor: C.album, borderRadius: 15, paddingVertical: 12 }}>
-                <Text style={{ fontSize: 17, color: C.album, marginTop: -2 }}>+</Text>
-                <Text style={{ fontSize: 13, fontWeight: "600", color: C.album }}>Ajouter un abonnement</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
-        <View style={{ gap: 10, marginTop: 14 }}>
+        <View style={{ gap: 8, marginTop: 4 }}>
+          {sortedAlbums.length === 0 && (
+            <Text style={{ fontSize: 12.5, color: C.textMuted, marginHorizontal: 2 }}>Crée ton premier album avec le ＋.</Text>
+          )}
+          {sortedAlbums.map((a) => (
+            <ListRow
+              key={a.id}
+              thumb={<View style={{ width: 44, height: 44 }}><Cover urls={coverUrls(a.photoIds)} height={44} /></View>}
+              title={a.name}
+              sub={`${a.photoIds.length} photo${a.photoIds.length > 1 ? "s" : ""}${a.updatedAt ? ` · ${timeAgo(a.updatedAt)}` : ""}`}
+              right={
+                <TouchableOpacity onPress={() => openAlbumMenu(a)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 6 }}>
+                  <Text style={{ fontSize: 17, fontWeight: "600", color: C.textMuted, letterSpacing: 1 }}>···</Text>
+                </TouchableOpacity>
+              }
+              onPress={() => open({ section: "album", albumId: a.id })}
+            />
+          ))}
           {sansAlbum.length > 0 && (
             <ListRow icon="album" iconColor={C.textMid} iconBg={C.bgMuted} title="Sans album"
               sub={`${sansAlbum.length} photo${sansAlbum.length > 1 ? "s" : ""}`}
               onPress={() => open({ section: "album", albumId: "__sans_album__" })} />
           )}
-          {deleted.length > 0 && (
-            <ListRow icon="trash" iconColor={C.red} iconBg={C.redSoft} title="Corbeille"
-              sub={`${deleted.length} photo${deleted.length > 1 ? "s" : ""} · ${formatSize(trashSize)}`}
-              onPress={() => open({ section: "deleted" })} />
-          )}
         </View>
+
+        {/* 2. CHAMBRE NOIRE : tout ce qu'on fait imprimer, toujours visible (rien à ouvrir) */}
+        <LinearGradient colors={[D.glow[1], D.glow[2]]} start={{ x: 0.8, y: 0 }} end={{ x: 0.3, y: 1 }}
+          style={{ marginTop: 26, marginHorizontal: -16, marginBottom: -30, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 16, paddingTop: 18, paddingBottom: 40 }}>
+          {/* Ampoule rouge */}
+          <View pointerEvents="none" style={{ position: "absolute", right: 36, top: 0, alignItems: "center" }}>
+            <View style={{ width: 1.5, height: 14, backgroundColor: D.wire }} />
+            <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: D.halo, opacity: 0.35, alignItems: "center", justifyContent: "center" }} />
+            <View style={{ position: "absolute", top: 21, width: 11, height: 11, borderRadius: 6, backgroundColor: D.bulb }} />
+          </View>
+          <Text style={{ fontSize: 21, fontWeight: "700", color: D.paper }}>Chambre noire</Text>
+
+          {/* Coups de cœur : guirlande + libellé (toucher = tous les coups de cœur) */}
+          <DarkLabel title="TIRAGES PHOTOS" />
+          <TouchableOpacity activeOpacity={0.85} onPress={() => open({ section: "kept" })}>
+            <DarkroomCover urls={keptUrls} width={HEART_W} height={HEART_H} radius={16} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 9, marginHorizontal: 2 }}>
+              <Icon name="heart" size={15} color={C.red} filled />
+              <Text style={{ fontSize: 14, fontWeight: "600", color: D.paper }}>Coups de cœur</Text>
+              <Text style={{ marginLeft: "auto", fontSize: 11.5, color: D.halo }} numberOfLines={1}>
+                {keptPrinted > 0
+                  ? `${keptCount - keptPrinted} à imprimer · ${keptPrinted} imprimée${keptPrinted > 1 ? "s" : ""}`
+                  : `${keptCount} photo${keptCount > 1 ? "s" : ""} à imprimer`} ›
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Livres photo : étagère de couvertures */}
+          <DarkLabel title="LIVRES PHOTO" right="＋ Nouveau" onRight={() => setBookPickerOpen(true)} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 4 }}>
+            {bookList.map(({ book, album }) => {
+              const ids = album.photoIds.filter((id) => urlById[id]);
+              const pct = Math.round(bookStats(book, ids).fillRatio * 100);
+              return (
+                <TouchableOpacity key={book.albumId} activeOpacity={0.85}
+                  onPress={() => navigation.navigate("PhotoBook", { albumId: album.id })}
+                  onLongPress={() => openBookMenu({ book, album })}
+                  style={{ width: CARD_W }}>
+                  <View style={{ borderRadius: 8, backgroundColor: C.bgCard, ...SHADOW }}>
+                    <BookCover cover={book.cover} size={CARD_W} ratio={pageRatio(book)} urlById={urlById} />
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 7 }}>
+                    <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "600", color: D.paper }}>{book.cover.title || album.name}</Text>
+                    <TouchableOpacity onPress={() => openBookMenu({ book, album })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Text style={{ fontSize: 15, color: D.halo, fontWeight: "700" }}>···</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={{ fontSize: 11, color: D.halo }}>{book.format} pages · {pct} % rempli</Text>
+                </TouchableOpacity>
+              );
+            })}
+            {/* Dernière vue : créer un livre */}
+            <TouchableOpacity activeOpacity={0.85} onPress={() => setBookPickerOpen(true)} style={{ width: CARD_W }}>
+              <View style={{ height: CARD_W * bookRatio, borderRadius: 8, borderWidth: 1.5, borderStyle: "dashed", borderColor: D.halo, alignItems: "center", justifyContent: "center", opacity: 0.8 }}>
+                <Text style={{ fontSize: 26, color: D.paper }}>＋</Text>
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: D.paper, marginTop: 7 }}>Créer un livre</Text>
+              <Text style={{ fontSize: 11, color: D.halo }}>à partir d'un album</Text>
+            </TouchableOpacity>
+          </ScrollView>
+
+          {/* Abonnements : une ligne chacun, avec ce qu'il y a à faire et le menu ··· */}
+          <DarkLabel title="ABONNEMENTS" right={hasSub ? "Gérer ›" : undefined} onRight={() => navigation.navigate("SubscriptionList")} />
+          <View style={{ gap: 9 }}>
+            {liveSubs.map((x, i) => (
+              <SubscriptionRow key={x.id} dark sub={x} st={subStatus(x, selections[x.id]?.[subMonth])}
+                urls={subUrls.slice((i * 3) % 9, ((i * 3) % 9) + 3)}
+                onPress={() => openSub(x)} onMenu={() => openSubMenu(x)} />
+            ))}
+            <TouchableOpacity onPress={() => navigation.navigate("SubscriptionIntro")} activeOpacity={0.8}
+              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderStyle: "dashed", borderColor: D.halo, borderRadius: 15, paddingVertical: 12, opacity: 0.9 }}>
+              <Text style={{ fontSize: 17, color: D.paper, marginTop: -2 }}>+</Text>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: D.paper }}>
+                {hasSub ? "Ajouter un abonnement" : "Recevoir mes coups de cœur chaque mois"}
+              </Text>
+              {!hasSub && (
+                <View style={{ backgroundColor: C.album, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ fontSize: 8.5, fontWeight: "700", color: "#fff" }}>NOUVEAU</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
       </ScrollView>
 
       {/* ── Renommer un album ── */}

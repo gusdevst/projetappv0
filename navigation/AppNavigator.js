@@ -32,6 +32,7 @@ import { SubscriptionSetupScreen } from "../screens/SubscriptionSetupScreen";
 import { SubscriptionMagnetsScreen } from "../screens/SubscriptionMagnetsScreen";
 import { SubscriptionMonthScreen } from "../screens/SubscriptionMonthScreen";
 import { SubscriptionListScreen } from "../screens/SubscriptionListScreen";
+import { SubscriptionManageScreen } from "../screens/SubscriptionManageScreen";
 import { SubscriptionTrackingScreen } from "../screens/SubscriptionTrackingScreen";
 import { SubscriptionHistoryScreen } from "../screens/SubscriptionHistoryScreen";
 import { usePhotoStore }         from "../store/usePhotoStore";
@@ -110,6 +111,7 @@ export function AppNavigator() {
       <Stack.Screen name="SubscriptionSetup" component={SubscriptionSetupScreen} />
       <Stack.Screen name="SubscriptionMonth" component={SubscriptionMonthScreen} />
       <Stack.Screen name="SubscriptionList" component={SubscriptionListScreen} />
+      <Stack.Screen name="SubscriptionManage" component={SubscriptionManageScreen} />
       <Stack.Screen name="SubscriptionTracking" component={SubscriptionTrackingScreen} />
       <Stack.Screen name="SubscriptionHistory" component={SubscriptionHistoryScreen} />
       <Stack.Screen name="Auth"        component={AuthScreen} />

@@ -598,3 +598,84 @@ Magnets : aperçu **carré recadré au centre** (« Aperçu du magnet 5 × 5 cm 
 nouvelle photo) et « Retour à la grille » (aussi ✕ et bouton retour Android). Sélection validée : seulement « Retour à la grille ».
 Pas de défilement gauche/droite entre photos (idée possible).
 
+**Corbeille déplacée + badges en liste (8 nov.) : ✅ codé, à tester** (demande d'Augustin).
+- **Galerie** : la ligne « Corbeille » est supprimée de `GalleryHomeScreen`.
+- **Accueil, mode Tri** : la pastille corbeille/« Vider » est retirée de `TriHero` ; elle est maintenant en **pied de la carte
+  « Cette semaine »** (`ProgressCard`, props `trashCount`, `trashSizeLabel`, `onOpenTrash`, `onEmptyTrash`, `emptying`),
+  seulement s'il y a des photos supprimées : « N dans la corbeille · X Mo » (toucher = voir la corbeille, `Gallery` section
+  `deleted`, pour restaurer) + bouton « Vider » (même confirmation qu'avant, `handleEmptyTrash` dans `HomeScreen`).
+- **Badges** (`components/BadgesGrid.js`, écran Progression) : **un badge par ligne** au lieu de la grille de briques —
+  ligne 1 : emoji · nom · (✓ + date si gagné, sinon avancement) ; ligne 2 : l'explication pour l'obtenir (`desc`) ; mini-barre
+  d'avancement pour ceux à gagner. Ordre inchangé.
+
+**Carte « Cette semaine » : rappel à la place du chrono (8 nov.) : ✅ codé, à tester** (`ProgressCard`) : la ligne « ⏱ 20 photos
+en ≈ … » est supprimée de la carte (le chrono reste dans l'écran Progression). À la place : « 🔔 Rappel activé · chaque jour à
+9h00 » (ou « 9h00 · 21h00 » en 2 rappels / « tous les 2 jours » / « chaque semaine à … »), ou « Rappel désactivé · Activer ».
+**Toucher cette ligne** : quotidien / hebdo / rappel coupé → feuille de choix d'heure sur l'accueil
+(`components/TimePickerSheet.js`, molettes heures/minutes) ; 2 rappels ou « tous les 2 jours » → écran Rappels. Valider appelle
+`updateReminderTime(h, m)` (`hooks/useNotificationReminder.js`) : reprogramme le rappel, enregistre l'heure et, si les rappels étaient
+coupés, active le rappel quotidien à cette heure (la permission est demandée à ce moment-là).
+
+**Corrections et gestion par abonnement (8 nov.) : ✅ codé, à tester** (retours d'Augustin).
+- **Bouton 🔀 aléatoire — carré gris derrière après 2-3 appuis** : cause probable = ombre Android qui apparaît/disparaît + bouton
+  `TouchableOpacity` (fondu d'opacité). `TriHero` : `Pressable`, ombre **toujours** présente, fonds opaques, bordure toujours là
+  (invisible éteint). Si le carré revient : même piège que la dette n°7 (ombre sur fond non opaque).
+- **« Envoi impossible, vérifie ta connexion » n'était PAS un problème de connexion** : sondage Supabase du 8 nov. → la table
+  `print_orders` existe mais la colonne `product` **n'existait pas** (le SQL n'avait pas été relancé après l'option magnets) →
+  l'insertion était refusée. **À faire : relancer `supabase/sql/print_orders.sql`** (sans risque). Désormais les erreurs sont typées
+  (`services/printOrders.js` : `kind` = `network` / `photo` / `server`) et l'alerte dit la vraie cause ; en mode dev elle affiche
+  aussi le détail technique.
+- **Bouton « Gérer »** dans l'en-tête de la sélection du mois (`SubscriptionMonthScreen`) → nouvelle page
+  **`SubscriptionManageScreen`** (gestion d'UN abonnement) : résumé de l'abonnement, « Voir ma sélection » / « Voir le suivi »,
+  « Historique des envois » (de cet abonnement : `SubscriptionHistory` accepte `route.params.subId`), « Changer les dates d'envoi »
+  (feuille), « Mettre en pause » / « Reprendre », « Résilier » (confirmation, la page se ferme), bloc « Livraison » (lecture seule),
+  « Tester la notification » (dev seulement).
+- **« Mes abonnements » simplifié** (`SubscriptionListScreen`) : plus de boutons globaux ni de question « pour quel abonnement ? » ;
+  **toucher une carte ouvre la gestion de cet abonnement** ; restent les lignes « + Offrir / M'abonner » et le total.
+  Le menu « ··· » de la Galerie ouvre la gestion (dates ouvertes directement pour « Changer les dates »).
+
+**Galerie « Pellicule » + « Chambre noire » (9 nov.) : ✅ codée (Augustin attendait le code ; réponses par défaut prises), à tester** :
+`screens/GalleryHomeScreen.js` refait d'après `maquette-galerie-chambre-noire.html`. **1. PELLICULE** : « Mes albums » en **liste**
+(`ListRow` : mosaïque 44 px, nom, « N photos · il y a … », menu « ··· » renommer / supprimer, ＋ dans le titre, petit mot « PELLICULE »
+au-dessus du titre) puis « Sans album ». **2. CHAMBRE NOIRE** : bloc rouge sombre pleine largeur (dégradé + ampoule, teintes
+`DARKROOM`), titre seul « Chambre noire », **toujours visible, rien à ouvrir** : **Coups de cœur** (guirlande `DarkroomCover` pleine
+largeur + « N à imprimer · M imprimées ›», toucher = tous les coups de cœur), **Livres photo** (étagère de couvertures + « ＋ Nouveau »
+et tuile « Créer un livre »), **Abonnements** (`SubscriptionRow`, « Gérer › », « + Ajouter un abonnement » / « Recevoir mes coups de
+cœur chaque mois » si aucun). Remplace « Mes tirages photos », « Mes livres photo » et la carte « Abonnement ». Choix pris par défaut
+(à confirmer) : mot « PELLICULE » gardé, abonnements dans la Chambre noire.
+
+**Photos déjà imprimées + galon dans le Bilan (9 nov.) : ✅ codé, à tester** (demandes d'Augustin).
+- **Marque « déjà imprimée » sur chaque photo** : `useSubscriptionStore.printedPhotos[photoId] = { at, subId, month, product }`, posée à
+  la **validation** d'une sélection (`validateSelection`), persistée (AsyncStorage), conservée même si l'abonnement est retiré.
+  `printedMapOf()` (`services/printSelection.js`) + hook `hooks/usePrintedPhotos.js` y ajoutent les photos des sélections déjà
+  validées avant cette marque (rien à migrer). **Une photo imprimée n'est plus jamais proposée** : exclue du tirage, de « ↻ une autre
+  au hasard » et de « Choisir moi-même » (`SubscriptionMonthScreen`), pour tous les abonnements. Elle **reste dans les coups de cœur** :
+  pastille « 🖨 Imprimée » sur la vignette (`PhotoGrid` prop `badgeFor`, `GalleryScreen`), ligne « Déjà imprimée le 12 nov. (magnets) »
+  dans la photo en grand, et la carte Galerie dit « N à imprimer · M imprimées ». Pas (encore) de moyen de réimprimer volontairement
+  une photo déjà imprimée. Les marques vivent sur le téléphone (ids de photos propres à l'appareil, comme les coups de cœur).
+- **Bilan** (`SummaryScreen`) : les blocs d'une même ligne ont la même hauteur ; le bloc « Mo libérés » affiche le **prochain galon**
+  (écusson + nom, barre d'avancement, « encore N photos pour ce galon » ; « 🏆 Galon maximum atteint » au sommet), d'après `rankInfo(lifetimeSorted)`.
+
+**Chambre noire — retouches (9 nov.) : ✅ codé, à tester** (`GalleryHomeScreen`, `DarkroomCover`) : la tuile pointillée « Créer un livre »
+prend maintenant **la forme exacte d'une couverture** (`pageRatio` du 1er livre, sinon 21×28 vertical) ; **guirlande** : tirages plus
+grands (34×42 au lieu de 26×32), photo plus grande (30×31), teinte rouge 12 % au lieu de 35 %, 3 à 4 tirages au lieu de 3 à 5, bloc
+plus haut (150) ; le petit titre sous « Chambre noire » devient **« TIRAGES PHOTOS »** (la ligne dessous reste « Coups de cœur »).
+**Maquette en attente de choix** : `maquette-chambre-noire-abonnements.html` (hors Git) — 4 pistes pour remplacer les briques d'abonnement
+**blanches** (qui jurent sur fond rouge sombre) : A verre dépoli · **B bacs de développement (brun-rouge `DARKROOM.tray`, ma préférée)** ·
+C papier crème · D étiquette sombre à liseré lumineux selon l'état. S'appliquerait à `SubscriptionRow` + la ligne « + Ajouter »
+**dans la Chambre noire seulement** (la page « Gérer » garde les cartes claires). Rien de codé pour ce point.
+
+**Briques d'abonnement de la Chambre noire : style B + D choisi par Augustin (9 nov.) — ✅ codé, à tester** : `SubscriptionRow` a une prop
+`dark` (utilisée seulement dans la Chambre noire de `GalleryHomeScreen` ; la page « Gérer » garde les cartes claires). Brique brun-rouge
+pleine (`DARKROOM.tray` + liseré `trayEdge`, comme les bacs de la guirlande) ; **liseré lumineux à gauche** selon l'état (rouge `todoGlow` =
+à valider, vert `C.sage3` = validée, gris = pause / à venir) ; l'**action « À valider » en pastille rouge vive** (`todoBg`), les autres
+états en simple texte coloré. Nouvelles couleurs dans `DARKROOM` : `trayEdge`, `todoBg`, `todoGlow`.
+**Onglet Galerie** (`TabBar`) : le point orange est remplacé par une **pastille avec le nombre** de sélections à valider (« 9+ » au-delà),
+d'après `useSubscriptionTodo()`.
+
+**Mode swipe — date complète de la photo (9 nov.) : ✅ codé, à tester** (`SwipeScreen`, `services/photoDate.js`, `services/photoLibrary.js`) : sous le lieu,
+l'en-tête affiche « 12 mars 2024 » (date de prise de vue) au lieu de l'année seule ; « **Reçue le** 12 mars 2024 » quand la photo n'a pas de date de
+prise (WhatsApp, web, vieux transferts) et qu'on s'est rabattu sur la date de modification du fichier = date d'arrivée (`photo.dateIsReceived`,
+posé à chaque chargement de la photothèque ; une photo déjà mémorisée avant ce changement n'a pas le repère → affichée comme date de prise
+jusqu'au prochain chargement). Sans date exploitable : année seule. **La photo en grand de la Galerie (`GalleryScreen`) affiche aussi la date complète / « Reçue le … »** (le repère est relu dans la photothèque à jour).
+

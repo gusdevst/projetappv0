@@ -76,6 +76,9 @@ export const DARKROOM = {
   paper: "#f6e6e0",
   tint:  "#c23b2e",                         // voile rouge posé sur les photos
   tray:  "#4a1a16",
+  trayEdge: "#6b2a22",                      // fin liseré des briques posées dans la chambre noire
+  todoBg:   "#8c2f24",                      // pastille « à valider » (action à faire) : rouge vif
+  todoGlow: "#ff9e8e",                      // liseré lumineux « à valider »
 };
 
 export const FONT = "Outfit";

@@ -58,6 +58,20 @@ export const STAGES = [
 ];
 export const stageIndex = (sel) => Math.max(0, STAGES.findIndex((s) => s.key === (sel?.stage ?? "validated")));
 
+// Photos DÉJÀ IMPRIMÉES : { photoId: { at, subId, month, product } }.
+// = les marques enregistrées sur chaque photo (printedPhotos) + celles qu'on retrouve dans les sélections validées
+// (abonnements validés avant que la marque existe). Une photo imprimée n'est plus jamais proposée à l'impression.
+export function printedMapOf(printedPhotos = {}, selections = {}) {
+  const map = { ...printedPhotos };
+  Object.entries(selections).forEach(([subId, byMonth]) => {
+    Object.entries(byMonth ?? {}).forEach(([month, sel]) => {
+      if (sel?.status !== "validated") return;
+      sel.photoIds.forEach((id) => { if (!map[id]) map[id] = { at: sel.validatedAt, subId, month }; });
+    });
+  });
+  return map;
+}
+
 // Ids déjà envoyés (sélections validées) pour un abonnement. `byMonth` = { "2026-11": sélection, … }
 export function sentIdsFor(byMonth = {}) {
   const out = new Set();

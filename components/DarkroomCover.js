@@ -12,7 +12,8 @@ import { DARKROOM as D } from "../constants/theme";
 const INCLINE = [-6, 3, -3, 6, -4]; // inclinaison de chaque tirage (degrés)
 
 // Nombre de tirages qui tiennent sur le fil selon la largeur du dessin.
-export const printsFor = (width, height) => Math.max(3, Math.min(5, Math.round((width / height) * 2.2)));
+// (tirages plus grands qu'avant pour qu'on voie bien les photos : 3 à 4 seulement)
+export const printsFor = (width, height) => Math.max(3, Math.min(4, Math.round((width / height) * 1.7)));
 
 export default function DarkroomCover({ urls = [], width = 100, height = 100, radius = 11 }) {
   // Repère : 100 de haut, largeur proportionnelle → rien n'est étiré.
@@ -38,7 +39,7 @@ export default function DarkroomCover({ urls = [], width = 100, height = 100, ra
             <Stop offset="1" stopColor={D.halo} stopOpacity="0" />
           </RadialGradient>
           <ClipPath id="dc-photo">
-            <Rect x="-11" y="2" width="22" height="24" />
+            <Rect x="-15" y="2.5" width="30" height="31" />
           </ClipPath>
         </Defs>
 
@@ -52,12 +53,12 @@ export default function DarkroomCover({ urls = [], width = 100, height = 100, ra
         {/* Tirages pincés sur le fil */}
         {xs.map((x, i) => (
           <G key={i} transform={`translate(${x},${sag(x)}) rotate(${INCLINE[i]})`}>
-            <Rect x="-13" y="0" width="26" height="32" rx="1.5" fill={D.paper} />
+            <Rect x="-17" y="0" width="34" height="42" rx="1.5" fill={D.paper} />
             {urls[i] && (
               <>
-                <Image href={{ uri: urls[i] }} x="-11" y="2" width="22" height="24"
+                <Image href={{ uri: urls[i] }} x="-15" y="2.5" width="30" height="31"
                   preserveAspectRatio="xMidYMid slice" clipPath="url(#dc-photo)" />
-                <Rect x="-11" y="2" width="22" height="24" fill={D.tint} opacity="0.35" />
+                <Rect x="-15" y="2.5" width="30" height="31" fill={D.tint} opacity="0.12" />
               </>
             )}
             <Rect x="-2" y="-4" width="4" height="8" rx="1" fill={D.clip} />

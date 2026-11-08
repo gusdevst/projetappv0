@@ -4,7 +4,7 @@
 // puis bouton 🔀 aléatoire (façon Spotify) + « Lancer un tri ».
 
 import { useState } from "react";
-import { View, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, TouchableOpacity, Pressable } from "react-native";
 import Svg, { Defs, LinearGradient, Stop, Ellipse, Rect, Path, G, Circle } from "react-native-svg";
 import Text from "../AppText";
 import Icon from "../Icons";
@@ -49,7 +49,6 @@ export default function TriHero({
   randomCount, onChangeRandomCount,
   shuffleOn, onToggleShuffle,
   ctaTitle, ctaSub, ctaDisabled, onLaunch,
-  trashCount = 0, trashSizeLabel, onOpenTrash, onEmptyTrash, emptying,
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const choices = SESSION_CHOICES.includes(randomCount)
@@ -119,46 +118,27 @@ export default function TriHero({
         {" · "}{triees.toLocaleString("fr-FR")} / {totalGalerie.toLocaleString("fr-FR")} photos triées
       </Text>
 
-      {/* Corbeille : petite pastille, seulement s'il y a des photos à supprimer */}
-      {trashCount > 0 && (
-        <View style={{ alignItems: "center", marginTop: 10 }}>
-          <TouchableOpacity
-            onPress={onOpenTrash}
-            activeOpacity={0.8}
-            style={[{ flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: C.bgCard, borderRadius: 20, paddingVertical: 5, paddingLeft: 11, paddingRight: 6 }, SHADOW]}
-          >
-            <Icon name="trash" size={15} color={C.red} strokeWidth={2} />
-            <Text style={{ fontSize: 12, color: C.textMid }}>
-              <Text style={{ fontWeight: "600", color: C.text }}>{trashCount}</Text> dans la corbeille · {trashSizeLabel}
-            </Text>
-            <TouchableOpacity
-              onPress={onEmptyTrash}
-              disabled={emptying}
-              hitSlop={{ top: 8, bottom: 8, left: 6, right: 8 }}
-              style={{ backgroundColor: C.redSoft, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 3 }}
-            >
-              {emptying
-                ? <ActivityIndicator size="small" color={C.red} />
-                : <Text style={{ fontSize: 12, fontWeight: "600", color: C.red }}>Vider</Text>}
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* Bouton 🔀 aléatoire + bouton principal */}
       <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
-        <TouchableOpacity
+        {/* Pressable (pas de fondu d'opacité) + ombre TOUJOURS présente + fonds opaques : sur Android, une ombre qui apparaît /
+            disparaît ou un bouton semi-transparent laissait un carré gris derrière le bouton quand on appuyait plusieurs fois. */}
+        <Pressable
           onPress={onToggleShuffle}
           accessibilityRole="switch"
           accessibilityState={{ checked: shuffleOn }}
           accessibilityLabel="Tri aléatoire"
-          style={[
-            { width: 56, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: shuffleOn ? C.sage : C.bgCard },
-            shuffleOn ? { borderWidth: 2, borderColor: C.accent } : SHADOW,
+          style={({ pressed }) => [
+            SHADOW,
+            {
+              width: 56, borderRadius: 16, alignItems: "center", justifyContent: "center",
+              backgroundColor: shuffleOn ? C.sage : C.bgCard,
+              borderWidth: 2, borderColor: shuffleOn ? C.accent : C.bgCard, // bordure toujours là (invisible quand éteint) : la taille ne bouge pas
+              transform: [{ scale: pressed ? 0.96 : 1 }],
+            },
           ]}
         >
           <Icon name="shuffle" size={22} color={shuffleOn ? C.accent : C.textMuted} strokeWidth={2} />
-        </TouchableOpacity>
+        </Pressable>
 
         <TouchableOpacity
           onPress={onLaunch}

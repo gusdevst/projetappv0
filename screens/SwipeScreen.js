@@ -30,6 +30,7 @@ import { SwipeEdgeHints } from "../components/SwipeEdgeHints";
 import { DayValidatedToast } from "../components/DayValidatedToast";
 import { BadgeUnlockBanner } from "../components/AchievementUnlocks";
 import { sharePhoto, getShareableUri } from "../services/photoShare";
+import { photoDateLabel } from "../services/photoDate";
 
 function getEdgeContainerStyle(edge) {
   if (edge === "up")    return { position: "absolute", top: 0,    left: 0, right: 0, height: 220 };
@@ -377,7 +378,7 @@ export function SwipeScreen({ navigation, route }) {
 
           <View style={{ alignItems: "center" }}>
             <Text style={{ color: "#fff", fontWeight: "600", fontSize: 13, textShadowColor: "rgba(0,0,0,0.4)", textShadowRadius: 4 }}>{photo.location}</Text>
-            <Text style={{ color: "rgba(255,255,255,.7)", fontSize: 11, textShadowColor: "rgba(0,0,0,0.4)", textShadowRadius: 4 }}>{photo.year}</Text>
+            <Text style={{ color: "rgba(255,255,255,.7)", fontSize: 11, textShadowColor: "rgba(0,0,0,0.4)", textShadowRadius: 4 }}>{photoDateLabel(photo)}</Text>
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>

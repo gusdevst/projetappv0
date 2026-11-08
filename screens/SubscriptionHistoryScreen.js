@@ -13,7 +13,8 @@ import { monthName, STAGES, stageIndex } from "../services/printSelection";
 import { syncOrderStatuses } from "../services/printOrders";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 
-export function SubscriptionHistoryScreen({ navigation }) {
+export function SubscriptionHistoryScreen({ navigation, route }) {
+  const onlySub = route?.params?.subId ?? null; // sinon : tous les abonnements
   const subs       = useSubscriptionStore((s) => s.subs);
   const selections = useSubscriptionStore((s) => s.selections);
 
@@ -21,13 +22,13 @@ export function SubscriptionHistoryScreen({ navigation }) {
 
   const items = useMemo(() => {
     const out = [];
-    subs.forEach((sub) => {
+    subs.filter((sub) => !onlySub || sub.id === onlySub).forEach((sub) => {
       Object.entries(selections[sub.id] ?? {}).forEach(([month, sel]) => {
         if (sel.status === "validated") out.push({ sub, month, sel });
       });
     });
     return out.sort((a, b) => b.sel.validatedAt - a.sel.validatedAt);
-  }, [subs, selections]);
+  }, [subs, selections, onlySub]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>

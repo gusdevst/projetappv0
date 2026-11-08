@@ -15,6 +15,8 @@ import { useNotificationReminder } from "../hooks/useNotificationReminder";
 import { BadgeUnlockBanner, RankUnlockModal } from "../components/AchievementUnlocks";
 import { DeleteRatio } from "../components/DeleteRatio";
 import { deleteRatio } from "../services/progressStats";
+import { rankInfo } from "../services/achievements";
+import { RankShield } from "../components/RankShield";
 
 const { width: SW } = Dimensions.get("window");
 
@@ -102,6 +104,10 @@ export function SummaryScreen({ navigation, route }) {
     sessionDeleted.length,
   );
 
+  // Prochain galon (selon toutes les photos triées depuis le début) : sert au petit bloc « Mo libérés ».
+  const lifetimeSorted = usePhotoStore((s) => s.lifetimeSorted);
+  const rank = rankInfo(lifetimeSorted ?? 0);
+
   // Album créé pendant cette session (mode album uniquement)
   const createdAlbum = albumId ? albums.find((a) => a.id === albumId) : null;
 
@@ -154,13 +160,13 @@ export function SummaryScreen({ navigation, route }) {
             { label: "Passées en revue", val: reviewedCount,           color: C.text,   icon: "eye",     bg: C.bgMuted, ic: C.textMid },
             { label: "Conservées",       val: sessionConserved.length, color: C.accent, icon: "check",   bg: C.sage,    ic: C.accent },
             { label: "Supprimées",       val: sessionDeleted.length,   color: C.red,    icon: "trash",   bg: C.redSoft, ic: C.red, trash: true },
-            { label: "Mo libérés",       val: deletedSize.toFixed(1),  color: C.accent, icon: "sparkle", bg: C.sage,    ic: C.accent },
+            { label: "Mo libérés",       val: deletedSize.toFixed(1),  color: C.accent, icon: "sparkle", bg: C.sage,    ic: C.accent, rank: true },
           ].map((s) => {
             const isTrash = !!s.trash;
             const cardContent = (
               <View
                 style={{
-                  width: (SW - 60) / 2,
+                  flex: 1, // les 2 blocs d'une même ligne ont la même hauteur (celui de droite se remplit avec le galon)
                   backgroundColor: C.bgCard,
                   borderRadius: 18,
                   paddingVertical: 16, paddingHorizontal: 12,
@@ -178,6 +184,27 @@ export function SummaryScreen({ navigation, route }) {
                 {isTrash && s.val > 0 && (
                   <Text style={{ fontSize: 11, color: C.red, fontWeight: "600", marginTop: 3 }}>Voir →</Text>
                 )}
+                {/* Prochain galon : nom, barre d'avancement, photos restantes */}
+                {s.rank && (
+                  <View style={{ alignSelf: "stretch", marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: C.border }}>
+                    {rank.next ? (
+                      <>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                          <RankShield metal={rank.next.metal} chevrons={rank.next.chevrons} size={14} />
+                          <Text style={{ fontSize: 11.5, fontWeight: "600", color: C.text }} numberOfLines={1}>{rank.next.name}</Text>
+                        </View>
+                        <View style={{ height: 5, borderRadius: 3, backgroundColor: C.sage2, marginTop: 6, overflow: "hidden" }}>
+                          <View style={{ height: 5, width: `${Math.round(rank.progress * 100)}%`, backgroundColor: C.accent }} />
+                        </View>
+                        <Text style={{ fontSize: 10.5, color: C.textMuted, textAlign: "center", marginTop: 4 }}>
+                          encore <Text style={{ fontWeight: "700", color: C.accent }}>{rank.left.toLocaleString("fr-FR")}</Text> photo{rank.left > 1 ? "s" : ""} pour ce galon
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={{ fontSize: 11.5, fontWeight: "600", color: C.accent, textAlign: "center" }}>🏆 Galon maximum atteint</Text>
+                    )}
+                  </View>
+                )}
               </View>
             );
             if (isTrash && s.val > 0) {
@@ -186,12 +213,13 @@ export function SummaryScreen({ navigation, route }) {
                   key={s.label}
                   onPress={() => navigation.navigate("Gallery", { section: "deleted" })}
                   activeOpacity={0.7}
+                  style={{ width: (SW - 60) / 2 }}
                 >
                   {cardContent}
                 </TouchableOpacity>
               );
             }
-            return <View key={s.label}>{cardContent}</View>;
+            return <View key={s.label} style={{ width: (SW - 60) / 2 }}>{cardContent}</View>;
           })}
         </View>
         )}
