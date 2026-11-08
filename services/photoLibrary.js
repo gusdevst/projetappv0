@@ -218,6 +218,7 @@ function mapAssetToPhoto(asset) {
     id: asset.id,
     url: asset.uri,
     filename: asset.filename ?? "",
+    modificationTime: asset.modificationTime ?? null, // ms — sert au cache d'analyse (photo modifiée → à remesurer)
     creationTime, // ms epoch (corrigé si absent, cf. plus haut) — utilisé par photoAnalysis pour clusters/doublons
     year,
     dateIsReceived, // true = date d'arrivée (pas de date de prise de vue) → affichée « Reçue le … » (services/photoDate.js)

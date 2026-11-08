@@ -1,13 +1,18 @@
 // [DEV] Test minimal du module de netteté : mesure quelques photos au hasard et
 // affiche leur score + le temps de calcul. Affiché seulement en __DEV__ (Réglages).
 // Sera remplacé par l'écran de calibrage (étape 3).
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Image } from "expo-image";
 import Text from "../AppText";
 import { C } from "../../constants/theme";
+import { BLUR_THRESHOLD, BLUR_THRESHOLD_WHATSAPP } from "../../constants/blurConfig";
 import { usePhotoStore } from "../../store/usePhotoStore";
+import { useBlurStore } from "../../store/useBlurStore";
 import { getSharpness, isSharpnessAvailable } from "../../services/sharpness";
+import { restartPhotoAnalysis, resetPhotoAnalysis } from "../../services/photoAnalysisQueue";
+import { blurryPhotos } from "../../services/blurDetection";
+import { isWhatsAppName } from "../../services/photoSource";
 
 const SAMPLE = 8;
 
@@ -86,6 +91,76 @@ export default function SharpnessDevTest() {
       {avgMs != null && (
         <Text style={{ fontSize: 12, color: C.textMid, marginTop: 10 }}>Moyenne : {avgMs} ms par photo</Text>
       )}
+
+      <AnalysisDiagnostic />
+    </View>
+  );
+}
+
+// [DEV] Suivi de l'analyse de fond (services/photoAnalysisQueue.js) + ce que la détection WhatsApp trouve vraiment.
+function AnalysisDiagnostic() {
+  const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
+  const deleted = usePhotoStore((s) => s.deleted);
+  const { status, total, done, scores, rev, whatsapp } = useBlurStore();
+
+  const stats = useMemo(() => {
+    const deletedIds = new Set(deleted.map((p) => p.id));
+    const blurry = blurryPhotos(libraryPhotos, scores, { waIds: whatsapp.ids, deletedIds });
+    let byName = 0, byAlbum = 0, suspects = 0;
+    for (const p of libraryPhotos) {
+      if (p.isScreenshot) continue;
+      const n = isWhatsAppName(p.filename);
+      const a = whatsapp.ids.has(p.id);
+      if (n) byName++;
+      if (a) byAlbum++;
+      // iOS : pas détectée, pas de date de prise de vue, petite taille → ressemble à une photo reçue par message
+      if (!n && !a && p.dateIsReceived && Math.max(p.width, p.height) <= 1700) suspects++;
+    }
+    return {
+      blurry: blurry.length,
+      blurryWa: blurry.filter((b) => b.whatsapp).length,
+      measured: Object.keys(scores).length,
+      byName, byAlbum, suspects,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [libraryPhotos, deleted, rev, whatsapp]);
+
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const statusLabel = {
+    idle: "en pause / pas lancée",
+    running: "en cours",
+    done: "terminée",
+    unavailable: "module natif absent (rebuild)",
+  }[status] || status;
+
+  const line = { fontSize: 12, color: C.textMid, marginTop: 3 };
+  const btn = { borderRadius: 10, paddingVertical: 9, paddingHorizontal: 12, borderWidth: 1, borderColor: C.border, backgroundColor: C.bgMuted };
+
+  return (
+    <View style={{ marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border }}>
+      <Text style={{ fontSize: 14, fontWeight: "700", color: C.text }}>Analyse de fond</Text>
+      <Text style={line}>{`${done} / ${total} photos (${pct} %) · ${statusLabel}`}</Text>
+      <Text style={line}>{`Résultats gardés sur le téléphone : ${stats.measured}`}</Text>
+      <Text style={line}>{`Photos floues (seuils ${BLUR_THRESHOLD} / ${BLUR_THRESHOLD_WHATSAPP} WhatsApp) : ${stats.blurry}, dont ${stats.blurryWa} WhatsApp`}</Text>
+
+      <Text style={{ fontSize: 13, fontWeight: "700", color: C.text, marginTop: 12 }}>Détection WhatsApp</Text>
+      <Text style={line}>{`Par nom de fichier (IMG-…-WA0003) : ${stats.byName}`}</Text>
+      <Text style={line}>{`Par dossier : ${stats.byAlbum}`}</Text>
+      <Text style={line}>
+        {whatsapp.albums.length
+          ? `Dossiers trouvés : ${whatsapp.albums.map((a) => `${a.title} (${a.count})`).join(", ")}`
+          : "Dossiers trouvés : aucun"}
+      </Text>
+      <Text style={line}>{`Suspectes non détectées (sans date de prise de vue, ≤ 1700 px) : ${stats.suspects}`}</Text>
+
+      <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+        <TouchableOpacity style={btn} onPress={restartPhotoAnalysis}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: C.text }}>Relancer</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={btn} onPress={resetPhotoAnalysis}>
+          <Text style={{ fontSize: 12, fontWeight: "600", color: C.red }}>Tout effacer et recalculer</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }

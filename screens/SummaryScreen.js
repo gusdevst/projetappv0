@@ -2,7 +2,7 @@
 // ─────────────────────────────────────────────
 // screens/SummaryScreen.js
 // ─────────────────────────────────────────────
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { View, ScrollView, TouchableOpacity, StatusBar, Dimensions, Alert } from "react-native";
 import Text from "../components/AppText";
 import { Image } from "expo-image";
@@ -75,6 +75,30 @@ export function SummaryScreen({ navigation, route }) {
   const resetHesitated    = usePhotoStore((state) => state.resetHesitated);
   const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
   const deleteAlbum       = usePhotoStore((state) => state.deleteAlbum);
+  const emptyTrash        = usePhotoStore((state) => state.emptyTrash);
+  const trashCount        = usePhotoStore((state) => state.deleted.length); // toute la corbeille (pas seulement cette session)
+  const [emptying, setEmptying] = useState(false);
+
+  // Même confirmation que sur l'accueil (HomeScreen.handleEmptyTrash).
+  function handleEmptyTrash() {
+    if (emptying || trashCount === 0) return;
+    Alert.alert(
+      "Vider la corbeille",
+      `Supprimer définitivement ${trashCount} photo${trashCount > 1 ? "s" : ""} ? Sur iPhone, elles restent récupérables 30 jours dans « Supprimés récemment ».`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer", style: "destructive",
+          onPress: async () => {
+            setEmptying(true);
+            const ok = await emptyTrash();
+            setEmptying(false);
+            if (!ok) Alert.alert("Erreur", "La suppression a échoué. Vérifie que Pellicule a le droit de supprimer des photos.");
+          },
+        },
+      ]
+    );
+  }
 
   // Rappels push : filet de secours si les notifs sont encore désactivées.
   const { notificationsEnabled, enableReminders } = useNotificationReminder();
@@ -181,8 +205,20 @@ export function SummaryScreen({ navigation, route }) {
                 </View>
                 <Text style={{ fontSize: 26, fontWeight: "600", color: s.color }}>{s.val}</Text>
                 <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2 }}>{s.label}</Text>
-                {isTrash && s.val > 0 && (
-                  <Text style={{ fontSize: 11, color: C.red, fontWeight: "600", marginTop: 3 }}>Voir →</Text>
+                {isTrash && s.val > 0 && trashCount > 0 && (
+                  <>
+                    <Text style={{ fontSize: 11, color: C.red, fontWeight: "600", marginTop: 3 }}>Voir →</Text>
+                    {/* Vider la corbeille directement depuis le bilan (touche intérieure : n'ouvre pas la corbeille) */}
+                    <TouchableOpacity
+                      onPress={handleEmptyTrash}
+                      disabled={emptying}
+                      activeOpacity={0.8}
+                      hitSlop={{ top: 6, bottom: 6, left: 10, right: 10 }}
+                      style={{ marginTop: 8, backgroundColor: C.red, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 18, opacity: emptying ? 0.5 : 1 }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>{emptying ? "…" : "Vider"}</Text>
+                    </TouchableOpacity>
+                  </>
                 )}
                 {/* Prochain galon : nom, barre d'avancement, photos restantes */}
                 {s.rank && (
@@ -207,7 +243,7 @@ export function SummaryScreen({ navigation, route }) {
                 )}
               </View>
             );
-            if (isTrash && s.val > 0) {
+            if (isTrash && s.val > 0 && trashCount > 0) {
               return (
                 <TouchableOpacity
                   key={s.label}
