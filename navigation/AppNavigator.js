@@ -35,6 +35,7 @@ import { SubscriptionListScreen } from "../screens/SubscriptionListScreen";
 import { SubscriptionManageScreen } from "../screens/SubscriptionManageScreen";
 import { SubscriptionTrackingScreen } from "../screens/SubscriptionTrackingScreen";
 import { SubscriptionHistoryScreen } from "../screens/SubscriptionHistoryScreen";
+import { BlurCalibrationScreen } from "../screens/BlurCalibrationScreen";
 import { usePhotoStore }         from "../store/usePhotoStore";
 
 const Stack = createStackNavigator();
@@ -115,6 +116,7 @@ export function AppNavigator() {
       <Stack.Screen name="SubscriptionTracking" component={SubscriptionTrackingScreen} />
       <Stack.Screen name="SubscriptionHistory" component={SubscriptionHistoryScreen} />
       <Stack.Screen name="Auth"        component={AuthScreen} />
+      {__DEV__ && <Stack.Screen name="BlurCalibration" component={BlurCalibrationScreen} />}
     </Stack.Navigator>
   );
 }

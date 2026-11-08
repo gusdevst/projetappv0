@@ -4,6 +4,7 @@
 import { useState, useMemo } from "react";
 import { View, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Image } from "expo-image";
+import { useNavigation } from "@react-navigation/native";
 import Text from "../AppText";
 import { C } from "../../constants/theme";
 import { BLUR_THRESHOLD, BLUR_THRESHOLD_WHATSAPP } from "../../constants/blurConfig";
@@ -99,6 +100,7 @@ export default function SharpnessDevTest() {
 
 // [DEV] Suivi de l'analyse de fond (services/photoAnalysisQueue.js) + ce que la détection WhatsApp trouve vraiment.
 function AnalysisDiagnostic() {
+  const navigation = useNavigation();
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
   const deleted = usePhotoStore((s) => s.deleted);
   const { status, total, done, scores, rev, whatsapp } = useBlurStore();
@@ -138,6 +140,13 @@ function AnalysisDiagnostic() {
 
   return (
     <View style={{ marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border }}>
+      <TouchableOpacity
+        onPress={() => navigation.navigate("BlurCalibration")}
+        style={{ borderRadius: 12, paddingVertical: 11, alignItems: "center", backgroundColor: C.sage, borderWidth: 1, borderColor: C.sage2, marginBottom: 12 }}
+      >
+        <Text style={{ fontWeight: "700", color: C.accent }}>Ouvrir le calibrage des seuils ›</Text>
+      </TouchableOpacity>
+
       <Text style={{ fontSize: 14, fontWeight: "700", color: C.text }}>Analyse de fond</Text>
       <Text style={line}>{`${done} / ${total} photos (${pct} %) · ${statusLabel}`}</Text>
       <Text style={line}>{`Résultats gardés sur le téléphone : ${stats.measured}`}</Text>
