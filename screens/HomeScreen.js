@@ -15,7 +15,6 @@ import Text from "../components/AppText";
 import HomeHeader from "../components/home/HomeHeader";
 import TriHero from "../components/home/TriHero";
 import FolderSheet from "../components/home/FolderSheet";
-import AlbumPickerSheet from "../components/book/AlbumPickerSheet";
 import Icon from "../components/Icons";
 import { SectionTitle, ListRow, SHADOW } from "../components/home/ui";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -26,6 +25,7 @@ import { usePhotoStore } from "../store/usePhotoStore";
 import { getAlbums, getAlbumAssetIds } from "../services/photoLibrary";
 import { RangeCalendarPicker, dateLabel } from "../components/RangeCalendarPicker";
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
+import { useBlurryPhotos } from "../hooks/useBlurryPhotos";
 import { ProgressCard } from "../components/ProgressCard";
 import TimePickerSheet from "../components/TimePickerSheet";
 import { BadgeUnlockBanner, RankUnlockModal } from "../components/AchievementUnlocks";
@@ -183,8 +183,6 @@ export function HomeScreen({ navigation, route }) {
   const setRandomCount         = usePhotoStore((state) => state.setRandomCount);
   const shuffleOn              = usePhotoStore((state) => state.shuffleOn);
   const setShuffleOn           = usePhotoStore((state) => state.setShuffleOn);
-  const albums                 = usePhotoStore((state) => state.albums);
-  const books                  = usePhotoStore((state) => state.books);
   const notificationFrequency  = usePhotoStore((state) => state.notificationFrequency);
   const notificationHour       = usePhotoStore((state) => state.notificationHour);
   const notificationMinute     = usePhotoStore((state) => state.notificationMinute);
@@ -196,6 +194,7 @@ export function HomeScreen({ navigation, route }) {
   const addAlbumFilter    = usePhotoStore((state) => state.addAlbumFilter);
   const emptyTrash        = usePhotoStore((state) => state.emptyTrash);
   const dailyLog          = usePhotoStore((state) => state.dailyLog); // carnet de bord → carte progression
+  const blurry            = useBlurryPhotos(); // photos floues repérées (ligne « Photos floues »)
 
   // ── Mode actif : ménage (orange) ou album (violet) ──────────────────────
   const activeMode  = usePhotoStore((state) => state.homeMode);
@@ -208,7 +207,6 @@ export function HomeScreen({ navigation, route }) {
   // Brique "Par date" : période choisie au calendrier (mode Tri), ouverte depuis l'accueil.
   const [dateRange, setDateRange]       = useState(null); // { from: Date, to: Date|null } | null
   const [showCalendar, setShowCalendar] = useState(false);
-  const [showBookPicker, setShowBookPicker] = useState(false); // feuille « Quel album ? » (livre photo)
 
   // Filtres date proposés selon le mode actif
 
@@ -626,15 +624,6 @@ export function HomeScreen({ navigation, route }) {
                   onPress={openAlbumPicker}
                 />
               </View>
-
-              {/* Livre photo → feuille « Quel album ? » → écran PhotoBook */}
-              <SectionTitle title="Livre photo" />
-              <ListRow
-                icon="album" iconColor={C.album} iconBg={C.albumSoft}
-                title="Créer un livre photo"
-                sub="24 à 64 pages, depuis un de tes albums"
-                onPress={() => setShowBookPicker(true)}
-              />
             </View>
           );
         })()}
@@ -648,6 +637,19 @@ export function HomeScreen({ navigation, route }) {
               <SectionTitle title="Trier autrement" />
               <View style={{ gap: 9 }}>
                 <ListRow icon="sameInstant" title="Même instant" sub="Prises à quelques secondes" onPress={() => navigation.navigate("Duplicates")} />
+                {/* Photos floues : visible seulement s'il y en a, ou pendant l'analyse. */}
+                {(blurry.count > 0 || blurry.analyzing) && (
+                  <ListRow
+                    icon="blur" title="Photos floues"
+                    sub={blurry.analyzing ? `analyse en cours (${blurry.pct} %)` : "Repérées automatiquement"}
+                    right={blurry.count > 0 ? (
+                      <View style={{ backgroundColor: C.redSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+                        <Text style={{ fontSize: 13, fontWeight: "700", color: C.red }}>{blurry.count.toLocaleString("fr-FR")}</Text>
+                      </View>
+                    ) : "chevron"}
+                    onPress={() => navigation.navigate("BlurryPhotos")}
+                  />
+                )}
                 <ListRow
                   icon="calendar" title="Par date"
                   sub={dateRange ? rangeLabel(dateRange) : "Choisis une période"}
@@ -700,16 +702,6 @@ export function HomeScreen({ navigation, route }) {
         shortcuts={dateShortcuts}
         onConfirm={handleCalendarConfirm}
         onCancel={() => setShowCalendar(false)}
-      />
-
-      {/* ── Feuille « Quel album ? » (livre photo) ─────────────────── */}
-      <AlbumPickerSheet
-        visible={showBookPicker}
-        onClose={() => setShowBookPicker(false)}
-        albums={albums}
-        urlById={Object.fromEntries(printed.map((p) => [p.id, p.url]))}
-        books={books}
-        onPick={(a) => { setShowBookPicker(false); navigation.navigate("PhotoBook", { albumId: a.id }); }}
       />
 
       {/* ── Feuille « Choisir un dossier » ─────────────────────────── */}

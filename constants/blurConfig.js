@@ -12,9 +12,8 @@ export const BLUR_ALGO_VERSION = 1;
 // ⚠️ Valeurs de départ, à régler à l'étape 3 avec le panneau de calibrage.
 export const BLUR_THRESHOLD = 100;
 
-// Seuil des photos WhatsApp. Plus BAS = plus tolérant : WhatsApp compresse les photos,
-// elles ont un score plus faible même quand elles sont réussies. On en signale donc moins.
-export const BLUR_THRESHOLD_WHATSAPP = 50;
+// Seuil des photos WhatsApp (réglé par Augustin le 8 nov. avec l'écran de calibrage : 150).
+export const BLUR_THRESHOLD_WHATSAPP = 150;
 
 // Analyse en arrière-plan (app ouverte).
 export const ANALYSIS_START_DELAY_MS = 2500; // attend un peu après le chargement : l'accueil s'affiche d'abord

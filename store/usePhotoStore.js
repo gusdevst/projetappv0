@@ -102,6 +102,7 @@ export const usePhotoStore = create(
       deleted:   [], // Corbeille (décision destructrice prioritaire — vide les autres piles)
       printed:   [], // À imprimer / album souvenirs
       skipped:   [], // MÉNAGE : photos "Conservées" — décision définitive, ne reviennent jamais
+      blurKeptIds: [], // PHOTOS FLOUES : ids des photos décochées puis confirmées « gardées » — plus jamais proposées comme floues
       dailyLog:  {}, // carnet de bord journalier (voir bumpLog en haut du fichier)
       lifetimeSorted: null, // total des photos triées depuis toujours (galons) — null = pas encore initialisé
       achievements:   {},   // galons + badges débloqués : { "rank-3": timestamp, "clean-1": timestamp }
@@ -210,6 +211,30 @@ export const usePhotoStore = create(
           lifetimeSorted: bumpTotal(state, 1),
           ...timeDecision(state, bumpLog(bumpSorted(state.dailyLog, 1), "binned", 1)), // 🗑 = photo supprimée → triée (+ compteur « supprimées » binned)
         };
+      }),
+
+      // addDeletedMany = « Mettre à la corbeille » de l'écran Photos floues : plusieurs photos d'un coup,
+      // en UNE seule mise à jour (donc une seule écriture sur disque). Même résultat que addDeleted
+      // (corbeille de Pellicule, restaurable), MAIS ces suppressions en lot ne comptent PAS dans la
+      // progression (série 🔥, galons, chrono) : sinon un seul appui validerait la journée.
+      addDeletedMany: (photos) => set((state) => {
+        const already = new Set(state.deleted.map((p) => p.id));
+        const fresh = photos.filter((p) => !already.has(p.id));
+        if (fresh.length === 0) return state;
+        const ids = new Set(fresh.map((p) => p.id));
+        return {
+          deleted: [...state.deleted, ...fresh],
+          kept:    state.kept.filter((p) => !ids.has(p.id)),
+          printed: state.printed.filter((p) => !ids.has(p.id)),
+        };
+      }),
+
+      // addBlurKept = ids des photos que l'utilisateur a décochées (« garder ») sur l'écran Photos floues
+      // et confirmées : elles ne sont plus jamais proposées comme floues.
+      addBlurKept: (photoIds) => set((state) => {
+        const merged = new Set(state.blurKeptIds);
+        photoIds.forEach((id) => merged.add(id));
+        return merged.size === state.blurKeptIds.length ? state : { blurKeptIds: [...merged] };
       }),
 
       // addPrinted = album : retire de deleted (album = "garder").
@@ -630,6 +655,7 @@ export const usePhotoStore = create(
         deleted:                 state.deleted,
         printed:                 state.printed,
         skipped:                 state.skipped,
+        blurKeptIds:             state.blurKeptIds,
         hesitated:               state.hesitated,
         albums:                  state.albums,
         books:                   state.books,

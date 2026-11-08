@@ -29,6 +29,12 @@ const ICONS = {
     <Rect x="4" y="7" width="13" height="13" rx="2.5" fill={C.bgCard} />
     <Circle cx="10.5" cy="13.5" r="2.4" />
   </>),
+  // Photos floues : appareil photo avec un rond en pointillés (mise au point ratée).
+  blur: (c) => (<>
+    <Rect x="3.5" y="5" width="17" height="14" rx="3" />
+    <Circle cx="12" cy="12" r="3.2" strokeDasharray="2 1.6" />
+    <Path d="M7 2.8l1 1.6M17 2.8l-1 1.6" opacity={0.6} />
+  </>),
   calendar: (c) => (<>
     <Rect x="4" y="5" width="16" height="15" rx="3" />
     <Path d="M4 10h16M9 3v4M15 3v4" />

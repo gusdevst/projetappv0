@@ -2,7 +2,7 @@
 
 > Fichier de passation. Lu en début de session pour retrouver l'état du projet
 > sans re-scanner tout le code. **À maintenir à jour** à chaque étape importante.
-> Dernière mise à jour : 2026-11-07 (livre photo : couverture, PDF Gelato ; commande en standby).
+> Dernière mise à jour : 2026-11-08 (« Photos floues » en mode Tri codée, à tester ; `feature/comptes` fusionnée dans `main`).
 
 ---
 
@@ -19,19 +19,19 @@ trop-plein de photos sans y passer des heures.
 
 ---
 
-## 2. État actuel (au 2026-11-07)
+## 2. État actuel (au 2026-11-08)
 
-- **`main` contient** (testé, poussé sur GitHub le 6 nov.) : progression, thème « sauge »,
-  barre de menu, Galerie, livre photo carré (`d49d903 coup de coeurs`).
-- Branche de travail : **`feature/comptes`** (créée le 6 nov. depuis `main`) — **comptes Supabase**
-  (connexion e-mail, déconnexion, suppression, sauvegarde de la progression : testés par Augustin)
-  + **livre photo 21×28 cm Gelato** : format, 6 styles de couverture + 26 fonds + recadrage, couverture
-  à plat, « Vérifier ton livre », **PDF d'essai aux specs Gelato (validé par Augustin le 7 nov.)**.
-  À fusionner dans `main` après test.
+- **`main` contient** : progression, thème « sauge », barre de menu, Galerie, livre photo carré, **et
+  (fusion fast-forward du 8 nov., `6cc5887`) la branche `feature/comptes`** : comptes Supabase (connexion e-mail,
+  déconnexion, suppression, sauvegarde de la progression), livre photo 21×28 cm Gelato (couvertures, PDF d'essai
+  validé le 7 nov.), abonnements Coups de cœur (tirages / magnets), Galerie « Pellicule » + « Chambre noire ».
+- Branche de travail : **`feature/photos-floues`** (créée le 8 nov. depuis `main`) — **« Photos floues » en mode Tri**
+  (étapes 1 à 7 faites, voir §14). Module natif ajouté → **rebuild nécessaire** (déjà fait sur iOS et Android).
+  À tester : étape 6 (corbeille, swipe direct, mémoire des photos gardées), puis fusionner dans `main`.
 - ⏸ **STANDBY (décision d'Augustin, 7 nov.)** : la suite de « livre photo → commande » (prix, écran
   « Commander », paiement, envoi du fichier, commande Gelato). Détail et reprise : §8 et §13.
 - Branches déjà fusionnées dans `main`, supprimables : `feature/progression`,
-  `feature/themes`, `feature/barre-menu`, `feature/livre-photo`, `octobre27`.
+  `feature/themes`, `feature/barre-menu`, `feature/livre-photo`, `feature/comptes`, `octobre27`.
 - Test au quotidien : **simulateur iOS du Mac** (`npx expo start --dev-client`, Fast Refresh).
   Test sur vrai téléphone : **app de dev Android** sur le téléphone d'Augustin (build EAS
   `development`, Metro en Wi-Fi) ; TestFlight sur l'iPhone de sa femme pour les versions beta.
@@ -56,7 +56,9 @@ NavigationContainer unique · écrans câblés au navigateur · vraies photos
   **react-native-svg** (icônes), **expo-font + @expo-google-fonts/outfit** (police),
   **@supabase/supabase-js + react-native-url-polyfill** (comptes, JS pur → pas de rebuild),
   polices du livre photo (Playfair, Caveat, Bebas, Great Vibes, Fredoka) chargées par `components/book/bookFonts.js`,
-  **react-native-view-shot** (natif → rebuild : « photographie » les pages hors écran) + **pdf-lib** (assemble le PDF).
+  **react-native-view-shot** (natif → rebuild : « photographie » les pages hors écran) + **pdf-lib** (assemble le PDF),
+  **`modules/pellicule-sharpness`** (module Expo LOCAL, Swift + Kotlin, natif → rebuild : mesure de netteté d'une photo,
+  autolinké depuis le dossier `modules/`, pas dans `package.json`).
 - Police **Outfit** intégrée au build (plugin `expo-font` dans `app.json`, 6 graisses 400→900
   sous le nom « Outfit ») → `fontWeight` marche tel quel. Ajouter un module natif = rebuild
   (`npx expo prebuild --platform ios --clean` puis `npx expo run:ios`).
@@ -80,7 +82,7 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
   autre écran, avec bouton retour). Swipe, Bilan… passent par-dessus la barre.
   Depuis un écran de la pile, aller sur l'accueil = `navigate("Main", { screen: "Home", params })`.
   Un seul NavigationContainer (dans App.js). Écrans de pile ajoutés : `PhotoBook`, `BookPageEditor`,
-  `BookCheck`, `Auth`.
+  `BookCheck`, `Auth`, `BlurryPhotos`, `BlurCalibration` (déclaré seulement en `__DEV__`).
 
 **store/**
 - `useAuthStore.js` — session de connexion Supabase (`session`, `ready`, `init()` appelé dans App.js).
@@ -89,6 +91,9 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
   réglages de rappels, flags "vu une fois". Persisté via AsyncStorage.
   Contient aussi le **carnet de bord** `dailyLog`, le chrono de tri, `lifetimeSorted`,
   `achievements` (galons/badges datés) et la file `pendingUnlocks` (non persistée).
+  Photos floues : `blurKeptIds` (persisté), `addBlurKept(ids)`, `addDeletedMany(photos)` (corbeille en lot, **hors progression**).
+- `useBlurStore.js` — état EN MÉMOIRE de l'analyse de netteté (`status`, `done` / `total`, `scores` = le cache,
+  `rev` = compteur de publications, `whatsapp` = albums WhatsApp trouvés). Alimenté par `photoAnalysisQueue`.
 
 **screens/** (13)
 - `OnboardingScreen` · `PermissionDeniedScreen` — arrivée + permissions.
@@ -113,6 +118,11 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
   `BookPageEditorScreen` — une page en grand (mise en page, titre, recadrage ; glisser = page suivante).
   `BookCheckScreen` — « Vérifier ton livre » avant impression (3 vues : contrôles · photos de faible qualité ·
   et maintenant ?). **« Créer le PDF » (PDF d'essai) visible seulement en `__DEV__`.**
+- `BlurryPhotosScreen` — « Photos floues » (mode Tri) : grille 3 colonnes, tout coché, coche = garder, photo = grand format,
+  pastille WhatsApp, boutons corbeille (feuille `BlurConfirmSheet`) et « Les trier une par une (swipe) » (→ `Swipe` direct).
+  `BlurCalibrationScreen` — **`__DEV__`** : photos rangées de la plus floue à la plus nette, seuil réglable, répartition.
+  `HomeScreen` : ligne « Photos floues » sous « Même instant » (mode Tri) ; la brique « Créer un livre photo » du mode Album a été retirée.
+  `SummaryScreen` : bouton « Vider » sur la brique « Supprimées » (vide toute la corbeille, même confirmation que l'accueil).
 
 **components/** — briques UI réutilisables :
 - `AppText` — **remplace le `Text` de React Native partout** (applique Outfit). Dans un nouveau
@@ -135,6 +145,15 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
   `coverTitleColor`, `BookControls` (`LayoutPicker`, `Chip`, `ToolButton`…), `PhotoPickerSheet`,
   `AlbumPickerSheet`, `CroppedImage`, `TiltSlider`, `bookFonts`, `FlatCover` (4ᵉ + dos + face avant, à partir
   des dimensions Gelato), `PrintPageRenderer` (dessine une page hors écran à la taille d'impression).
+- `BlurConfirmSheet` — feuille « Mettre N photos à la corbeille ? » (Photos floues). `dev/SharpnessDevTest` — **`__DEV__`**,
+  carte en bas des Réglages : test du module, avancement de l'analyse, diagnostic WhatsApp, accès au calibrage.
+  `Icons` : icône `blur` ajoutée.
+
+**modules/pellicule-sharpness/** — module natif local : `ios/PelliculeSharpnessModule.swift` (miniature 512 px via
+PHImageManager, sans iCloud) et `android/.../PelliculeSharpnessModule.kt` (miniature via ContentResolver + BitmapFactory).
+Même formule des deux côtés : **variance du Laplacien** d'une miniature en gris. `getSharpness(id)` → `{ score, width, height }`
+ou `null` (photo illisible / seulement sur iCloud). Si on change la formule : modifier LES DEUX fichiers + monter
+`BLUR_ALGO_VERSION` + rebuild.
 
 **services/** — logique métier, pas d'UI :
 - `photoLibrary.js` — wrapper expo-media-library (permission, chargement, suppression).
@@ -160,10 +179,21 @@ Racine : `/Users/augustindevasselot/Documents/phototri/`
 - `bookPdf.js` — géométrie des pages (mm → pixels → points PDF), plan du PDF, assemblage `pdf-lib`
   (boîtes de rognage / fond perdu). Ordre : couverture à plat · garde blanche · pages · page blanche de fin.
 - `photoShare.js` — fichier original d'une photo (`getShareableUri`, aussi utilisé pour le PDF : photos HD, iCloud).
+- **Chaîne d'analyse des photos (photos floues ; servira aussi aux futures étiquettes « plage / chien »)** :
+  `sharpness.js` (enveloppe du module natif ; `isSharpnessAvailable` = false si pas de rebuild) ·
+  `photoAnalysisQueue.js` (`startPhotoAnalysis()` appelé dans `App.js` : file progressive, 2 photos à la fois, récentes d'abord,
+  stoppée en arrière-plan ; ne mesure que les photos sans résultat à jour ; `restartPhotoAnalysis` / `resetPhotoAnalysis` pour le dev) ·
+  `photoAnalysisCache.js` (fichier JSON `photo-analysis-v1.json` dans le dossier documents :
+  `{ [idPhoto]: { m: modificationTime, blur: { s, v } } }` ; une future analyse ajoutera sa clé à côté de `blur`) ·
+  `photoSource.js` (WhatsApp : nom `IMG-…-WA0003` OU dossier contenant « whatsapp ») ·
+  `blurDetection.js` (pur : `isBlurFresh`, `blurryPhotos(...)` = photos sous le seuil, exclusions) ·
+  `blurMetrics.js` (**inutilisé**, voir §14 : 4 mesures abandonnées car elles demandaient un rebuild).
+  `photoLibrary.js` : chaque photo porte aussi `modificationTime` (clé du cache).
 
 **hooks/** — `useAndroidBack` (bouton retour Android), `useNotificationReminder`
 (logique d'activation des rappels, partagée), `useBookPdf` (fabrique le PDF d'essai : dessin hors écran →
-capture JPEG → PDF → fichier partageable ; progression, annulation, étape affichée).
+capture JPEG → PDF → fichier partageable ; progression, annulation, étape affichée),
+`useBlurryPhotos` (liste des photos floues + avancement de l'analyse, pour l'accueil et l'écran Photos floues).
 
 **supabase/** — `config.toml` + `functions/` : `gelato-cover` (dimensions de couverture), `gelato-price`
 (coût d'impression et livraison Gelato ; ajoutée le 6 nov., **non testée par Claude**). Fonctions Deno côté serveur.
@@ -171,6 +201,7 @@ capture JPEG → PDF → fichier partageable ; progression, annulation, étape a
 **constants/** — `theme.js` : **plusieurs palettes** (`PALETTES.ardoise` = ancienne bleue,
 `PALETTES.sauge` = nouvelle). L'interrupteur `THEME_ACTIF` choisit celle utilisée → `C`.
 Aussi `FONT` ("Outfit"), styles `S`. Ne jamais écrire une couleur en dur : passer par `C`.
+`blurConfig.js` : **tous les réglages des photos floues** (version de la formule, seuils normal / WhatsApp, cadence de l'analyse).
 
 ---
 
@@ -267,12 +298,30 @@ dépôt, déployée de la même façon ; réponse brute de Gelato, **à lire et 
 14. **Intérieur de couverture** : affiché en page blanche hachurée « Intérieur de couverture » dans l'aperçu.
     C'est voulu : chez Gelato, la page 2 du fichier (garde) et la dernière page restent **blanches** (non imprimées).
     Libellé à reprendre (« Garde (non imprimée) ») si Augustin le souhaite — **ne pas changer ses textes sans accord**.
+15. **Photos floues — précision de la mesure** : la variance du Laplacien dépend de la scène (portrait net sur fond lisse = score bas ;
+    photo floue très texturée ou bruitée = score haut). Augustin l'a constaté sur ses photos. Piste testée puis **annulée** : renvoyer
+    plusieurs mesures du module natif (zone la plus nette, rapport détail fin / moyen) — elle demandait un rebuild. `services/blurMetrics.js`
+    en garde le début (inutilisé, **conservé à la demande d'Augustin**). À reprendre seulement si les erreurs gênent à l'usage.
+16. **Photos floues — seuil normal pas calibré** (100, valeur de départ). Seul le seuil WhatsApp a été réglé (150, sur l'Android d'Augustin).
+    Les scores iOS et Android ne sont pas forcément comparables (même formule, décodeurs différents) : si besoin, un seuil par plateforme.
+17. **Détection WhatsApp sur iOS non vérifiée** : sur Android elle marche (5 142 par nom, 5 130 par dossier). Sur iOS, WhatsApp range dans
+    la pellicule sous des noms `IMG_1234`, sans dossier : les photos WhatsApp y passeront probablement avec le seuil normal (le panneau
+    `[DEV]` n'existe pas en TestFlight pour le vérifier). Règle de secours possible : sans date de prise de vue + petite taille.
+18. **Cache d'analyse jamais nettoyé** (les photos supprimées de la photothèque restent dans `photo-analysis-v1.json`, quelques Ko) ; les photos
+    seulement sur iCloud sont réessayées à chaque lancement (sans téléchargement). L'analyse tourne aussi en version publiée (≈ 43 ms / photo sur Android).
+19. **Brique « Supprimées » du bilan : « Vider »** vide **toute** la corbeille, pas seulement les photos de la session (la confirmation annonce le total).
 
 ---
 
 ## 8. Prochaines étapes probables
 
-1. **Fusionner `feature/comptes` dans `main`** (comptes + livre 21×28 testés par Augustin ; pousser depuis VS Code).
+1. ✅ `feature/comptes` fusionnée dans `main` (8 nov.). **À faire : tester l'étape 6 de « Photos floues » puis fusionner `feature/photos-floues`**
+   (pousser depuis VS Code, choisir **origin**).
+1bis. **Recherche en mode Album** (partie 1 de `Claude outputs/maquette-recherche-flou.html`, **pas codée**) : champ « l'été 2026 à la plage »,
+   période (été, Noël…) + contenu (plage, chien…) ; nouvelle ligne « Par contenu » dans « Affiner la sélection ». Le contenu demande des
+   **étiquettes** (analyse d'image sur le téléphone) : même chaîne que le flou (`photoAnalysisQueue` + cache), mais un autre module natif
+   (rebuild). Questions ouvertes de la maquette : « été » = juin-août ou saison officielle ? grille « tout coché » ou swipe direct (réglé pour le flou).
+1ter. **Connexion Apple / Google** : à rediscuter avec Augustin (voir aussi n° 4).
 2. ⏸ **Livre photo → commande (Gelato) — EN STANDBY depuis le 7 nov.** Déjà fait : produit, clé API (secret
    Supabase), dimensions de couverture, couverture à plat, PDF d'essai conforme (validé), fonction de prix.
    **Reste, dans l'ordre :**
@@ -698,4 +747,60 @@ n'est pas filtré par compte (un 2ᵉ compte sur le même téléphone verrait le
 sans fichier : à lancer seulement si perdues). Les « requêtes sauvegardées » du SQL Editor de Supabase ne sont que des brouillons : ce qui compte, c'est que
 le SQL a été **exécuté** (tables et fonctions restent). Vérifié par l'API le 9 nov. : tables `progress`, `print_orders` (avec `product`, `spec`) et
 `subscriptions` présentes. **Non vérifiables de l'extérieur** : le dossier `print-photos` (Storage) et la fonction `delete_my_account` (Database → Functions).
+
+---
+
+## 14. Session 8 nov. 2026 (branche `feature/photos-floues`) — « Photos floues » en mode Tri
+
+**Git** : `feature/comptes` fusionnée dans `main` (fast-forward), `feature/photos-floues` créée depuis `main`.
+Maquette validée : `Claude outputs/maquette-recherche-flou.html`, partie 2 (la partie 1, recherche en mode Album, n'est **pas** codée).
+
+**Ce que fait la fonction**
+- Un module natif mesure la netteté (variance du Laplacien, miniature 512 px, gris) ; une file l'applique à toute la photothèque en
+  arrière-plan, app ouverte, et garde les résultats dans un fichier (clé = id + date de modification + version de formule `BLUR_ALGO_VERSION`).
+  **Exclus** : vidéos (jamais chargées), screenshots (`isScreenshot`), photos en corbeille, photos déjà décidées « à garder »
+  (❤️, conservées, album) et photos confirmées gardées depuis l'écran Photos floues (`blurKeptIds`).
+- Accueil, mode Tri, sous « Même instant » : ligne « Photos floues » / « Repérées automatiquement », pastille rouge pâle avec le nombre ;
+  visible seulement s'il y en a ou pendant l'analyse (sous-titre « analyse en cours (32 %) » — mis en sous-titre car la phrase complète
+  de la maquette était trop longue pour une ligne). Pas de pastille « NOUVEAU » (c'était une annotation de la maquette).
+- Écran « Photos floues » : en-tête (total + poids, « Tout décocher / Tout cocher »), « Dont N photos [WhatsApp] », grille 3 colonnes toute
+  cochée, coche = garder, photo = grand format (sans pincer pour zoomer), pastille verte WhatsApp, aide en bas, deux boutons sur les photos **cochées** :
+  1. « Mettre N photos à la corbeille » → feuille de confirmation (maquette C) → `addDeletedMany` (corbeille de Pellicule, restaurable) +
+     `addBlurKept` pour les décochées → retour à l'accueil ;
+  2. « Les trier une par une (swipe) » → **`Swipe` directement** (`{ queue, mode: "menage" }`), sans passer par l'accueil (décision d'Augustin ;
+     l'autre option était un filtre sur l'accueil comme « Par date »). Texte repris de la maquette (la consigne écrite disait
+     « Trier les 212 photos cochées (swipe) »).
+- **Décision de Claude, à valider** : la corbeille **en lot ne compte pas** dans la progression (`dailyLog`, `lifetimeSorted`, série 🔥, chrono) —
+  sinon un seul appui validerait la journée. Les suppressions par swipe comptent comme avant.
+- Textes nouveaux (non présents dans la maquette, à valider) : « Aucune photo floue pour l'instant. » / « Analyse en cours (x %)… » (liste vide) ;
+  accords au singulier de la feuille de confirmation.
+
+**Seuils** (`constants/blurConfig.js`) : normal = 100 (valeur de départ, pas calibré) ; **WhatsApp = 150** (réglé par Augustin avec l'écran de
+calibrage). Attention : plus HAUT que le normal, contrairement à l'hypothèse de départ (« WhatsApp plus tolérant ») : sur ses photos, c'est
+l'inverse qui marchait. Score bas = flou ; une photo est floue si son score est SOUS le seuil.
+
+**Mesures réelles** (Android d'Augustin) : ≈ 43 ms par photo ; WhatsApp = 5 142 photos par nom, 5 130 par dossier (« WhatsApp Images » 5 129 + « WhatsApp » 1),
+8 suspectes non détectées ; au départ 19 photos floues dont 15 WhatsApp (seuils 100 / 50).
+
+**Outils `__DEV__`** (carte en bas des Réglages, `components/dev/SharpnessDevTest.js`) : mesure 8 photos au hasard (score + temps), avancement de
+l'analyse, nombre de photos floues, diagnostic WhatsApp, « Relancer », « Tout effacer et recalculer », accès à l'écran de calibrage
+(`BlurCalibrationScreen` : onglets Normales / WhatsApp, seuil −10/−50/+10/+50, répartition par tranches, grille triée, bord rouge = signalée, grand
+format avec score exact, ligne « À mettre dans constants/blurConfig.js »). Les seuils réglés dans l'écran ne changent rien ailleurs.
+
+**Essai annulé (8 nov.)** : renvoyer 4 mesures du module natif (laplacien global, zone la plus nette, rapports fin/moyen et moyen/gros) pour mieux
+classer les photos à scène atypique. Annulé à la demande d'Augustin (**pas de rebuild** voulu) : tout est revenu au dernier commit, sauf le seuil
+WhatsApp. Reprendre = rebuild iOS + Android + `BLUR_ALGO_VERSION = 2`.
+
+**Autres changements de la session** : bilan de tri (`SummaryScreen`) → bouton « Vider » sur la brique « Supprimées » ; mode Album de l'accueil →
+brique « Créer un livre photo » retirée (les livres se créent depuis la Galerie, Chambre noire).
+
+**Rebuild** : module natif ajouté (étape 1) → `npx expo prebuild --platform ios --clean` puis `npx expo run:ios` ; Android = build EAS `development`.
+Rien d'autre n'a demandé de rebuild depuis.
+
+**À tester / pas vérifié**
+- Étape 6 entière : feuille de confirmation, corbeille en lot (photos restaurables dans la corbeille), mémoire des photos gardées après
+  fermeture de l'app, swipe direct puis retour sur la grille, série 🔥 inchangée après un lot.
+- Kotlin du module : compile et tourne (test Android d'Augustin OK) ; Swift idem (test iOS OK).
+- Détection WhatsApp sur iOS (dette n°17) ; seuil normal (dette n°16) ; bouton « Vider » du bilan ; retrait de la brique livre du mode Album.
+- Dettes ouvertes : n°15 à 19 (§7).
 
