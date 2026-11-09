@@ -303,11 +303,11 @@ dépôt, déployée de la même façon ; réponse brute de Gelato, **à lire et 
     Libellé à reprendre (« Garde (non imprimée) ») si Augustin le souhaite — **ne pas changer ses textes sans accord**.
 15. **Photos floues — précision de la mesure** : ✅ **codé le 9 nov., à tester après rebuild**. Le module natif renvoie 4 mesures
     (`lap` = d'origine, `top` = moyenne des 4 cases les plus nettes d'une grille 4 × 4, `lap2` / `lap4` = image réduite 2 / 4 fois) ;
-    `BLUR_METRIC = "top"` décide (portrait net sur fond lisse sauvé) ; seuils par mesure dans `BLUR_THRESHOLDS` (top 200 / WhatsApp 250 =
-    **valeurs de départ à calibrer**) ; `BLUR_ALGO_VERSION = 2` → toute la photothèque est remesurée. Écran de calibrage : choix de la mesure
+    `BLUR_METRIC = "top"` décide (portrait net sur fond lisse sauvé) ; seuils par mesure dans `BLUR_THRESHOLDS`, **calibrés par
+    Augustin le 9 nov.** (lap 100 / 150 · top 150 / 300 · r12 0,35 / 0,45 · r24 0,3 / 0,55 ; normal / WhatsApp) ; `BLUR_ALGO_VERSION = 2` → toute la photothèque est remesurée. Écran de calibrage : choix de la mesure
     (Laplacien / Zone nette / Fin-moyen / Moyen-gros). Une app pas reconstruite n'enregistre rien (exige les 4 mesures). Limite connue :
     une photo floue mais très bruitée (nuit) peut encore passer pour nette (essayer `r12` au calibrage si ça gêne).
-16. **Photos floues — seuil normal pas calibré** (100, valeur de départ). Seul le seuil WhatsApp a été réglé (150, sur l'Android d'Augustin).
+16. ✅ (réglée le 9 nov., voir n°15) **Photos floues — seuil normal pas calibré** (100, valeur de départ). Seul le seuil WhatsApp a été réglé (150, sur l'Android d'Augustin).
     Les scores iOS et Android ne sont pas forcément comparables (même formule, décodeurs différents) : si besoin, un seuil par plateforme.
 17. **Détection WhatsApp sur iOS non vérifiée** : sur Android elle marche (5 142 par nom, 5 130 par dossier). Sur iOS, WhatsApp range dans
     la pellicule sous des noms `IMG_1234`, sans dossier : les photos WhatsApp y passeront probablement avec le seuil normal (le panneau

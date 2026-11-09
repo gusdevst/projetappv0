@@ -14,13 +14,12 @@ export const BLUR_ALGO_VERSION = 2; // 2 = 4 mesures (dette n°15, 9 nov.)
 export const BLUR_METRIC = "top";
 
 // Seuils par mesure : score < seuil → floue. normal = photos de l'appareil, wa = photos WhatsApp.
-// lap : réglé le 8 nov. (WhatsApp 150 sur l'Android d'Augustin ; normal 100 pas calibré).
-// top / r12 / r24 : ⚠️ valeurs de départ, à régler avec l'écran de calibrage [DEV].
+// Tous réglés par Augustin le 9 nov. avec l'écran de calibrage [DEV] (après le rebuild à 4 mesures).
 export const BLUR_THRESHOLDS = {
   lap: { normal: 100, wa: 150 },
-  top: { normal: 200, wa: 250 },
+  top: { normal: 150, wa: 300 },
   r12: { normal: 0.35, wa: 0.45 },
-  r24: { normal: 0.6, wa: 0.7 },
+  r24: { normal: 0.3, wa: 0.55 },
 };
 
 // Seuils de la mesure choisie (utilisés partout dans l'app).
