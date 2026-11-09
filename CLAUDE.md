@@ -2,7 +2,7 @@
 
 > Fichier de passation. Lu en début de session pour retrouver l'état du projet
 > sans re-scanner tout le code. **À maintenir à jour** à chaque étape importante.
-> Dernière mise à jour : 2026-11-08 (« Photos floues » codée, à tester ; reprise d'un tri Album codée, §15 ; `feature/comptes` fusionnée dans `main`).
+> Dernière mise à jour : 2026-11-09 (`feature/photos-floues` fusionnée dans `main` ; libellés livre photo de la Galerie et `photo_info` des commandes, §16).
 
 ---
 
@@ -25,13 +25,15 @@ trop-plein de photos sans y passer des heures.
   (fusion fast-forward du 8 nov., `6cc5887`) la branche `feature/comptes`** : comptes Supabase (connexion e-mail,
   déconnexion, suppression, sauvegarde de la progression), livre photo 21×28 cm Gelato (couvertures, PDF d'essai
   validé le 7 nov.), abonnements Coups de cœur (tirages / magnets), Galerie « Pellicule » + « Chambre noire ».
-- Branche de travail : **`feature/photos-floues`** (créée le 8 nov. depuis `main`) — **« Photos floues » en mode Tri**
-  (étapes 1 à 7 faites, voir §14). Module natif ajouté → **rebuild nécessaire** (déjà fait sur iOS et Android).
-  À tester : étape 6 (corbeille, swipe direct, mémoire des photos gardées), puis fusionner dans `main`.
+- **Fusionnée aussi dans `main` le 9 nov. (fast-forward, `53e7cfa`, pas encore poussée)** : `feature/photos-floues` =
+  **« Photos floues » en mode Tri** (voir §14), nouveau tuto d'onboarding, reprise d'un tri Album (§15). Module natif ajouté →
+  **rebuild nécessaire** (déjà fait sur iOS et Android). **Fusionnée AVANT d'avoir testé l'étape 6** (corbeille avec confirmation,
+  swipe direct, mémoire des photos gardées) : à tester.
+- Branche de travail : `main` (pas de nouvelle branche créée pour l'instant).
 - ⏸ **STANDBY (décision d'Augustin, 7 nov.)** : la suite de « livre photo → commande » (prix, écran
   « Commander », paiement, envoi du fichier, commande Gelato). Détail et reprise : §8 et §13.
 - Branches déjà fusionnées dans `main`, supprimables : `feature/progression`,
-  `feature/themes`, `feature/barre-menu`, `feature/livre-photo`, `feature/comptes`, `octobre27`.
+  `feature/themes`, `feature/barre-menu`, `feature/livre-photo`, `feature/comptes`, `feature/photos-floues`, `octobre27`.
 - Test au quotidien : **simulateur iOS du Mac** (`npx expo start --dev-client`, Fast Refresh).
   Test sur vrai téléphone : **app de dev Android** sur le téléphone d'Augustin (build EAS
   `development`, Metro en Wi-Fi) ; TestFlight sur l'iPhone de sa femme pour les versions beta.
@@ -320,8 +322,8 @@ dépôt, déployée de la même façon ; réponse brute de Gelato, **à lire et 
 
 ## 8. Prochaines étapes probables
 
-1. ✅ `feature/comptes` fusionnée dans `main` (8 nov.). **À faire : tester l'étape 6 de « Photos floues » puis fusionner `feature/photos-floues`**
-   (pousser depuis VS Code, choisir **origin**).
+1. ✅ `feature/comptes` (8 nov.) et `feature/photos-floues` (9 nov.) fusionnées dans `main`. **À faire : tester l'étape 6 de « Photos floues »**,
+   puis pousser `main` depuis VS Code (choisir **origin**).
 1bis. **Recherche en mode Album** (partie 1 de `Claude outputs/maquette-recherche-flou.html`, **pas codée**) : champ « l'été 2026 à la plage »,
    période (été, Noël…) + contenu (plage, chien…) ; nouvelle ligne « Par contenu » dans « Affiner la sélection ». Le contenu demande des
    **étiquettes** (analyse d'image sur le téléphone) : même chaîne que le flou (`photoAnalysisQueue` + cache), mais un autre module natif
@@ -838,3 +840,21 @@ Rien d'autre n'a demandé de rebuild depuis.
   `SwipeScreen` (la liste de l'aperçu d'album n'est plus recalculée à chaque swipe : elle parcourait toute la photothèque ; badge = `albumCount`).
   Si ça fige encore : ajouter des `console.log` avec horodatage autour de `navigate("TriMode")` et du montage de `SwipeScreen`.
 - Les filtres (Par date / Par lieu) ne sont PAS mémorisés : seule la file de photos l'est.
+
+
+---
+
+## 16. Session 9 nov. 2026 (suite) — libellés livre photo + commandes
+
+- **Galerie, libellés du livre photo** (demande d'Augustin : plusieurs produits à venir, « 30 p. » n'a plus de sens partout) :
+  dans un album (`GalleryScreen`), le bouton dit « 📖 Livre photo en cours » (ou « 📖 Créer un livre photo ») au lieu de « Mon livre photo · 30 p. » ;
+  la feuille « Quel album ? » (`AlbumPickerSheet`) n'affiche plus que le **nombre de photos** de chaque album (plus « livre de 30 pages »).
+  **Gardé volontairement** : le nombre de pages sur les livres en cours de la Chambre noire (étagère « 30 pages · N % rempli » et menu appui long).
+  Un livre créé démarre toujours à 30 pages (minimum Gelato) ; réglé ensuite dans l'éditeur.
+  Quand les magnets / tirages auront leur propre écran de création : prévoir un choix du produit (« ＋ Nouveau » de la Chambre noire, bouton de l'album).
+- **`print_orders.photo_info`** (jsonb, ajouté le 9 nov.) : par photo `{ path, w, h, shape }` (`shape` = portrait · landscape · square), écrit par
+  `submitSelection` (`services/printOrders.js`, `shapeOf`). Sert à repérer les photos horizontales. **SQL à relancer** (ou seulement
+  `alter table public.print_orders add column if not exists photo_info jsonb;`) sinon l'envoi est refusé. Dimensions Android pas vérifiées (portrait bien noté « portrait » ?).
+- **Format des photos envoyées** : fichier ORIGINAL tel quel (HEIC possible sur iPhone ; à convertir en JPEG avec un imprimeur partenaire).
+  **Règle de recadrage pas fixée** : `spec.crop = "none"` pour les tirages 10 × 15 (2:3, alors qu'une photo de téléphone est en 3:4). Proposition (pas validée) :
+  remplir le papier (rogner ~11 % au centre) et tourner les photos horizontales, comme pour les magnets ; il faudrait alors adapter la note de la sélection du mois.
