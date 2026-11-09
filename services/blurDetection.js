@@ -1,5 +1,6 @@
 // Décision « cette photo est-elle floue ? » — fonctions pures, sans I/O.
-import { BLUR_ALGO_VERSION, BLUR_THRESHOLD, BLUR_THRESHOLD_WHATSAPP } from "../constants/blurConfig";
+import { BLUR_ALGO_VERSION, BLUR_THRESHOLD, BLUR_THRESHOLD_WHATSAPP, BLUR_METRIC } from "../constants/blurConfig";
+import { metricValue } from "./blurMetrics";
 import { isWhatsAppName } from "./photoSource";
 
 /** Photo WhatsApp ? waIds = Set des ids des albums WhatsApp (voir photoSource). */
@@ -20,18 +21,19 @@ export function isAnalyzable(photo) {
 export function isBlurFresh(entry, photo) {
   return !!entry?.blur
     && entry.blur.v === BLUR_ALGO_VERSION
+    && Number.isFinite(entry.blur.lap) && Number.isFinite(entry.blur.top)
     && (entry.m ?? null) === (photo.modificationTime ?? null);
 }
 
-/** Score d'une photo, ou null si pas (encore) mesurée. */
-export function blurScoreOf(entry, photo) {
-  return isBlurFresh(entry, photo) ? entry.blur.s : null;
+/** Score d'une photo pour une mesure (par défaut BLUR_METRIC), ou null si pas (encore) mesurée. */
+export function blurScoreOf(entry, photo, metric = BLUR_METRIC) {
+  return isBlurFresh(entry, photo) ? metricValue(entry.blur, metric) : null;
 }
 
 /**
  * Liste des photos floues, de la plus floue à la moins floue.
  * @param photos  photos de la photothèque
- * @param scores  cache { [id]: { m, blur: { s, v } } }
+ * @param scores  cache { [id]: { m, blur: { lap, top, lap2, lap4, v } } }
  * @param opts    waIds (Set), deletedIds (Set : déjà à la corbeille), keptIds (Set : gardées à la main)
  * @returns {{ photo, score, whatsapp }[]}
  */

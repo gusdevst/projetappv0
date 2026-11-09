@@ -196,7 +196,7 @@ export function BlurryPhotosScreen({ navigation }) {
           onPress={startSwipe}
           style={{ marginTop: 7, borderRadius: 14, paddingVertical: 11, alignItems: "center", backgroundColor: C.bgCard, borderWidth: 1, borderColor: C.border, opacity: checkedCount === 0 ? 0.4 : 1 }}
         >
-          <Text style={{ fontSize: 14, fontWeight: "600", color: C.text }}>Les trier une par une (swipe)</Text>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: C.text }}>{`Trier ${checkedCount > 1 ? "les " : "la "}${plural(checkedCount, "photo")} ${checkedCount > 1 ? "cochées" : "cochée"} (swipe)`}</Text>
         </TouchableOpacity>
       </View>
 

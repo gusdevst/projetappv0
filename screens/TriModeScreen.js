@@ -137,10 +137,19 @@ export function TriModeScreen({ navigation, route }) {
     }
   }, []);
 
+  // Un seul appui sur « Lancer » pris en compte (sinon 2 écrans de tri empilés si on retouche
+  // pendant l'ouverture). Réarmé quand on revient sur cet écran.
+  const launchedRef = useRef(false);
+  useEffect(() => {
+    const unsub = navigation.addListener("focus", () => { launchedRef.current = false; });
+    return unsub;
+  }, [navigation]);
+
   // ── Mode Album — Nouvel album ─────────────────────────────────────────────
   const handleLancerNouvelAlbum = () => {
     const name = albumName.trim();
-    if (!name || filteredPhotos.length === 0) return;
+    if (!name || filteredPhotos.length === 0 || launchedRef.current) return;
+    launchedRef.current = true;
     // Crée l'album une seule fois, même si on relance après un retour arrière.
     let albumId = createdAlbumId;
     if (!albumId) {
@@ -160,7 +169,8 @@ export function TriModeScreen({ navigation, route }) {
 
   // ── Mode Album — Album existant ───────────────────────────────────────────
   const handleLancerAlbumExistant = () => {
-    if (!selectedExistingAlbum || filteredPhotos.length === 0) return;
+    if (!selectedExistingAlbum || filteredPhotos.length === 0 || launchedRef.current) return;
+    launchedRef.current = true;
     navigation.navigate("Swipe", {
       queue:     filteredPhotos,
       mode:      "album",

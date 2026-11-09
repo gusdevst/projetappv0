@@ -144,7 +144,9 @@ export function SummaryScreen({ navigation, route }) {
       clearAlbumFilters();
       // Nettoie l'album s'il est vide (l'user a lancé une session sans swiper une seule photo dedans).
       // Sans ça, un album fantôme resterait dans le store et ferait afficher "1 album" sur l'accueil.
-      if (albumId && createdAlbum && createdAlbum.photoIds.length === 0) {
+      // Sauf si un tri est mis de côté pour cet album (sortie anticipée) : on le garde pour « Reprendre ».
+      const pending = usePhotoStore.getState().albumSession?.albumId === albumId;
+      if (albumId && createdAlbum && createdAlbum.photoIds.length === 0 && !pending) {
         deleteAlbum(albumId);
       }
     }

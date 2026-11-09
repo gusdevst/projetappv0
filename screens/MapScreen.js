@@ -236,6 +236,31 @@ export function MapScreen({ navigation, route }) {
 
   const selectionCount = selectedKeys.size;
 
+  // ── Lancer le tri : un seul appui pris en compte ─────────────────────────
+  // Avant, le bouton restait actif pendant l'ouverture de l'écran suivant : l'écran
+  // semblait figé, on retouchait, et chaque appui empilait un écran de plus.
+  // Maintenant : le bouton passe en « Ouverture… » tout de suite, on laisse l'écran se
+  // redessiner, puis on navigue. Il se réarme quand on revient sur la carte.
+  const [launching, setLaunching] = useState(false);
+  const launchingRef = useRef(false);
+  useEffect(() => {
+    const unsub = navigation.addListener("focus", () => { launchingRef.current = false; setLaunching(false); });
+    return unsub;
+  }, [navigation]);
+
+  function launchSort() {
+    if (launchingRef.current || displayedPhotos.length === 0) return;
+    launchingRef.current = true;
+    setLaunching(true);
+    const preQueue = displayedPhotos;
+    setTimeout(() => {
+      navigation.navigate("TriMode", {
+        preQueue,
+        ...(mode === "album" ? { skipToAlbum: true } : { skipToMenage: true }),
+      });
+    }, 50);
+  }
+
   function addAsFilter() {
     if (displayedPhotos.length === 0) return;
     const auto = selectionCount === 0;
@@ -354,19 +379,16 @@ export function MapScreen({ navigation, route }) {
             )}
 
             <TouchableOpacity
-              onPress={() => navigation.navigate("TriMode", {
-                preQueue: displayedPhotos,
-                ...(mode === "album" ? { skipToAlbum: true } : { skipToMenage: true }),
-              })}
-              disabled={displayedPhotos.length === 0}
+              onPress={launchSort}
+              disabled={displayedPhotos.length === 0 || launching}
               style={{
                 backgroundColor: accent, borderRadius: S.radius, padding: 16,
                 alignItems: "center", elevation: 4,
-                opacity: displayedPhotos.length === 0 ? 0.4 : 1,
+                opacity: displayedPhotos.length === 0 ? 0.4 : launching ? 0.7 : 1,
               }}
             >
               <Text style={{ color: "#fff", fontWeight: "600", fontSize: 15 }}>
-                {displayedPhotos.length === 0 ? "Aucune photo dans la zone visible" : `🧹 Trier ces ${displayedPhotos.length} photo${displayedPhotos.length > 1 ? "s" : ""}`}
+                {launching ? "Ouverture…" : displayedPhotos.length === 0 ? "Aucune photo dans la zone visible" : `🧹 Trier ces ${displayedPhotos.length} photo${displayedPhotos.length > 1 ? "s" : ""}`}
               </Text>
             </TouchableOpacity>
 

@@ -2,7 +2,7 @@
 
 > Fichier de passation. Lu en début de session pour retrouver l'état du projet
 > sans re-scanner tout le code. **À maintenir à jour** à chaque étape importante.
-> Dernière mise à jour : 2026-11-08 (« Photos floues » en mode Tri codée, à tester ; `feature/comptes` fusionnée dans `main`).
+> Dernière mise à jour : 2026-11-08 (« Photos floues » codée, à tester ; reprise d'un tri Album codée, §15 ; `feature/comptes` fusionnée dans `main`).
 
 ---
 
@@ -301,16 +301,18 @@ dépôt, déployée de la même façon ; réponse brute de Gelato, **à lire et 
 14. **Intérieur de couverture** : affiché en page blanche hachurée « Intérieur de couverture » dans l'aperçu.
     C'est voulu : chez Gelato, la page 2 du fichier (garde) et la dernière page restent **blanches** (non imprimées).
     Libellé à reprendre (« Garde (non imprimée) ») si Augustin le souhaite — **ne pas changer ses textes sans accord**.
-15. **Photos floues — précision de la mesure** : la variance du Laplacien dépend de la scène (portrait net sur fond lisse = score bas ;
-    photo floue très texturée ou bruitée = score haut). Augustin l'a constaté sur ses photos. Piste testée puis **annulée** : renvoyer
-    plusieurs mesures du module natif (zone la plus nette, rapport détail fin / moyen) — elle demandait un rebuild. `services/blurMetrics.js`
-    en garde le début (inutilisé, **conservé à la demande d'Augustin**). À reprendre seulement si les erreurs gênent à l'usage.
+15. **Photos floues — précision de la mesure** : ✅ **codé le 9 nov., à tester après rebuild**. Le module natif renvoie 4 mesures
+    (`lap` = d'origine, `top` = moyenne des 4 cases les plus nettes d'une grille 4 × 4, `lap2` / `lap4` = image réduite 2 / 4 fois) ;
+    `BLUR_METRIC = "top"` décide (portrait net sur fond lisse sauvé) ; seuils par mesure dans `BLUR_THRESHOLDS` (top 200 / WhatsApp 250 =
+    **valeurs de départ à calibrer**) ; `BLUR_ALGO_VERSION = 2` → toute la photothèque est remesurée. Écran de calibrage : choix de la mesure
+    (Laplacien / Zone nette / Fin-moyen / Moyen-gros). Une app pas reconstruite n'enregistre rien (exige les 4 mesures). Limite connue :
+    une photo floue mais très bruitée (nuit) peut encore passer pour nette (essayer `r12` au calibrage si ça gêne).
 16. **Photos floues — seuil normal pas calibré** (100, valeur de départ). Seul le seuil WhatsApp a été réglé (150, sur l'Android d'Augustin).
     Les scores iOS et Android ne sont pas forcément comparables (même formule, décodeurs différents) : si besoin, un seuil par plateforme.
 17. **Détection WhatsApp sur iOS non vérifiée** : sur Android elle marche (5 142 par nom, 5 130 par dossier). Sur iOS, WhatsApp range dans
     la pellicule sous des noms `IMG_1234`, sans dossier : les photos WhatsApp y passeront probablement avec le seuil normal (le panneau
     `[DEV]` n'existe pas en TestFlight pour le vérifier). Règle de secours possible : sans date de prise de vue + petite taille.
-18. **Cache d'analyse jamais nettoyé** (les photos supprimées de la photothèque restent dans `photo-analysis-v1.json`, quelques Ko) ; les photos
+18. **Cache d'analyse jamais nettoyé** (les photos supprimées de la photothèque restent dans `photo-analysis-v1.json`, quelques Ko ; **laissé tel quel, décision d'Augustin du 8 nov.**) ; les photos
     seulement sur iCloud sont réessayées à chaque lancement (sans téléchargement). L'analyse tourne aussi en version publiée (≈ 43 ms / photo sur Android).
 19. **Brique « Supprimées » du bilan : « Vider »** vide **toute** la corbeille, pas seulement les photos de la session (la confirmation annonce le total).
 
@@ -323,7 +325,7 @@ dépôt, déployée de la même façon ; réponse brute de Gelato, **à lire et 
 1bis. **Recherche en mode Album** (partie 1 de `Claude outputs/maquette-recherche-flou.html`, **pas codée**) : champ « l'été 2026 à la plage »,
    période (été, Noël…) + contenu (plage, chien…) ; nouvelle ligne « Par contenu » dans « Affiner la sélection ». Le contenu demande des
    **étiquettes** (analyse d'image sur le téléphone) : même chaîne que le flou (`photoAnalysisQueue` + cache), mais un autre module natif
-   (rebuild). Questions ouvertes de la maquette : « été » = juin-août ou saison officielle ? grille « tout coché » ou swipe direct (réglé pour le flou).
+   (rebuild). Décidé par Augustin : « été » = **juillet et août**.
 1ter. **Connexion Apple / Google** : à rediscuter avec Augustin (voir aussi n° 4).
 2. ⏸ **Livre photo → commande (Gelato) — EN STANDBY depuis le 7 nov.** Déjà fait : produit, clé API (secret
    Supabase), dimensions de couverture, couverture à plat, PDF d'essai conforme (validé), fonction de prix.
@@ -770,10 +772,10 @@ Maquette validée : `Claude outputs/maquette-recherche-flou.html`, partie 2 (la 
   cochée, coche = garder, photo = grand format (sans pincer pour zoomer), pastille verte WhatsApp, aide en bas, deux boutons sur les photos **cochées** :
   1. « Mettre N photos à la corbeille » → feuille de confirmation (maquette C) → `addDeletedMany` (corbeille de Pellicule, restaurable) +
      `addBlurKept` pour les décochées → retour à l'accueil ;
-  2. « Les trier une par une (swipe) » → **`Swipe` directement** (`{ queue, mode: "menage" }`), sans passer par l'accueil (décision d'Augustin ;
+  2. « Trier les N photos cochées (swipe) » (texte de la maquette, corrigé le 8 nov.) → **`Swipe` directement** (`{ queue, mode: "menage" }`), sans passer par l'accueil (décision d'Augustin ;
      l'autre option était un filtre sur l'accueil comme « Par date »). Texte repris de la maquette (la consigne écrite disait
      « Trier les 212 photos cochées (swipe) »).
-- **Décision de Claude, à valider** : la corbeille **en lot ne compte pas** dans la progression (`dailyLog`, `lifetimeSorted`, série 🔥, chrono) —
+- **Décision validée par Augustin (8 nov.)** : la corbeille **en lot ne compte pas** dans la progression (`dailyLog`, `lifetimeSorted`, série 🔥, chrono) —
   sinon un seul appui validerait la journée. Les suppressions par swipe comptent comme avant.
 - Textes nouveaux (non présents dans la maquette, à valider) : « Aucune photo floue pour l'instant. » / « Analyse en cours (x %)… » (liste vide) ;
   accords au singulier de la feuille de confirmation.
@@ -816,3 +818,23 @@ Rien d'autre n'a demandé de rebuild depuis.
 - Détection WhatsApp sur iOS (dette n°17) ; seuil normal (dette n°16) ; bouton « Vider » du bilan ; retrait de la brique livre du mode Album.
 - Dettes ouvertes : n°15 à 19 (§7).
 
+
+---
+
+## 15. Session 8 nov. 2026 (suite) — reprendre un tri Album
+
+**✅ codé, à tester** (demande d'Augustin : commencer un album avec des filtres, quitter en plein swipe, reprendre plus tard).
+- `usePhotoStore` : `albumSession = { albumId, photoIds, idx, updatedAt }` (persisté ; ids seulement, la photothèque est rechargée à chaque
+  ouverture) + `startAlbumSession`, `setAlbumSessionIdx(albumId, idx)`, `clearAlbumSession`. `deleteAlbum` et `reset` l'effacent. **Un seul tri en cours** :
+  lancer un autre tri Album remplace le précédent (les photos déjà ajoutées à l'album restent).
+- `SwipeScreen` (mode album) : note la file à l'entrée, la position à chaque photo (`idx`), accepte `route.params.startIdx` ; efface à la
+  dernière photo seulement. Quitter par « ← Retour », par l'icône sortie (« Fin de tri » → bilan) ou fermer l'appli = tri gardé ; le bilan ne supprime pas l'album vide tant qu'un tri est en attente.
+- `HomeScreen` (mode Album) : section **« Album en cours »** **sous « Affiner la sélection »** (maquette A validée le 9 nov. :
+  `maquette-album-en-cours.html`, hors Git) = une `ListRow` à contour terracotta : mosaïque des 4 dernières photos de l'album, nom,
+  « N / M photos passées en revue », barre (`ListRow` a une prop `progress`), ✕ = abandonner (confirmation). Toucher = reprendre :
+  la file est reconstruite depuis la photothèque (photos supprimées / en corbeille ignorées). Le mot « tri » est évité (fait penser au mode Tri).
+- **Bug « le tri ne se lance pas depuis la carte » (Android, mode Album, scan GPS fini) — cause NON confirmée**, 3 correctifs de prudence :
+  `MapScreen` (bouton → « Ouverture… », un seul appui, navigation après 50 ms, réarmé au retour), `TriModeScreen` (un seul « Lancer »),
+  `SwipeScreen` (la liste de l'aperçu d'album n'est plus recalculée à chaque swipe : elle parcourait toute la photothèque ; badge = `albumCount`).
+  Si ça fige encore : ajouter des `console.log` avec horodatage autour de `navigate("TriMode")` et du montage de `SwipeScreen`.
+- Les filtres (Par date / Par lieu) ne sont PAS mémorisés : seule la file de photos l'est.

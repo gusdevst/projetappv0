@@ -12,7 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Text from "../components/AppText";
 import BackButton from "../components/BackButton";
 import { C, S } from "../constants/theme";
-import { BLUR_THRESHOLD, BLUR_THRESHOLD_WHATSAPP } from "../constants/blurConfig";
+import { BLUR_THRESHOLDS, BLUR_METRIC } from "../constants/blurConfig";
+import { BLUR_METRICS, BLUR_METRIC_KEYS, formatScore } from "../services/blurMetrics";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useBlurStore } from "../store/useBlurStore";
 import { blurScoreOf, isAnalyzable, isWhatsAppPhoto } from "../services/blurDetection";
@@ -23,8 +24,10 @@ const GAP = 4;
 const CELL = Math.floor((SW - S.pad * 2 - GAP * (COLS - 1)) / COLS);
 const ROW_H = CELL + GAP;
 
-// Tranches de score pour la répartition.
-const EDGES = [0, 25, 50, 100, 150, 200, 300, 500, 1000, Infinity];
+// Tranches de score pour la répartition (les ratios r12 / r24 ont leur propre échelle).
+const EDGES_ABS = [0, 25, 50, 100, 150, 200, 300, 500, 1000, Infinity];
+const EDGES_RATIO = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1, Infinity];
+const isRatio = (metric) => metric === "r12" || metric === "r24";
 
 function bucketLabel(lo, hi) {
   return hi === Infinity ? `${lo}+` : `${lo}`;
@@ -46,7 +49,9 @@ export function BlurCalibrationScreen({ navigation }) {
   const { scores, rev, whatsapp, status, total, done } = useBlurStore();
 
   const [tab, setTab] = useState("normal"); // "normal" | "wa"
-  const [th, setTh] = useState({ normal: BLUR_THRESHOLD, wa: BLUR_THRESHOLD_WHATSAPP });
+  const [metric, setMetric] = useState(BLUR_METRIC); // mesure qui décide (dette n°15)
+  const [th, setTh] = useState(() => JSON.parse(JSON.stringify(BLUR_THRESHOLDS)));
+  const EDGES = isRatio(metric) ? EDGES_RATIO : EDGES_ABS;
   const [opened, setOpened] = useState(null); // { photo, score } affichée en grand
   const listRef = useRef(null);
 
@@ -56,7 +61,7 @@ export function BlurCalibrationScreen({ navigation }) {
     const wa = [];
     for (const photo of libraryPhotos) {
       if (!isAnalyzable(photo)) continue;
-      const score = blurScoreOf(scores[photo.id], photo);
+      const score = blurScoreOf(scores[photo.id], photo, metric);
       if (score == null) continue;
       (isWhatsAppPhoto(photo, whatsapp.ids) ? wa : normal).push({ photo, score });
     }
@@ -64,10 +69,10 @@ export function BlurCalibrationScreen({ navigation }) {
     wa.sort((a, b) => a.score - b.score);
     return { normal, wa };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [libraryPhotos, rev, whatsapp]);
+  }, [libraryPhotos, rev, whatsapp, metric]);
 
   const list = groups[tab];
-  const threshold = th[tab];
+  const threshold = th[metric][tab];
   const flagged = useMemo(() => {
     const i = list.findIndex((x) => x.score >= threshold);
     return i === -1 ? list.length : i;
@@ -82,11 +87,15 @@ export function BlurCalibrationScreen({ navigation }) {
       }
     }
     return counts;
-  }, [list]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list, metric]);
   const maxBucket = Math.max(1, ...buckets);
 
   function bump(delta) {
-    setTh((t) => ({ ...t, [tab]: Math.max(0, t[tab] + delta) }));
+    setTh((t) => {
+      const v = Math.max(0, Math.round((t[metric][tab] + delta) * 100) / 100);
+      return { ...t, [metric]: { ...t[metric], [tab]: v } };
+    });
   }
 
   function goToThreshold() {
@@ -112,6 +121,25 @@ export function BlurCalibrationScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Mesure qui décide */}
+        <View style={{ flexDirection: "row", gap: 6, marginTop: 12 }}>
+          {BLUR_METRIC_KEYS.map((k) => {
+            const on = metric === k;
+            return (
+              <TouchableOpacity
+                key={k}
+                onPress={() => setMetric(k)}
+                style={{ flex: 1, paddingVertical: 7, borderRadius: 10, alignItems: "center", backgroundColor: on ? C.text : C.bgCard, borderWidth: 1, borderColor: on ? C.text : C.border }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: "700", color: on ? "#fff" : C.textMid }}>{BLUR_METRICS[k].label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>
+          {`${BLUR_METRICS[metric].hint}${metric === BLUR_METRIC ? " · mesure utilisée dans l'app" : ""}`}
+        </Text>
+
         {/* Onglets */}
         <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
           {[
@@ -135,13 +163,12 @@ export function BlurCalibrationScreen({ navigation }) {
         <View style={{ marginTop: 12, backgroundColor: C.bgCard, borderRadius: 14, borderWidth: 1, borderColor: C.border, padding: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
             <Text style={{ fontSize: 13, color: C.textMid }}>Seuil {tab === "wa" ? "WhatsApp" : "normal"}</Text>
-            <Text style={{ fontSize: 24, fontWeight: "700", color: C.text }}>{threshold}</Text>
+            <Text style={{ fontSize: 24, fontWeight: "700", color: C.text }}>{formatScore(threshold)}</Text>
           </View>
           <View style={{ flexDirection: "row", gap: 6, marginTop: 8 }}>
-            <StepButton label="−50" onPress={() => bump(-50)} />
-            <StepButton label="−10" onPress={() => bump(-10)} />
-            <StepButton label="+10" onPress={() => bump(10)} />
-            <StepButton label="+50" onPress={() => bump(50)} />
+            {(isRatio(metric) ? [-0.05, -0.01, 0.01, 0.05] : [-50, -10, 10, 50]).map((d) => (
+              <StepButton key={d} label={`${d > 0 ? "+" : "−"}${Math.abs(d)}`} onPress={() => bump(d)} />
+            ))}
           </View>
           <Text style={{ fontSize: 12.5, color: C.textMid, marginTop: 8 }}>
             <Text style={{ fontWeight: "700", color: C.red }}>{flagged}</Text>
@@ -166,7 +193,7 @@ export function BlurCalibrationScreen({ navigation }) {
           </View>
 
           <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 8 }}>
-            {`À mettre dans constants/blurConfig.js : BLUR_THRESHOLD = ${th.normal} · BLUR_THRESHOLD_WHATSAPP = ${th.wa}`}
+            {`À mettre dans constants/blurConfig.js : BLUR_METRIC = "${metric}" · BLUR_THRESHOLDS.${metric} = { normal: ${th[metric].normal}, wa: ${th[metric].wa} }`}
           </Text>
         </View>
 
@@ -209,7 +236,7 @@ export function BlurCalibrationScreen({ navigation }) {
                 style={{ width: CELL, height: CELL, borderRadius: 8, backgroundColor: C.bgMuted, borderWidth: isBlurry ? 2 : 0, borderColor: C.red }}
               />
               <View style={{ position: "absolute", left: 4, bottom: 4, backgroundColor: isBlurry ? C.red : "rgba(0,0,0,0.6)", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: "#fff" }}>{Math.round(item.score)}</Text>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: "#fff" }}>{formatScore(item.score)}</Text>
               </View>
             </TouchableOpacity>
           );
@@ -223,7 +250,7 @@ export function BlurCalibrationScreen({ navigation }) {
             <>
               <Image source={{ uri: opened.photo.url }} contentFit="contain" style={{ width: SW, height: "78%" }} />
               <View style={{ alignItems: "center", marginTop: 14 }}>
-                <Text style={{ fontSize: 22, fontWeight: "700", color: "#fff" }}>Score {opened.score.toFixed(1)}</Text>
+                <Text style={{ fontSize: 22, fontWeight: "700", color: "#fff" }}>{`${BLUR_METRICS[metric].label} : ${formatScore(opened.score)}`}</Text>
                 <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 4 }}>
                   {`${opened.photo.filename} · ${opened.photo.width}×${opened.photo.height}`}
                 </Text>

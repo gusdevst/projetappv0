@@ -76,10 +76,13 @@ export function SwipeScreen({ navigation, route }) {
   const isMenage = mode === "menage";
   const isAlbum  = mode === "album";
 
-  const [idx, setIdx] = useState(0);
+  // startIdx : reprise d'un tri Album mis de côté (voir la carte « Reprendre » de l'accueil).
+  const startIdx = route.params?.startIdx ?? 0;
+  const [idx, setIdx] = useState(startIdx);
   const {
     addKept, addDeleted, addPrinted, addSkipped, addHesitated, undoLast,
     albums, createAlbum, addPhotoToAlbum,
+    startAlbumSession, setAlbumSessionIdx, clearAlbumSession,
     swipeMappingsMenage, swipeMappingsAlbum,
     libraryPhotos,
     swipeTutoSeen, setSwipeTutoSeen,
@@ -125,7 +128,11 @@ export function SwipeScreen({ navigation, route }) {
   // Photos actuellement dans l'album = ids stockés, résolus en objets {url} via
   // les photos de cette session, la file de tri et la photothèque chargée.
   const currentAlbum = albums.find((a) => a.id === albumId) || null;
-  const albumPreviewPhotos = (() => {
+  // Nombre de photos de l'album (badge du haut) : simple lecture, pas de calcul lourd.
+  const albumCount = currentAlbum ? currentAlbum.photoIds.length : sessionAlbumPhotos.length;
+  // La liste n'est construite QUE quand l'aperçu est ouvert : avant, elle était recalculée à
+  // chaque swipe en parcourant toute la photothèque (lourd sur Android avec des milliers de photos).
+  const albumPreviewPhotos = !showAlbumPreview ? [] : (() => {
     if (!currentAlbum) return sessionAlbumPhotos;
     const lookup = new Map();
     [...libraryPhotos, ...queue, ...sessionAlbumPhotos].forEach((p) => {
@@ -152,6 +159,18 @@ export function SwipeScreen({ navigation, route }) {
 
   // Sprint de 20 : repart de zéro à l'entrée et à la sortie du tri.
   useEffect(() => { resetSprint(); return resetSprint; }, []);
+
+  // ── Tri Album sauvegardé ─────────────────────────────────────────────────
+  // À l'entrée : on note la file et la position. Ensuite la position suit chaque photo.
+  // Si l'user quitte en cours de route (← Retour, appli fermée), l'accueil Album
+  // propose « Reprendre ». Effacé à la fin du tri (bilan) — voir plus bas.
+  useEffect(() => {
+    if (!isAlbum || !albumId || queue.length === 0) return;
+    startAlbumSession({ albumId, photoIds: queue.map((p) => p.id), idx: startIdx });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (isAlbum && albumId) setAlbumSessionIdx(albumId, idx);
+  }, [idx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const flashFeedback = (color, edge) => {
     setFeedbackColor(color);
@@ -194,6 +213,7 @@ export function SwipeScreen({ navigation, route }) {
       navigation.popToTop();
       return;
     }
+    // Album : on NE efface PAS la sauvegarde ici → l'accueil proposera « Reprendre le tri ».
     navigation.navigate("Summary", {
       albumId,
       albumName,
@@ -249,6 +269,7 @@ export function SwipeScreen({ navigation, route }) {
     if (actionKey === "hesitate") { addHesitated(photo); setSessionHesitated((p) => [...p, photo]); }
 
     if (idx >= queue.length - 1) {
+      if (isAlbum) clearAlbumSession(); // dernière photo passée → tri terminé
       navigation.navigate("Summary", {
         albumId,
         albumName,
@@ -393,7 +414,7 @@ export function SwipeScreen({ navigation, route }) {
                   {albumName}
                 </Text>
                 <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600", opacity: 0.85 }}>
-                  {albumPreviewPhotos.length} ›
+                  {albumCount} ›
                 </Text>
               </TouchableOpacity>
             ) : (

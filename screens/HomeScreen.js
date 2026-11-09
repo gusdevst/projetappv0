@@ -193,6 +193,9 @@ export function HomeScreen({ navigation, route }) {
   const clearAlbumFilters = usePhotoStore((state) => state.clearAlbumFilters);
   const addAlbumFilter    = usePhotoStore((state) => state.addAlbumFilter);
   const emptyTrash        = usePhotoStore((state) => state.emptyTrash);
+  const albums            = usePhotoStore((state) => state.albums);
+  const albumSession      = usePhotoStore((state) => state.albumSession);       // tri Album mis de côté
+  const clearAlbumSession = usePhotoStore((state) => state.clearAlbumSession);
   const dailyLog          = usePhotoStore((state) => state.dailyLog); // carnet de bord → carte progression
   const blurry            = useBlurryPhotos(); // photos floues repérées (ligne « Photos floues »)
 
@@ -407,6 +410,49 @@ export function HomeScreen({ navigation, route }) {
     } else {
       navigation.navigate("TriMode", { preQueue: queue, skipToAlbum: true });
     }
+  }
+
+  // ── Reprendre un tri Album en cours (mode Album) ─────────────────────────
+  // On affiche la carte seulement si l'album existe encore. Les chiffres viennent
+  // de la sauvegarde ; la file de photos n'est reconstruite qu'au toucher.
+  const resumeAlbum = albumSession ? albums.find((a) => a.id === albumSession.albumId) : null;
+  const resumeTotal = albumSession?.photoIds.length ?? 0;
+  const resumeDone  = Math.min(albumSession?.idx ?? 0, resumeTotal);
+  // Jusqu'à 4 vignettes des photos déjà dans l'album (mosaïque de la ligne).
+  const resumeThumbs = useMemo(() => {
+    if (!resumeAlbum || libraryPhotos.length === 0) return [];
+    const want = new Set(resumeAlbum.photoIds.slice(-4));
+    return libraryPhotos.filter((p) => want.has(p.id)).slice(0, 4);
+  }, [resumeAlbum, libraryPhotos]);
+
+  function handleResumeAlbum() {
+    if (!resumeAlbum || !albumSession) return;
+    // Photos de la file encore présentes dans la photothèque (et pas à la corbeille).
+    const byId  = new Map(libraryPhotos.map((p) => [p.id, p]));
+    const trash = new Set(deleted.map((p) => p.id));
+    const ok    = (id) => byId.has(id) && !trash.has(id);
+    const resumeQueue = albumSession.photoIds.filter(ok).map((id) => byId.get(id));
+    const startIdx    = albumSession.photoIds.slice(0, albumSession.idx).filter(ok).length;
+    if (resumeQueue.length === 0 || startIdx >= resumeQueue.length) {
+      clearAlbumSession();
+      Alert.alert("Tri terminé", "Il n'y a plus de photos à passer en revue dans ce tri.");
+      return;
+    }
+    navigation.navigate("Swipe", {
+      queue: resumeQueue, startIdx, mode: "album",
+      albumId: resumeAlbum.id, albumName: resumeAlbum.name,
+    });
+  }
+
+  function handleDropResume() {
+    Alert.alert(
+      "Abandonner ce tri ?",
+      `Les photos déjà ajoutées à « ${resumeAlbum?.name ?? "l'album"} » restent dans l'album. Seule ta place dans le tri est oubliée.`,
+      [
+        { text: "Annuler", style: "cancel" },
+        { text: "Abandonner", style: "destructive", onPress: clearAlbumSession },
+      ]
+    );
   }
 
   // ── Corbeille + rappel (mode Tri) ────────────────────────────────────────
@@ -624,6 +670,32 @@ export function HomeScreen({ navigation, route }) {
                   onPress={openAlbumPicker}
                 />
               </View>
+
+              {/* Album en cours : un tri commencé et mis de côté (ligne comme « Par date »), toucher = reprendre */}
+              {resumeAlbum && (
+                <>
+                  <SectionTitle title="Album en cours" />
+                  <ListRow
+                    thumb={
+                      <View style={{ width: 44, height: 44, borderRadius: 11, backgroundColor: C.albumSoft, overflow: "hidden", flexDirection: "row", flexWrap: "wrap", gap: 1 }}>
+                        {resumeThumbs.length === 0
+                          ? <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><Icon name="album" size={23} color={C.album} /></View>
+                          : resumeThumbs.map((p) => (
+                              <ExpoImage key={p.id} source={{ uri: p.url }} contentFit="cover" style={{ width: 21.5, height: 21.5 }} />
+                            ))}
+                      </View>
+                    }
+                    title={resumeAlbum.name}
+                    sub={libraryLoading ? "Chargement…" : `${resumeDone} / ${resumeTotal} photos passées en revue`}
+                    progress={resumeTotal ? resumeDone / resumeTotal : 0}
+                    active activeColor={C.album}
+                    right="close"
+                    onClear={handleDropResume}
+                    onPress={handleResumeAlbum}
+                    disabled={libraryLoading}
+                  />
+                </>
+              )}
             </View>
           );
         })()}

@@ -24,7 +24,7 @@ export function SectionTitle({ title, right }) {
 
 // Ligne de liste : vignette (icône ou contenu libre) · titre · sous-titre · droite.
 // right : "chevron" (défaut) | "close" (avec onClear) | élément React.
-export function ListRow({ icon, iconColor = C.accent, iconBg = C.sage, thumb, title, sub, subColor, count, right = "chevron", onClear, active, activeColor = C.accent, onPress, disabled }) {
+export function ListRow({ icon, iconColor = C.accent, iconBg = C.sage, thumb, title, sub, subColor, count, right = "chevron", onClear, active, activeColor = C.accent, onPress, disabled, progress }) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -45,6 +45,11 @@ export function ListRow({ icon, iconColor = C.accent, iconBg = C.sage, thumb, ti
         <Text style={{ fontSize: 14.5, fontWeight: "500", color: C.text }} numberOfLines={1}>{title}</Text>
         {!!sub && (
           <Text style={{ fontSize: 11.5, color: subColor ?? C.textMuted, fontWeight: subColor ? "600" : "400", marginTop: 1 }} numberOfLines={2}>{sub}</Text>
+        )}
+        {progress != null && (
+          <View style={{ height: 4, borderRadius: 2, backgroundColor: C.albumSoft, marginTop: 5, overflow: "hidden" }}>
+            <View style={{ height: 4, borderRadius: 2, backgroundColor: activeColor, width: `${Math.round(Math.min(1, progress) * 100)}%` }} />
+          </View>
         )}
       </View>
       {count != null && <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>{count}</Text>}

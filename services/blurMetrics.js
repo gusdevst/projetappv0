@@ -1,4 +1,4 @@
-// Les « mesures de netteté » disponibles. Le module natif renvoie 4 nombres par photo :
+// Les « mesures de netteté » disponibles. Le module natif renvoie 4 nombres par photo (utilisé depuis le 9 nov., dette n°15) :
 //   lap  = variance du Laplacien de toute l'image (la mesure d'origine)
 //   top  = idem, mais seulement sur la zone la plus nette de l'image
 //   lap2 / lap4 = la même chose sur l'image réduite 2 fois / 4 fois
@@ -14,7 +14,7 @@ const EPS = 1e-6;
 
 export const BLUR_METRICS = {
   lap: { label: "Laplacien", hint: "mesure d'origine", value: (b) => b.lap },
-  top: { label: "Zone nette", hint: "quart le plus net", value: (b) => b.top },
+  top: { label: "Zone nette", hint: "4 cases les plus nettes (grille 4×4)", value: (b) => b.top },
   r12: { label: "Fin/moyen", hint: "détail fin ÷ détail moyen", value: (b) => b.lap / Math.max(b.lap2, EPS) },
   r24: { label: "Moyen/gros", hint: "détail moyen ÷ gros détail", value: (b) => b.lap2 / Math.max(b.lap4, EPS) },
 };

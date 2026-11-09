@@ -345,7 +345,7 @@ export const usePhotoStore = create(
         };
       }),
 
-      reset: () => set({ kept: [], deleted: [], printed: [], skipped: [], hesitated: [], albums: [], books: {} }),
+      reset: () => set({ kept: [], deleted: [], printed: [], skipped: [], hesitated: [], albums: [], albumSession: null, books: {} }),
 
       // Relance le tri depuis zéro : renvoie dans la file à trier toutes les
       // photos non supprimées qui avaient été classées (pile album, passées,
@@ -373,6 +373,21 @@ export const usePhotoStore = create(
       })),
       clearAlbumFilters: () => set({ albumFilters: [] }),
 
+      // ─── Session de tri Album mise de côté (« Reprendre ») ──────────────
+      // Un seul tri en cours à la fois. On garde les ids de la file (pas les photos :
+      // la photothèque est rechargée à chaque ouverture) et la position `idx`.
+      // { albumId, photoIds: [...], idx, updatedAt } ou null.
+      albumSession: null,
+      startAlbumSession: ({ albumId, photoIds, idx = 0 }) => set({
+        albumSession: { albumId, photoIds, idx, updatedAt: Date.now() },
+      }),
+      setAlbumSessionIdx: (albumId, idx) => set((state) =>
+        state.albumSession && state.albumSession.albumId === albumId
+          ? { albumSession: { ...state.albumSession, idx, updatedAt: Date.now() } }
+          : {}
+      ),
+      clearAlbumSession: () => set({ albumSession: null }),
+
       // ─── Actions albums ─────────────────────────────────────────────────
       createAlbum: (name) => set((state) => ({
         albums: [
@@ -392,6 +407,8 @@ export const usePhotoStore = create(
           albums:  updatedAlbums,
           books,
           printed: state.printed.filter((p) => stillReferenced.has(p.id)),
+          // Plus d'album = plus de tri à reprendre pour lui.
+          albumSession: state.albumSession?.albumId === albumId ? null : state.albumSession,
         };
       }),
 
@@ -658,8 +675,9 @@ export const usePhotoStore = create(
         blurKeptIds:             state.blurKeptIds,
         hesitated:               state.hesitated,
         albums:                  state.albums,
+        albumSession:            state.albumSession,
         books:                   state.books,
-        swipeMappingsMenage:     state.swipeMappingsMenage,
+        swipeMappingsMenage:    state.swipeMappingsMenage,
         swipeMappingsAlbum:      state.swipeMappingsAlbum,
         notificationFrequency:   state.notificationFrequency,
         notificationHour:        state.notificationHour,

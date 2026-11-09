@@ -2,7 +2,7 @@
 // Un fichier plutôt qu'AsyncStorage : des dizaines de milliers de photos = plusieurs Mo,
 // AsyncStorage (surtout Android) n'aime pas les très grosses valeurs.
 //
-// Format : { [photoId]: { m: modificationTime, blur: { s: score, v: versionAlgo } } }
+// Format : { [photoId]: { m: modificationTime, blur: { lap, top, lap2, lap4, v: versionAlgo } } }
 // Les futures analyses (étiquettes « plage / chien »…) ajouteront leur propre clé à côté
 // de `blur` (ex. `tags`), avec leur propre `v`.
 import * as FileSystem from "expo-file-system/legacy";

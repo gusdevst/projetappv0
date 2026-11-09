@@ -27,7 +27,7 @@ import {
 let started = false;
 let runId = 0;          // chaque lancement prend un numéro ; un lancement plus ancien s'arrête de lui-même
 let startTimer = null;
-let cache = null;       // { [photoId]: { m, blur: { s, v } } }
+let cache = null;       // { [photoId]: { m, blur: { lap, top, lap2, lap4, v } } }
 let cachePromise = null;
 let saveChain = Promise.resolve();
 const failedThisSession = new Set(); // photos illisibles : pas de nouvel essai avant le prochain lancement de l'app
@@ -96,10 +96,13 @@ async function run() {
       const p = todo[next++];
       try {
         const res = await getSharpness(p.id);
-        if (res && Number.isFinite(res.score)) {
+        // Les 4 mesures sont exigées : une app pas encore reconstruite (ancien module, 1 seule mesure)
+        // n'écrit rien, et la photo sera mesurée après le rebuild.
+        if (res && [res.lap, res.top, res.lap2, res.lap4].every(Number.isFinite)) {
+          const r = (x) => Math.round(x * 100) / 100;
           cache[p.id] = {
             m: p.modificationTime ?? null,
-            blur: { s: Math.round(res.score * 100) / 100, v: BLUR_ALGO_VERSION },
+            blur: { lap: r(res.lap), top: r(res.top), lap2: r(res.lap2), lap4: r(res.lap4), v: BLUR_ALGO_VERSION },
           };
           sinceSave++;
         } else {
