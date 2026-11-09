@@ -33,7 +33,6 @@ export default function AlbumPickerSheet({ visible, onClose, albums, urlById, bo
             <ScrollView>
               {withPhotos.map((a) => {
                 const ids = a.photoIds.filter((id) => urlById[id]);
-                const book = books[a.id];
                 return (
                   <TouchableOpacity key={a.id} onPress={() => onPick(a)}
                     style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 9 }}>
@@ -42,8 +41,8 @@ export default function AlbumPickerSheet({ visible, onClose, albums, urlById, bo
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "500", color: C.text }}>{a.name}</Text>
-                      <Text style={{ fontSize: 12, color: book ? C.album : C.textMuted, fontWeight: book ? "600" : "400" }}>
-                        {ids.length} photo{ids.length > 1 ? "s" : ""}{book ? ` · livre de ${book.format} pages` : ""}
+                      <Text style={{ fontSize: 12, color: C.textMuted }}>
+                        {ids.length} photo{ids.length > 1 ? "s" : ""}
                       </Text>
                     </View>
                     <Icon name="chevronRight" size={16} color={C.textMuted} />

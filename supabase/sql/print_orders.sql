@@ -23,6 +23,7 @@ create table if not exists public.print_orders (
   message     text,                                -- petit mot (pour un proche)
   photo_count int  not null check (photo_count > 0),
   photos      jsonb not null,                      -- chemins dans le dossier print-photos
+  photo_info  jsonb,                               -- par photo : chemin, largeur / hauteur (px), forme (portrait · landscape · square)
   product     text not null default 'prints' check (product in ('prints', 'magnets')),  -- tirages 10x15 ou magnets 5x5
   spec        jsonb,                               -- ce que l'imprimeur doit produire (mm, recadrage…)
   status      text not null default 'validated'
@@ -32,9 +33,10 @@ create table if not exists public.print_orders (
   unique (user_id, sub_id, month)
 );
 
--- Table déjà créée avant l'option magnets ? On ajoute les deux colonnes (sans effet si elles existent).
+-- Table déjà créée avant ? On ajoute les colonnes manquantes (sans effet si elles existent).
 alter table public.print_orders add column if not exists product text not null default 'prints';
 alter table public.print_orders add column if not exists spec jsonb;
+alter table public.print_orders add column if not exists photo_info jsonb;  -- dimensions + forme de chaque photo
 do $$ begin
   alter table public.print_orders add constraint print_orders_product_check check (product in ('prints', 'magnets'));
 exception when duplicate_object then null; end $$;

@@ -367,7 +367,7 @@ export function GalleryScreen({ navigation, route }) {
               shadowColor: C.album, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 3 }}
           >
             <Text style={{ fontSize: 13, color: "#fff", fontWeight: "600" }}>
-              {book ? `📖 Mon livre photo · ${book.format} p.` : "📖 Créer un livre photo"}
+              {book ? "📖 Livre photo en cours" : "📖 Créer un livre photo"}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

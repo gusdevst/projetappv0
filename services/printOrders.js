@@ -31,7 +31,14 @@ async function originalFile(photoId) {
   const info = await MediaLibrary.getAssetInfoAsync(photoId, { shouldDownloadFromNetwork: true });
   if (!info?.localUri) throw fail("photo", "Photo introuvable sur le téléphone.");
   const ext = (info.localUri.split("?")[0].split(".").pop() || "jpg").toLowerCase();
-  return { uri: info.localUri, ext: MIME[ext] ? ext : "jpg" };
+  return { uri: info.localUri, ext: MIME[ext] ? ext : "jpg", width: info.width ?? null, height: info.height ?? null };
+}
+
+// Forme de la photo, pour que l'imprimeur sache s'il faut la tourner (horizontal) ou non.
+function shapeOf(w, h) {
+  if (!w || !h) return null;
+  if (Math.abs(w - h) / Math.max(w, h) < 0.02) return "square";
+  return w > h ? "landscape" : "portrait";
 }
 
 // Envoie la sélection. onProgress(done, total) pour la barre d'avancement. Lève une erreur au moindre échec
@@ -43,12 +50,13 @@ export async function submitSelection({ sub, month, photoIds, onProgress }) {
   const uid = session.user.id;
 
   const paths = [];
+  const info = []; // une entrée par photo : chemin, dimensions en pixels, forme (portrait / landscape / square)
   for (let i = 0; i < photoIds.length; i++) {
     onProgress?.(i, photoIds.length);
     let file;
     try { file = await originalFile(photoIds[i]); }
     catch (e) { throw e.kind ? e : fail("photo", e?.message ?? "Photo illisible."); }
-    const { uri, ext } = file;
+    const { uri, ext, width, height } = file;
     const path = `${uid}/${sub.id}/${month}/${i + 1}.${ext}`;
     let res;
     try {
@@ -67,6 +75,7 @@ export async function submitSelection({ sub, month, photoIds, onProgress }) {
     }
     if (res.status < 200 || res.status >= 300) throw fail("server", `Photo ${i + 1} refusée (${res.status}) : ${res.body?.slice?.(0, 160)}`);
     paths.push(path);
+    info.push({ path, w: width, h: height, shape: shapeOf(width, height) });
   }
 
   const { error } = await supabase.from("print_orders").upsert(
@@ -80,6 +89,7 @@ export async function submitSelection({ sub, month, photoIds, onProgress }) {
       message: sub.message || null,
       photo_count: paths.length,
       photos: paths,
+      photo_info: info,              // dimensions + forme de chaque photo (horizontales à tourner pour un tirage)
       product: productOf(sub).key,   // "prints" | "magnets" : à quoi servent ces photos
       spec: productOf(sub).spec,     // taille finale (mm), recadrage… pour l'imprimeur, quel qu'il soit
     },
