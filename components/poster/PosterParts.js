@@ -9,14 +9,16 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Text from "../AppText";
 import { C, DARKROOM as D } from "../../constants/theme";
+import { CroppedImage } from "../book/CroppedImage";
+import { DEFAULT_CROP } from "../../services/photoBook";
 import { POSTER_FORMATS } from "../../services/posterProducts";
 
 // Rapport hauteur / largeur d'un poster de la série A.
 export const POSTER_RATIO = 297 / 210;
 
 // Poster : `width` = largeur totale (bord blanc compris). `landscape` = poster horizontal (feuille tournée à 90°).
-// Sans photo : aplat sauge.
-export function PosterFrame({ uri, width, tint = 0, border = 3, landscape = false, style }) {
+// Sans photo : aplat sauge. `crop` : recadrage choisi ({ scale, x, y }) ; `editable` + `onCropChange` : glisser / pincer pour le régler.
+export function PosterFrame({ uri, width, tint = 0, border = 3, landscape = false, crop, editable = false, onCropChange, style }) {
   const inner = width - border * 2;
   return (
     <View style={[{
@@ -24,7 +26,9 @@ export function PosterFrame({ uri, width, tint = 0, border = 3, landscape = fals
       shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.28, shadowRadius: 5,
     }, style]}>
       <View style={{ flex: 1, backgroundColor: C.sage2, overflow: "hidden" }}>
-        {!!uri && <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />}
+        {!!uri && (crop || editable
+          ? <CroppedImage url={uri} crop={{ ...DEFAULT_CROP, ...crop }} editable={editable} onChange={onCropChange} />
+          : <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />)}
         {tint > 0 && <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: D.tint, opacity: tint }} />}
       </View>
     </View>

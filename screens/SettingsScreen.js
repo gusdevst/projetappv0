@@ -440,6 +440,10 @@ export function SettingsScreen({ navigation, route }) {
         <Text style={{ textAlign: "center", color: C.textMuted, fontSize: 11, marginTop: 24 }}>
           Pellicule v1.0.0 · Fait avec ❤️ en France
         </Text>
+        {/* Crédits des données de la recherche par lieu (GeoNames impose de citer la source, licence CC BY 4.0) */}
+        <Text style={{ textAlign: "center", color: C.textMuted, fontSize: 10.5, marginTop: 6, paddingHorizontal: 24 }}>
+          Villes : GeoNames (geonames.org, CC BY 4.0) · Frontières : Natural Earth
+        </Text>
 
       </ScrollView>
 

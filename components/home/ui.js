@@ -2,15 +2,20 @@
 // Petites briques visuelles partagées par l'accueil (style sauge) :
 // ombre douce, titre de section, ligne de liste à vignette.
 
-import { View, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity, Platform } from "react-native";
 import Text from "../AppText";
 import Icon from "../Icons";
 import { C } from "../../constants/theme";
 
-export const SHADOW = {
-  shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
-};
+// iOS : ombre douce. Android : AUCUNE ombre (`elevation`) — elle y dessine un petit contour gris
+// autour des blocs (voir CLAUDE.md, dette n°7) ; les cartes se détachent déjà du fond par leur couleur.
+export const SHADOW = Platform.select({
+  android: { elevation: 0 },
+  default: {
+    shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
+  },
+});
 
 // Titre de section : « Trier autrement », « Mes albums »… + liens optionnels à droite.
 export function SectionTitle({ title, right }) {

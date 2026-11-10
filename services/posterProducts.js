@@ -99,11 +99,13 @@ export function posterSizeLabel(key, landscape = false) {
 // Renvoie { dpi, lossPct } ou null si la taille de la photo est inconnue.
 //   dpi     : résolution obtenue sur le papier ;
 //   lossPct : part de la photo qui sera coupée par le recadrage (0 à 100).
-export function posterQuality(photo, key) {
+// `zoom` : zoom choisi par l'utilisateur dans l'écran de recadrage (1 = photo qui remplit juste le poster).
+// Zoomer agrandit la photo sur le papier, donc baisse la résolution : dpi ÷ zoom.
+export function posterQuality(photo, key, zoom = 1) {
   const w = photo?.width, h = photo?.height;
   if (!w || !h) return null;
   const { widthMm, heightMm } = posterDims(key, posterIsLandscape(photo));
-  const dpi = 25.4 * Math.min(w / widthMm, h / heightMm);
+  const dpi = (25.4 * Math.min(w / widthMm, h / heightMm)) / Math.max(1, zoom);
   const posterRatio = widthMm / heightMm;           // largeur / hauteur
   const photoRatio = w / h;
   const keptFraction = photoRatio > posterRatio ? posterRatio / photoRatio : photoRatio / posterRatio;

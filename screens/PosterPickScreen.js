@@ -79,12 +79,12 @@ export function PosterPickScreen({ navigation }) {
   function onApplySearch(r) {
     // Période et contenu se combinent par intersection (comme les filtres de l'accueil).
     let ids = null;
-    for (const list of [r.dateIds, r.contentIds]) {
+    for (const list of [r.dateIds, r.contentIds, r.placeIds]) {
       if (!list) continue;
       const set = new Set(list);
       ids = ids ? new Set([...ids].filter((id) => set.has(id))) : set;
     }
-    const label = [r.dateLabel, r.contentLabel].filter(Boolean).join(" · ");
+    const label = [r.placeLabel, r.dateLabel, r.contentLabel].filter(Boolean).join(" · ");
     setSearch({ query: r.query, label, ids });
     setSelectedId(null);
     setSearchOpen(false);

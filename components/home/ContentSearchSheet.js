@@ -1,7 +1,12 @@
 // components/home/ContentSearchSheet.js
 // Feuille « Chercher dans tes photos » (mode Album) — maquette recherche-flou, partie 1, écran B :
 // on écrit « l'été 2026 à la plage », l'app montre ce qu'elle a compris (période + contenu),
-// le nombre de photos trouvées, puis « Appliquer ces filtres ».
+// le nombre de photos trouvées, puis « Valider ce filtre ».
+//
+// RIEN n'est appliqué avant que l'utilisateur appuie sur un bouton. Chaque idée comprise a une case :
+// décochée, elle est ignorée (c'est lui qui valide). Règle de combinaison : le LIEU (pays ou ville : « Maroc », « Marrakech », d'après le GPS de la photo)
+// et la PÉRIODE (une année…) sont des filtres ; les sujets (plage, enfants, saison citée à part…) se cumulent en
+// « l'un OU l'autre » à l'intérieur.
 //
 // La feuille ne touche pas aux filtres elle-même : elle prévient l'accueil via onApply(...).
 import { useState, useMemo, useEffect } from "react";
@@ -17,7 +22,7 @@ import { parseQuery } from "../../services/searchParser";
 import { searchContent } from "../../services/contentSearch";
 import { isWhatsAppPhoto } from "../../services/blurDetection";
 
-const EXAMPLES = ["Noël 2025", "mon chien", "montagne cet hiver", "anniversaire", "bébé", "feu d'artifice", "piscine l'été dernier"];
+const EXAMPLES = ["Maroc", "Marrakech 2025, plage", "Maroc 2025, plage, famille", "2026, voyage, enfants, coucher de soleil", "Noël 2025", "mon chien", "montagne cet hiver", "bébé, anniversaire", "feu d'artifice", "piscine l'été dernier"];
 
 const frNum = (n) => n.toLocaleString("fr-FR");
 
@@ -28,7 +33,7 @@ const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
  * @param visible, onClose
  * @param initialQuery   texte à pré-remplir (ex. la recherche déjà appliquée)
  * @param color          couleur du mode (album)
- * @param onApply        ({ query, parsed, dateIds, contentIds, dateLabel, contentLabel }, create: boolean) => void
+ * @param onApply        ({ query, parsed, dateIds, contentIds, placeIds, dateLabel, contentLabel, placeLabel }, create: boolean) => void
  *                       create = true : « Créer un album » (filtres appliqués + tri lancé tout de suite)
  * @param pickMode       true : un seul bouton « Voir ces photos » (appelle onApply(..., false)). Utilisé par le choix
  *                       d'une photo de poster, où il n'y a pas d'album à créer.
@@ -36,15 +41,21 @@ const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 export default function ContentSearchSheet({ visible, onClose, initialQuery = "", color = C.album, onApply, pickMode = false }) {
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
   const deleted = usePhotoStore((s) => s.deleted);
+  const geoPhotos = usePhotoStore((s) => s.geoPhotos);
+  const geoScanStatus = usePhotoStore((s) => s.geoScanStatus);
+  const geoScanProgress = usePhotoStore((s) => s.geoScanProgress);
   const { scores, rev, whatsapp, labelsStatus, labelsTotal, labelsDone } = useBlurStore();
   const [query, setQuery] = useState(initialQuery);
   const [modeOverride, setModeOverride] = useState(null); // null = comme la phrase ; "and" | "or" = choix de l'utilisateur
+  const [off, setOff] = useState(() => new Set());        // idées décochées par l'utilisateur ("period" = la période)
+  const toggle = (id) => setOff((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   // À chaque ouverture : on repart de la recherche déjà appliquée (ou d'un champ vide).
   useEffect(() => {
     if (visible) {
       setQuery(initialQuery);
       setModeOverride(null);
+      setOff(new Set());
     }
   }, [visible, initialQuery]);
 
@@ -59,20 +70,32 @@ export default function ContentSearchSheet({ visible, onClose, initialQuery = ""
     return () => { show.remove(); hide.remove(); };
   }, []);
 
+  // base = tout ce que l'app a compris ; parsed = ce que l'utilisateur a gardé (cases cochées).
   const base = useMemo(() => parseQuery(query), [query]);
-  const parsed = useMemo(() => ({ ...base, mode: modeOverride ?? base.mode }), [base, modeOverride]);
+  const parsed = useMemo(() => ({
+    ...base,
+    concepts: base.concepts.filter((c) => !off.has(c.id)),
+    places: base.places.filter((p) => !off.has(p.id)),
+    seasons: base.seasons.filter((s) => !off.has(s.id)),
+    period: off.has("period") ? null : base.period,
+    mode: modeOverride ?? base.mode,
+  }), [base, modeOverride, off]);
+  const subjectCount = parsed.concepts.length + parsed.seasons.length;
   const hasQuery = query.trim() !== "";
-  const understood = parsed.concepts.length > 0 || parsed.period != null;
+  const understood = subjectCount > 0 || parsed.period != null || parsed.places.length > 0;
 
   const deletedIds = useMemo(() => new Set(deleted.map((p) => p.id)), [deleted]);
+
+  // Coordonnées des photos (pour « Maroc » : le pays est déduit du GPS de la photo, hors ligne).
+  const geoById = useMemo(() => new Map(geoPhotos.map((p) => [p.id, { lat: p.lat, lng: p.lng }])), [geoPhotos]);
 
   // Résultat complet (période + contenu).
   const full = useMemo(() => {
     if (!understood) return { results: [], notAnalyzed: 0 };
-    return searchContent(parsed, libraryPhotos, scores, { deletedIds });
+    return searchContent(parsed, libraryPhotos, scores, { deletedIds, geoById });
     // `rev` : de nouveaux résultats d'analyse arrivent pendant que la feuille est ouverte
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parsed, understood, libraryPhotos, deletedIds, rev]);
+  }, [parsed, understood, libraryPhotos, deletedIds, geoById, rev]);
 
   const waCount = useMemo(
     () => full.results.filter((r) => isWhatsAppPhoto(r.photo, whatsapp.ids)).length,
@@ -82,9 +105,18 @@ export default function ContentSearchSheet({ visible, onClose, initialQuery = ""
   // Nombre de photos dans la période seule (affiché sur la ligne « période » de « J'ai compris »).
   const periodCount = useMemo(() => {
     if (!parsed.period) return 0;
-    return searchContent({ ...parsed, concepts: [] }, libraryPhotos, scores, { deletedIds }).results.length;
+    return searchContent({ ...parsed, concepts: [], seasons: [], places: [] }, libraryPhotos, scores, { deletedIds }).results.length;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsed, libraryPhotos, deletedIds]);
+
+  // Nombre de photos prises dans le(s) pays (sans la période ni les sujets).
+  const placeCount = useMemo(() => {
+    if (!parsed.places.length) return 0;
+    return searchContent({ ...parsed, concepts: [], seasons: [], period: null }, libraryPhotos, scores, { deletedIds, geoById }).results.length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsed, libraryPhotos, deletedIds, geoById]);
+  const geoScanning = geoScanStatus === "scanning";
+  const geoPct = geoScanProgress?.total > 0 ? Math.round((geoScanProgress.scanned / geoScanProgress.total) * 100) : 0;
 
   const analysing = labelsStatus === "running" || labelsStatus === "idle";
   const analysisPct = labelsTotal > 0 ? Math.round((labelsDone / labelsTotal) * 100) : 0;
@@ -97,19 +129,25 @@ export default function ContentSearchSheet({ visible, onClose, initialQuery = ""
     // Période : toutes les photos de cette période (sans le contenu). Contenu : toutes les photos de ce contenu (sans la période).
     // Les deux filtres se combinent ensuite par intersection, comme les autres filtres de l'accueil.
     const dateIds = parsed.period
-      ? searchContent({ ...parsed, concepts: [] }, libraryPhotos, scores, { deletedIds: deleted0 }).results.map((r) => r.photo.id)
+      ? searchContent({ ...parsed, concepts: [], seasons: [], places: [] }, libraryPhotos, scores, { deletedIds: deleted0 }).results.map((r) => r.photo.id)
       : null;
-    const contentIds = parsed.concepts.length
-      ? searchContent({ ...parsed, period: null }, libraryPhotos, scores, { deletedIds: deleted0 }).results.map((r) => r.photo.id)
+    // Pays : toutes les photos géolocalisées dans ce(s) pays (sans la période ni les sujets).
+    const placeIds = parsed.places.length
+      ? searchContent({ ...parsed, concepts: [], seasons: [], period: null }, libraryPhotos, scores, { deletedIds: deleted0, geoById }).results.map((r) => r.photo.id)
+      : null;
+    const contentIds = subjectCount
+      ? searchContent({ ...parsed, period: null, places: [] }, libraryPhotos, scores, { deletedIds: deleted0 }).results.map((r) => r.photo.id)
       : null;
     onApply({
       query: query.trim(),
       parsed,
       dateIds,
       contentIds,
+      placeIds,
+      placeLabel: parsed.places.length ? parsed.places.map((p) => p.fr).join(" ou ") : null,
       dateLabel: parsed.period ? cap(parsed.period.label) : null,
-      contentLabel: parsed.concepts.length
-        ? parsed.concepts.map((c) => c.fr).join(parsed.mode === "or" ? " ou " : " + ")
+      contentLabel: subjectCount
+        ? [...parsed.concepts.map((c) => c.fr), ...parsed.seasons.map((x) => x.fr)].join(parsed.mode === "or" ? " ou " : " + ")
         : null,
     }, create);
   }
@@ -133,7 +171,7 @@ export default function ContentSearchSheet({ visible, onClose, initialQuery = ""
               <ScrollView style={{ flexGrow: 0, flexShrink: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 6 }}>
                 <Text style={{ fontWeight: "600", fontSize: 18, color: C.text }}>Chercher dans tes photos</Text>
                 <Text style={{ fontSize: 12.5, color: C.textMuted, marginTop: 2 }}>
-                  Écris ta demande : une période, un sujet, ou les deux.
+                  Écris ta demande : un lieu (pays, ville), une année ou une période, et des sujets. Sépare-les par des virgules.
                 </Text>
 
                 {/* Champ */}
@@ -171,25 +209,60 @@ export default function ContentSearchSheet({ visible, onClose, initialQuery = ""
                   <View style={{ marginTop: 14, backgroundColor: C.bgCard, borderRadius: 16, padding: 14 }}>
                     <Text style={{ fontSize: 11.5, fontWeight: "700", color: color, letterSpacing: 0.6 }}>J'AI COMPRIS</Text>
 
-                    {parsed.period && (
+                    {base.places.map((pl) => (
+                      <Understood
+                        key={pl.id}
+                        icon="pin"
+                        title={pl.fr}
+                        sub={off.has(pl.id)
+                          ? "Ignoré"
+                          : `Filtre : ${frNum(placeCount)} photo${placeCount > 1 ? "s" : ""} géolocalisée${placeCount > 1 ? "s" : ""} là-bas`}
+                        color={color}
+                        on={!off.has(pl.id)}
+                        onToggle={() => toggle(pl.id)}
+                      />
+                    ))}
+                    {base.period && (
                       <Understood
                         icon="calendar"
-                        title={cap(parsed.period.label)}
-                        sub={`${frNum(periodCount)} photo${periodCount > 1 ? "s" : ""} sur cette période`}
+                        title={cap(base.period.label)}
+                        sub={off.has("period")
+                          ? "Ignorée"
+                          : `Filtre : ${frNum(periodCount)} photo${periodCount > 1 ? "s" : ""} sur cette période`}
                         color={color}
+                        on={!off.has("period")}
+                        onToggle={() => toggle("period")}
                       />
                     )}
-                    {parsed.concepts.map((c) => (
+                    {base.concepts.map((c) => (
                       <Understood
                         key={c.id}
                         icon="eye"
                         title={c.fr}
-                        sub={c.approx ? "Approximatif : cherche des photos qui y ressemblent" : null}
+                        sub={off.has(c.id) ? "Ignoré" : c.approx ? "Approximatif : cherche des photos qui y ressemblent" : null}
                         color={color}
-                        warn={c.approx}
+                        warn={c.approx && !off.has(c.id)}
+                        on={!off.has(c.id)}
+                        onToggle={() => toggle(c.id)}
                       />
                     ))}
-                    {parsed.concepts.length > 1 && (
+                    {base.seasons.map((x) => (
+                      <Understood
+                        key={x.id}
+                        icon="calendar"
+                        title={x.fr}
+                        sub={off.has(x.id) ? "Ignoré" : "Les photos de cette saison"}
+                        color={color}
+                        on={!off.has(x.id)}
+                        onToggle={() => toggle(x.id)}
+                      />
+                    ))}
+                    {(base.period || base.places.length > 0) && subjectCount > 0 && (
+                      <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 10 }}>
+                        {`Seulement des photos de ${[...parsed.places.map((p) => p.fr), parsed.period?.label].filter(Boolean).join(" · ")}, parmi les sujets cochés.`}
+                      </Text>
+                    )}
+                    {subjectCount > 1 && (
                       <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
                         {[["or", "L'un ou l'autre"], ["and", "Les deux à la fois"]].map(([m, lab]) => {
                           const on = parsed.mode === m;
@@ -248,6 +321,16 @@ export default function ContentSearchSheet({ visible, onClose, initialQuery = ""
                             </Text>
                           </View>
                         )}
+                        {parsed.places.length > 0 && (geoScanning || full.notLocated > 0) && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 }}>
+                            {geoScanning && <ActivityIndicator size="small" color={color} />}
+                            <Text style={{ flex: 1, fontSize: 12, color: C.textMuted }}>
+                              {geoScanning
+                                ? `Localisation de tes photos en cours${geoPct ? ` (${geoPct} %)` : ""} : la liste peut s'allonger.`
+                                : `${frNum(full.notLocated)} photo${full.notLocated > 1 ? "s" : ""} sans position GPS (WhatsApp, captures…) : ${full.notLocated > 1 ? "ignorées" : "ignorée"}.`}
+                            </Text>
+                          </View>
+                        )}
                         {full.results.length === 0 && (
                           <Text style={{ fontSize: 12.5, color: C.textMid, marginTop: 6 }}>
                             Aucune photo ne correspond. Essaie un autre mot ou une autre période.
@@ -280,11 +363,11 @@ export default function ContentSearchSheet({ visible, onClose, initialQuery = ""
               {/* Bouton */}
               <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
                 <TouchableOpacity
-                  onPress={() => apply(!pickMode)}
+                  onPress={() => apply(false)}
                   disabled={!canApply}
                   style={{ backgroundColor: color, borderRadius: 16, paddingVertical: 13, alignItems: "center", opacity: canApply ? 1 : 0.45 }}
                 >
-                  <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>{pickMode ? "Voir ces photos" : "Créer un album avec ces photos"}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>{pickMode ? "Voir ces photos" : "Valider ce filtre"}</Text>
                   {canApply && (
                     <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 1 }}>
                       {`${frNum(full.results.length)} photo${full.results.length > 1 ? "s" : ""}`}
@@ -293,11 +376,11 @@ export default function ContentSearchSheet({ visible, onClose, initialQuery = ""
                 </TouchableOpacity>
                 {!pickMode && (
                   <TouchableOpacity
-                    onPress={() => apply(false)}
+                    onPress={() => apply(true)}
                     disabled={!canApply}
                     style={{ alignItems: "center", paddingVertical: 11, opacity: canApply ? 1 : 0.45 }}
                   >
-                    <Text style={{ fontSize: 14, fontWeight: "600", color }}>Appliquer les filtres seulement</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "600", color }}>Valider et créer l'album tout de suite</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -310,9 +393,15 @@ export default function ContentSearchSheet({ visible, onClose, initialQuery = ""
 }
 
 // Une ligne de « J'ai compris » : icône · titre · sous-titre.
-function Understood({ icon, title, sub, color, warn }) {
+// La pastille à droite est une CASE : touchée, elle ignore (ou reprend) cette idée.
+function Understood({ icon, title, sub, color, warn, on = true, onToggle }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 }}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={onToggle}
+      disabled={!onToggle}
+      style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10, opacity: on ? 1 : 0.5 }}
+    >
       <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center" }}>
         <Icon name={icon} size={18} color={color} />
       </View>
@@ -320,9 +409,12 @@ function Understood({ icon, title, sub, color, warn }) {
         <Text style={{ fontSize: 14.5, fontWeight: "600", color: C.text }}>{title}</Text>
         {!!sub && <Text style={{ fontSize: 12, color: warn ? C.album : C.textMuted, marginTop: 1 }}>{sub}</Text>}
       </View>
-      <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: color, alignItems: "center", justifyContent: "center" }}>
-        <Icon name="check" size={12} color="#fff" strokeWidth={2.8} />
+      <View style={{
+        width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center",
+        backgroundColor: on ? color : "transparent", borderWidth: on ? 0 : 2, borderColor: C.border,
+      }}>
+        {on && <Icon name="check" size={13} color="#fff" strokeWidth={2.8} />}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }

@@ -935,6 +935,38 @@ Rien d'autre n'a demandé de rebuild depuis.
 
 
 
+- **Recherche — règles de combinaison + validation (10 nov., soir) : ✅ codé, à tester** (demande d'Augustin).
+  **La PÉRIODE est le filtre, les sujets se cumulent en « OU » à l'intérieur.** Exemple : « 2026, voyage, enfants, été, coucher de soleil, amis » =
+  photos de 2026 qui sont (voyage OU enfants OU été OU coucher de soleil OU amis). Pour que ça marche, `parseQuery` découpe la phrase aux **virgules** :
+  une saison / un mois n'est rattaché à une année que dans le **même morceau** (« l'été 2026, la plage » = été 2026 ET plage) ; cité à part et avec une année
+  ailleurs, c'est un **sujet de plus** (`parsed.seasons`, reconnu par la date de la photo, dans `searchContent`). **Sans virgules**, « 2026 voyage été » reste « été 2026 »
+  (rattachement par proximité, comme avant). Une saison sans aucune année (« la plage en été ») = la période elle-même (tous les étés).
+  **Validation** : rien n'est appliqué avant un bouton ; chaque idée comprise (période, sujets, saison) a une **case** (décochée = ignorée, état `off`) ;
+  boutons « Valider ce filtre » (retour à l'accueil, filtres posés) et « Valider et créer l'album tout de suite » (ancien « Créer un album »).
+  **Accueil mode Album** : la **barre de recherche est la 1re ligne d'« Affiner la sélection »** (plus de champ au-dessus du compteur) ; la ligne « Par contenu » est **supprimée** :
+  la barre, quand elle est active, a un contour terracotta, affiche la phrase + ce qui est filtré (sujets · période) et sa ✕ retire les filtres de la recherche (`contenu-recherche` + `date-recherche`).
+
+- **Recherche par PAYS (« Maroc ») — 10 nov., soir : ✅ codé, à tester** (demande d'Augustin ; choix : frontières **hors ligne**, pas de géocodage Apple/Google → aucune coordonnée ne sort du téléphone, pas de rebuild).
+  Le pays est déduit du **GPS de la photo** (`geoPhotos` du store, rempli par `scanGeo` en arrière-plan ; `services/gpsCache.js`). `services/countryLookup.js` : `countryAt(lat, lng)` → id de pays (`"maroc"`),
+  point-dans-polygone sur `constants/countries-50m.json` (TopoJSON **Natural Earth 50m**, copié du paquet npm `world-atlas@2.0.2`, ISC / domaine public, 756 Ko, chargé au 1er usage) ; cache en mémoire par case de ~2 km ;
+  un point juste en mer (plage, côte simplifiée) est rattaché au pays le plus proche **à moins de 25 km**. `constants/countryNames.js` = noms français + variantes (clé = nom anglais du fichier ; Somaliland → Somalie,
+  Chypre du Nord → Chypre ; quelques alias : Angleterre / Écosse → Royaume-Uni, Bali → Indonésie, Tahiti → Polynésie, Dubaï → Émirats, Zanzibar → Tanzanie ; petits territoires sans nom = non cherchables).
+  `parseQuery` → `parsed.places` ; **le pays est un FILTRE comme la période** (plusieurs pays = l'un OU l'autre ; ET avec période et sujets : « Maroc 2025, plage » = plage, au Maroc, en 2025).
+  `searchContent(..., { geoById })` filtre par pays et renvoie `notLocated` (photos sans position : WhatsApp, captures… ou scan GPS pas fini). La feuille affiche une ligne 📍 cochable, « N photos géolocalisées là-bas »,
+  et l'avancement de la localisation. Appliquer pose un filtre `pays-recherche` de type **`lieu`** (donc visible aussi dans « Par lieu » ; la ✕ de la barre de recherche le retire avec les autres).
+  **Limites connues** : villes → voir la puce suivante ; **régions non gérées** (« Bretagne », « Provence » = mot inconnu) ; dans ce fichier **le Maroc inclut le Sahara occidental**
+  (Laâyoune, Dakhla = Maroc ; décision de données à valider si besoin) et **Ceuta / Melilla comptent comme Maroc** (frontière à 50m) ; îlots minuscules absents (Lampedusa → aucun pays) ; la Guyane, la Réunion… sont dans « France ».
+
+- **Recherche par VILLE (« Marrakech ») — 10 nov., soir : ✅ codé, à tester** (Augustin a choisi le seuil **30 000 habitants**, hors ligne).
+  Données : `constants/cities.json` = **GeoNames `cities15000`** (CC BY 4.0 → **crédit affiché en bas de Réglages**, ne pas le retirer), filtré à ≥ 30 000 hab. → **18 223 villes, 526 Ko**, fabriqué par `scripts/build-cities.mjs`
+  (`node scripts/build-cities.mjs cities15000.txt 30000` ; fichier source à retélécharger sur download.geonames.org/export/dump/cities15000.zip ; quartiers PPLX, quartiers de Paris et noms à chiffre exclus ; changer le seuil = relancer le script).
+  `services/cityLookup.js` : `cityKeysAt(lat, lng)` → **toutes** les villes dont la photo est proche (rayon = 9 km à 30 000 hab., 20 km à 300 000, 31 km à 3 M, plafond 40 km) : une photo de Versailles compte pour Versailles ET Paris ;
+  hors rayon = pas de ville (reste dans son pays). Grille de cases de 1° + cache par case de ~2 km. Villes de même nom (Valencia ES / VE) = UN lieu (on cherche autour de chacune).
+  Noms français : `constants/cityNames.js` (~110 exceptions : Londres, Le Caire, Pékin, Marrakech/Marrakesh, Fès, Tanger… ; clé = nom exact dans `cities.json`) ; une ville absente de cette table s'écrit comme dans GeoNames (souvent l'anglais pour les grandes : Munich, Naples, Geneva).
+  **À compléter au fil des mots « pas compris »** (ajouter une ligne). Parseur : les villes passent APRÈS les idées du dictionnaire, les pays, les mots-outils, mois, saisons, années (jamais prises pour une ville) ; `COMMON_WORDS` écarte « orange » et « sale » ;
+  suggestions « Tu voulais dire » pour une ville = faute d'une lettre seulement. Id de lieu = `v:<nom>` (kind `"city"`), pays = `maroc`… ; plusieurs lieux = l'un OU l'autre. Le filtre posé est toujours `pays-recherche` (type `lieu`).
+  **Pas encore** : régions / départements, villages < 30 000 hab. (rattachés à la grande ville proche si < rayon), choix entre deux villes homonymes (ex. « Valencia » = Espagne + Venezuela). Le 1er mot tapé construit l'index (~45 ms) puis c'est instantané.
+
 ---
 
 ## 18. Session 10 nov. 2026 (suite) — posters (imprimeur.fr) dans la Chambre noire
@@ -967,3 +999,7 @@ Rien d'autre n'a demandé de rebuild depuis.
   **Choix de la photo du poster = un seul écran** (`PosterPickScreen` : onglets Coups de cœur · Albums · Photothèque, plus de page « d'où vient la photo ? »).
   **Poster horizontal** : le poster suit le sens de la photo (`posterIsLandscape`, `posterDims`, `posterSizeLabel`, `PosterFrame landscape`) ; l'ancien message « les posters sont verticaux » est supprimé.
   ⚠️ imprimeur.fr ne liste que des formats « portrait » pour le poster : on enverra l'image tournée de 90° dans une feuille verticale (même feuille physique) ; à valider par une commande TEST.
+- **Page « Cadre ton poster » refaite (10 nov., soir) : ✅ codée, à tester sur appareil.** `PosterFormatScreen` : grand aperçu du poster avec la photo, **glisser = déplacer, pincer = zoomer** (réutilise `CroppedImage` du livre, via
+  `PosterFrame` props `crop` / `editable` / `onCropChange`), boutons − / ＋ / « Recentrer » ; 4 pastilles de format avec la qualité de la photo **à ce zoom** (`posterQuality(photo, key, zoom)` = dpi ÷ zoom, la donnée que
+  Augustin aime) ; **prix discret** (une ligne au-dessus du bouton « Continuer », plus sur chaque format). Le recadrage `{ scale, x, y }` passe à `PosterRecapScreen` (aperçu recadré). Pas de rotation ni de redressement (le livre en a).
+  À vérifier : le pincer / glisser dans un `ScrollView` (le geste doit gagner sur le défilement) ; la fabrication du fichier final doit appliquer ce même recadrage.

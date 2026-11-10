@@ -5,11 +5,17 @@
 //   {
 //     concepts:    idées de contenu comprises (voir constants/searchVocabulary.js),
 //     mode:        "or" (par défaut : plusieurs sujets = l'un OU l'autre) — la feuille de recherche peut le passer à "and",
-//     period:      { label, parts } ou null (voir matchPeriod),
+//     places:      pays compris (« Maroc », « au Japon »), [{ id, fr, words }] — FILTRE comme la période : plusieurs pays = l'un OU l'autre,
+//                  et le tout se combine avec la période et les sujets en ET (voir services/countryLookup.js),
+//     period:      { label, parts } ou null (voir matchPeriod) = le FILTRE de date (année, « été 2026 », « Noël dernier »…),
+//     seasons:     saisons / mois cités À PART dans une phrase qui a déjà une année (« 2026, voyage, été ») :
+//                  ils se comptent comme des sujets (l'un OU l'autre) à l'intérieur de la période. [{ id, fr, part }]
 //     unknown:     mots qu'on n'a pas compris,
 //     suggestions: idées proches des mots inconnus (pour proposer « Tu voulais dire… ? »),
 //   }
 import { CONCEPTS, STOPWORDS } from "../constants/searchVocabulary";
+import { listPlaces } from "./countryLookup";
+import { listCityPlaces } from "./cityLookup";
 
 // ── Texte : minuscules, sans accents, sans ponctuation ─────────────────────
 export function normFr(s) {
@@ -25,6 +31,7 @@ export function normFr(s) {
 
 // ── Index des mots du dictionnaire ─────────────────────────────────────────
 let INDEX = null;     // Map « mot normalisé » → idée
+let PLACE_INDEX = null; // Map « mot normalisé » → pays {id, fr, words}
 let MAX_GRAM = 1;     // plus longue expression du dictionnaire (en mots)
 
 function buildIndex() {
@@ -38,7 +45,31 @@ function buildIndex() {
       max = Math.max(max, k.split(" ").length);
     }
   }
+  const pmap = new Map();
+  for (const pl of listPlaces()) {
+    for (const w of pl.words) {
+      const k = normFr(w);
+      if (!k) continue;
+      if (!pmap.has(k)) pmap.set(k, pl);
+      max = Math.max(max, k.split(" ").length);
+    }
+  }
+  // Villes (GeoNames, > 30 000 hab.) : APRÈS les pays et les idées du dictionnaire, qui gagnent toujours
+  // (un mot déjà pris, un mot-outil, un mois, une année ne devient jamais une ville). Les plus peuplées d'abord.
+  // Mots de tous les jours qui sont aussi des villes (Orange, Salé) : on préfère ne pas les prendre pour un lieu.
+  const COMMON_WORDS = new Set(["orange", "sale"]);
+  const reserved = (k) => COMMON_WORDS.has(k) || map.has(k) || STOPWORDS.has(k) || MONTHS[k] || SEASONS[k] || ISYEAR(k) || k === "noel"
+    || k === "ou" || k === "et" || k === "ci" || k === "annee" || k === "mois" || THIS_WORDS.has(k) || LAST_WORDS.has(k);
+  for (const pl of listCityPlaces()) {
+    for (const w of pl.words) {
+      const k = normFr(w);
+      if (k.length < 3 || pmap.has(k) || reserved(k)) continue;
+      pmap.set(k, pl);
+      max = Math.max(max, k.split(" ").length);
+    }
+  }
   INDEX = map;
+  PLACE_INDEX = pmap;
   MAX_GRAM = max;
 }
 
@@ -59,6 +90,10 @@ export function duplicateWords() {
 // Mot ou expression → idée. On essaie aussi sans « s » / « x » final (pluriels).
 function lookup(phrase) {
   return INDEX.get(phrase) || INDEX.get(phrase.replace(/(s|x)$/, "")) || null;
+}
+// Idem pour les pays (« etats unis » tel quel ; pas de pluriel à retirer : « mali » ne doit pas devenir « mal »).
+function lookupPlace(phrase) {
+  return PLACE_INDEX.get(phrase) || null;
 }
 
 // ── Périodes ───────────────────────────────────────────────────────────────
@@ -142,18 +177,30 @@ const ISYEAR = (t) => /^(19|20)\d{2}$/.test(t);
  */
 export function parseQuery(text, now = new Date()) {
   if (!INDEX) buildIndex();
-  const tokens = normFr(text).split(" ").filter(Boolean);
+  // La phrase est découpée aux virgules / points-virgules : une saison n'est rattachée à une année
+  // que si les deux sont dans le même morceau (« l'été 2026, la plage » ≠ « 2026, voyage, été »).
+  const tokens = [];
+  const seg = []; // numéro de morceau de chaque mot
+  String(text ?? "").split(/[,;\n]+/).forEach((chunk, k) => {
+    for (const t of normFr(chunk).split(" ")) if (t) { tokens.push(t); seg.push(k); }
+  });
+  const sameSeg = (a, b) => seg[a] === seg[b];
   const used = new Array(tokens.length).fill(false);
 
-  // 1) Contenu : mots / expressions du dictionnaire (les plus longues d'abord).
+  // 1) Contenu : mots / expressions du dictionnaire (les plus longues d'abord) + pays.
   const concepts = [];
+  const places = [];
   for (let i = 0; i < tokens.length; i++) {
     if (used[i]) continue;
     for (let n = Math.min(MAX_GRAM, tokens.length - i); n >= 1; n--) {
-      const c = lookup(tokens.slice(i, i + n).join(" "));
+      if (!sameSeg(i, i + n - 1)) continue;
+      const phrase = tokens.slice(i, i + n).join(" ");
+      const c = lookup(phrase);
+      const pl = c ? null : lookupPlace(phrase);
       // un mot-outil seul (« de », « la ») ne compte jamais comme contenu
-      if (c && !(n === 1 && STOPWORDS.has(tokens[i]))) {
-        if (!concepts.includes(c)) concepts.push(c);
+      if ((c || pl) && !(n === 1 && STOPWORDS.has(tokens[i]))) {
+        if (c && !concepts.includes(c)) concepts.push(c);
+        if (pl && !places.includes(pl)) places.push(pl);
         for (let k = i; k < i + n; k++) used[k] = true;
         i += n - 1;
         break;
@@ -164,18 +211,19 @@ export function parseQuery(text, now = new Date()) {
   // 2) Période : saisons, mois, Noël, années, « cet été », « l'été dernier »…
   const parts = [];
   const periodLabels = [];
+  const recurring = []; // saisons / mois sans année : on décidera plus bas s'ils sont une période ou un sujet
   const usedAsPeriod = new Set();
   const yearNear = (i) => {
     for (let d = 1; d <= 3; d++) {
       for (const j of [i + d, i - d]) {
-        if (j >= 0 && j < tokens.length && !used[j] && ISYEAR(tokens[j])) return { year: Number(tokens[j]), at: j };
+        if (j >= 0 && j < tokens.length && !used[j] && sameSeg(i, j) && ISYEAR(tokens[j])) return { year: Number(tokens[j]), at: j };
       }
     }
     return null;
   };
   const relNear = (i) => {
-    for (const j of [i - 1, i - 2]) if (j >= 0 && THIS_WORDS.has(tokens[j]) && !used[j]) return { rel: 0, at: j };
-    for (const j of [i + 1, i + 2]) if (j < tokens.length && LAST_WORDS.has(tokens[j]) && !used[j]) return { rel: -1, at: j };
+    for (const j of [i - 1, i - 2]) if (j >= 0 && sameSeg(i, j) && THIS_WORDS.has(tokens[j]) && !used[j]) return { rel: 0, at: j };
+    for (const j of [i + 1, i + 2]) if (j < tokens.length && sameSeg(i, j) && LAST_WORDS.has(tokens[j]) && !used[j]) return { rel: -1, at: j };
     return null;
   };
   const yearsUsed = new Set();
@@ -192,8 +240,8 @@ export function parseQuery(text, now = new Date()) {
     const y = yearNear(i);
     const r = y ? null : relNear(i);
     const part = partFor(def, label, { year: y ? y.year : null, rel: r ? r.rel : null }, now);
-    parts.push(part);
-    periodLabels.push(part.label);
+    if (part.recurring) recurring.push({ label, part });
+    else { parts.push(part); periodLabels.push(part.label); }
     used[i] = true;
     if (y) yearsUsed.add(y.at);
     if (r) usedAsPeriod.add(r.at);
@@ -233,6 +281,17 @@ export function parseQuery(text, now = new Date()) {
     }
   }
 
+  // Une saison / un mois sans année :
+  //  · s'il y a déjà une période (une année…) : c'est un SUJET de plus (« 2026, voyage, été » = photos de 2026
+  //    qui sont des voyages OU de l'été) ;
+  //  · sinon c'est la période elle-même (« la plage en été » = les étés de toutes les années).
+  const seasons = [];
+  if (parts.length > 0) {
+    for (const r of recurring) seasons.push({ id: `saison-${normFr(r.label).replace(/ /g, "-")}`, fr: r.label.charAt(0).toUpperCase() + r.label.slice(1), part: r.part });
+  } else {
+    for (const r of recurring) { parts.push(r.part); periodLabels.push(r.part.label); }
+  }
+
   // 4) Mots-outils ignorés ; le reste est inconnu.
   // Plusieurs sujets = « l'un OU l'autre » par défaut (« des paysages, des photos de groupe et d'amis » :
   // on veut l'ensemble). L'utilisateur peut passer à « les deux à la fois » dans la feuille de recherche.
@@ -247,7 +306,9 @@ export function parseQuery(text, now = new Date()) {
 
   return {
     concepts,
+    places,
     mode,
+    seasons,
     period: parts.length ? { label: periodLabels.join(" + "), parts } : null,
     unknown,
     suggestions: suggestFor(unknown),
@@ -274,9 +335,12 @@ function suggestFor(unknown) {
   const out = [];
   for (const u of unknown) {
     if (u.length < 3) continue;
-    for (const [word, concept] of INDEX) {
+    for (const [word, concept] of [...INDEX, ...PLACE_INDEX]) {
       if (out.includes(concept)) continue;
-      const close = word.startsWith(u) || (u.length >= 4 && u.startsWith(word) && word.length >= 4) || (u.length >= 5 && lev(u, word) <= 2);
+      // Les villes sont très nombreuses : on ne les propose que pour une faute de frappe (1 lettre), pas pour un début de mot.
+      const close = concept.kind === "city"
+        ? u.length >= 6 && lev(u, word) <= 1
+        : word.startsWith(u) || (u.length >= 4 && u.startsWith(word) && word.length >= 4) || (u.length >= 5 && lev(u, word) <= 2);
       if (close) out.push(concept);
       if (out.length >= 5) return out;
     }
@@ -287,7 +351,9 @@ function suggestFor(unknown) {
 /** Texte lisible de ce que l'app a compris (pour « J'ai compris »). */
 export function describeQuery(parsed) {
   const bits = [];
+  if (parsed.places?.length) bits.push(parsed.places.map((p) => p.fr).join(" ou "));
   if (parsed.period) bits.push(parsed.period.label);
-  if (parsed.concepts.length) bits.push(parsed.concepts.map((c) => c.fr).join(parsed.mode === "or" ? " ou " : " + "));
+  const subjects = [...parsed.concepts.map((c) => c.fr), ...(parsed.seasons ?? []).map((s) => s.fr)];
+  if (subjects.length) bits.push(subjects.join(parsed.mode === "or" ? " ou " : " + "));
   return bits.join(" · ");
 }

@@ -18,7 +18,7 @@ import { formatEuro } from "../constants/subscription";
 import { POSTER_FORMATS, POSTER_MAX_QTY, DEFAULT_POSTER_FORMAT, posterPriceCents, posterIsLandscape, posterSizeLabel } from "../services/posterProducts";
 
 export function PosterRecapScreen({ navigation, route }) {
-  const { photoId, format } = route.params ?? {};
+  const { photoId, format, crop } = route.params ?? {};
   const f = POSTER_FORMATS[format] ?? POSTER_FORMATS[DEFAULT_POSTER_FORMAT];
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
   const kept = usePhotoStore((s) => s.kept);
@@ -51,7 +51,7 @@ export function PosterRecapScreen({ navigation, route }) {
         </View>
 
         <View style={[...card, { flexDirection: "row", gap: 14, marginTop: 14 }]}>
-          <PosterFrame uri={photo?.url} width={posterIsLandscape(photo) ? 104 : 78} landscape={posterIsLandscape(photo)} />
+          <PosterFrame uri={photo?.url} crop={crop} width={posterIsLandscape(photo) ? 104 : 78} landscape={posterIsLandscape(photo)} />
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 15, fontWeight: "700", color: C.text }}>Poster {f.name}</Text>
             <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{posterSizeLabel(f.key, posterIsLandscape(photo))}{posterIsLandscape(photo) ? " · horizontal" : ""}</Text>
