@@ -2,7 +2,9 @@
 // Onglet « Galerie » (maquette validée « Pellicule + Chambre noire ») : une seule page, rien à ouvrir pour tout voir.
 // 1. PELLICULE — « Mes albums » en LISTE (mosaïque, nom, nombre de photos, menu ···), ＋ dans le titre, puis « Sans album ».
 // 2. CHAMBRE NOIRE — bloc rouge sombre pleine largeur : tout ce qu'on fait imprimer, déjà visible :
-//    Coups de cœur (guirlande de tirages), Livres photo (étagère de couvertures), Abonnements (lignes avec leur état).
+//    TIRAGES PHOTOS = Coups de cœur (guirlande, mot « Coups de cœur » au-dessus du fil, sans compteurs) + abonnements TIRAGES (brique dessous)
+//    + « ＋ Nouveau » (page produit « Nouveaux tirages » : abonnement ou tirage simple) ; Livres photo (étagère de couvertures). Les abonnements se gèrent dans Réglages.
+//    Une seule ampoule : celle du coin du bloc (maquette `maquette-chambre-noire-tirages-v2.html`, validée le 10 nov.).
 // Toucher un élément ouvre seulement SON détail. La corbeille n'est plus ici : elle vit dans la carte « Cette semaine » de l'accueil.
 
 import { useMemo, useState } from "react";
@@ -15,6 +17,7 @@ import { ListRow, SectionTitle, SHADOW } from "../components/home/ui";
 import { BookCover } from "../components/book/BookPage";
 import AlbumPickerSheet from "../components/book/AlbumPickerSheet";
 import DarkroomCover, { printsFor } from "../components/DarkroomCover";
+import { PosterWall } from "../components/poster/PosterParts";
 import { useBookFonts } from "../components/book/bookFonts";
 import { bookStats, pageRatio } from "../services/photoBook";
 import { LinearGradient } from "expo-linear-gradient";
@@ -59,14 +62,36 @@ function Cover({ urls, height }) {
   );
 }
 
-// Petit titre en capitales dans la Chambre noire (« COUPS DE CŒUR », « LIVRES PHOTO »…) + action à droite.
-function DarkLabel({ title, right, onRight }) {
+// Titre de section de la Chambre noire (maquette « titres », version D validée le 10 nov.) :
+// petit voyant rouge + titre en gras + filet lumineux qui s'estompe + action à droite (« ＋ Nouveau », « ＋ Créer »).
+// `badge` : pastille « NOUVEAU » à côté du titre. `onInfo` : petit ⓘ avant l'action (ex. rouvrir la présentation du poster).
+function DarkLabel({ title, right, onRight, soon, badge, onInfo }) {
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: 20, marginBottom: 9, marginHorizontal: 2 }}>
-      <Text style={{ fontSize: 10.5, fontWeight: "700", letterSpacing: 1.2, color: D.halo }}>{title}</Text>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 22, marginBottom: 11, marginHorizontal: 2 }}>
+      {/* Voyant : pas d'élévation (piège Android, dette n°7), juste une lueur iOS */}
+      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: D.todoGlow, shadowColor: D.todoGlow, shadowOpacity: 0.9, shadowRadius: 5, shadowOffset: { width: 0, height: 0 } }} />
+      <Text style={{ fontSize: 15, fontWeight: "700", color: D.paper }}>{title}</Text>
+      {!!badge && (
+        <View style={{ backgroundColor: C.album, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+          <Text style={{ fontSize: 8.5, fontWeight: "700", color: "#fff" }}>{badge}</Text>
+        </View>
+      )}
+      <LinearGradient colors={["rgba(255,201,188,0.55)", "rgba(255,201,188,0)"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, height: 1 }} />
+      {!!onInfo && (
+        <TouchableOpacity onPress={onInfo} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={{ fontSize: 15, color: D.halo }}>ⓘ</Text>
+        </TouchableOpacity>
+      )}
       {!!right && (
         <TouchableOpacity onPress={onRight} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={{ fontSize: 12.5, fontWeight: "600", color: D.paper }}>{right}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: D.paper }}>{right}</Text>
+            {!!soon && (
+              <View style={{ backgroundColor: C.album, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                <Text style={{ fontSize: 8.5, fontWeight: "700", color: "#fff" }}>BIENTÔT</Text>
+              </View>
+            )}
+          </View>
         </TouchableOpacity>
       )}
     </View>
@@ -88,7 +113,10 @@ export function GalleryHomeScreen({ navigation }) {
   const selections    = useSubscriptionStore((s) => s.selections);
   const updateSub     = useSubscriptionStore((s) => s.updateSub);
   const liveSubs      = useMemo(() => subs.filter((x) => x.status !== "cancelled"), [subs]); // résiliés = hors de la liste
-  const hasSub        = liveSubs.length > 0; // abonné → section « Mes abonnements » à la place de la carte « Abonnement »
+  const hasSub        = liveSubs.length > 0;
+  // Les abonnements TIRAGES vivent sous la guirlande. Les magnets et la gestion de tous les abonnements sont dans
+  // Réglages (« Gérer mes abonnements »), plus de section « Abonnements » dans la Chambre noire (10 nov.).
+  const tirageSubs    = liveSubs.map((x, i) => ({ x, i })).filter(({ x }) => x.product !== "magnets");
   const subUrls       = useKeptUrls(9);      // vignettes des abonnements : les vrais coups de cœur
   const books         = usePhotoStore((s) => s.books);
   const deleteBook    = usePhotoStore((s) => s.deleteBook);
@@ -107,12 +135,17 @@ export function GalleryHomeScreen({ navigation }) {
     const byId = new Map(libraryPhotos.map((p) => [p.id, p]));
     return kept.filter((p) => byId.has(p.id)).map((p) => ({ ...p, url: byId.get(p.id).url }));
   }, [kept, libraryPhotos]);
-  const keptCount = keptAlive.length;
   const printedMap = usePrintedPhotos();
-  const keptPrinted = keptAlive.filter((p) => printedMap[p.id]).length; // déjà imprimées (restent dans les coups de cœur)
   // Guirlande de la Chambre noire : les derniers ❤️ pas encore imprimés (sinon, les derniers tout court).
   const HEART_W = SW - 32;   // pleine largeur du bloc
-  const HEART_H = 150; // plus haut : les tirages de la guirlande sont plus grands, donc les photos se voient
+  const HEART_H = 150; // hauteur d'origine (plus de compteurs sous la scène, plus de pancarte)
+  // Bloc « Posters » : 3 photos parmi les coups de cœur (pas les mêmes que la guirlande quand il y en a assez).
+  const posterUrls = useMemo(() => {
+    const rev = [...keptAlive].reverse();
+    return (rev.length > 5 ? rev.slice(3, 6) : rev.slice(0, 3)).map((p) => p.url);
+  }, [keptAlive]);
+  const posterIntroSeen = usePhotoStore((s) => s.posterIntroSeen);
+  const openPoster = () => navigation.navigate(posterIntroSeen ? "PosterPick" : "PosterIntro");
   const toPrint = keptAlive.filter((p) => !printedMap[p.id]);
   const garland = toPrint.length ? toPrint : keptAlive;
   const keptUrls = garland.slice(-printsFor(HEART_W, HEART_H)).reverse().map((p) => p.url);
@@ -269,23 +302,25 @@ export function GalleryHomeScreen({ navigation }) {
           </View>
           <Text style={{ fontSize: 21, fontWeight: "700", color: D.paper }}>Chambre noire</Text>
 
-          {/* Coups de cœur : guirlande + libellé (toucher = tous les coups de cœur) */}
-          <DarkLabel title="TIRAGES PHOTOS" />
+          {/* Tirages photos : guirlande des coups de cœur (mot au-dessus du fil) + abonnements tirages dessous */}
+          <DarkLabel title="Tirages photos" right="＋ Nouveau" onRight={() => navigation.navigate("PrintNew")} />
           <TouchableOpacity activeOpacity={0.85} onPress={() => open({ section: "kept" })}>
             <DarkroomCover urls={keptUrls} width={HEART_W} height={HEART_H} radius={16} />
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 9, marginHorizontal: 2 }}>
-              <Icon name="heart" size={15} color={C.red} filled />
-              <Text style={{ fontSize: 14, fontWeight: "600", color: D.paper }}>Coups de cœur</Text>
-              <Text style={{ marginLeft: "auto", fontSize: 11.5, color: D.halo }} numberOfLines={1}>
-                {keptPrinted > 0
-                  ? `${keptCount - keptPrinted} à imprimer · ${keptPrinted} imprimée${keptPrinted > 1 ? "s" : ""}`
-                  : `${keptCount} photo${keptCount > 1 ? "s" : ""} à imprimer`} ›
-              </Text>
+            <View pointerEvents="none" style={{ position: "absolute", left: 16, top: 11, flexDirection: "row", alignItems: "center", gap: 7 }}>
+              <Icon name="heart" size={13} color={D.halo} filled />
+              <Text style={{ fontSize: 14, fontWeight: "700", color: D.paper }}>Coups de cœur</Text>
             </View>
           </TouchableOpacity>
+          <View style={{ gap: 9, marginTop: 10 }}>
+            {tirageSubs.map(({ x, i }) => (
+              <SubscriptionRow key={x.id} dark sub={x} st={subStatus(x, selections[x.id]?.[subMonth])}
+                urls={subUrls.slice((i * 3) % 9, ((i * 3) % 9) + 3)}
+                onPress={() => openSub(x)} onMenu={() => openSubMenu(x)} />
+            ))}
+          </View>
 
           {/* Livres photo : étagère de couvertures */}
-          <DarkLabel title="LIVRES PHOTO" right="＋ Nouveau" onRight={() => setBookPickerOpen(true)} />
+          <DarkLabel title="Livres photo" right="＋ Nouveau" onRight={() => setBookPickerOpen(true)} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 4 }}>
             {bookList.map(({ book, album }) => {
               const ids = album.photoIds.filter((id) => urlById[id]);
@@ -318,27 +353,12 @@ export function GalleryHomeScreen({ navigation }) {
             </TouchableOpacity>
           </ScrollView>
 
-          {/* Abonnements : une ligne chacun, avec ce qu'il y a à faire et le menu ··· */}
-          <DarkLabel title="ABONNEMENTS" right={hasSub ? "Gérer ›" : undefined} onRight={() => navigation.navigate("SubscriptionList")} />
-          <View style={{ gap: 9 }}>
-            {liveSubs.map((x, i) => (
-              <SubscriptionRow key={x.id} dark sub={x} st={subStatus(x, selections[x.id]?.[subMonth])}
-                urls={subUrls.slice((i * 3) % 9, ((i * 3) % 9) + 3)}
-                onPress={() => openSub(x)} onMenu={() => openSubMenu(x)} />
-            ))}
-            <TouchableOpacity onPress={() => navigation.navigate("SubscriptionIntro")} activeOpacity={0.8}
-              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderStyle: "dashed", borderColor: D.halo, borderRadius: 15, paddingVertical: 12, opacity: 0.9 }}>
-              <Text style={{ fontSize: 17, color: D.paper, marginTop: -2 }}>+</Text>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: D.paper }}>
-                {hasSub ? "Ajouter un abonnement" : "Recevoir mes coups de cœur chaque mois"}
-              </Text>
-              {!hasSub && (
-                <View style={{ backgroundColor: C.album, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                  <Text style={{ fontSize: 8.5, fontWeight: "700", color: "#fff" }}>NOUVEAU</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
+          {/* Posters : 3 cadres accrochés au fil (maquette `maquette-poster.html`). 1re fois = présentation, ensuite choix de la photo. */}
+          <DarkLabel title="Posters" badge="NOUVEAU" right="＋ Nouveau" onRight={openPoster} onInfo={() => navigation.navigate("PosterIntro")} />
+          <TouchableOpacity activeOpacity={0.85} onPress={openPoster}>
+            <PosterWall urls={posterUrls} width={HEART_W} />
+          </TouchableOpacity>
+
         </LinearGradient>
       </ScrollView>
 

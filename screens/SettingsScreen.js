@@ -14,6 +14,7 @@ import { usePhotoStore } from "../store/usePhotoStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { AccountCard } from "../components/AccountCard";
 import SharpnessDevTest from "../components/dev/SharpnessDevTest";
+import LabelsDevTest from "../components/dev/LabelsDevTest";
 import { deleteAccount } from "../services/auth";
 
 // ── Données de configuration ──────────────────────────────────────────────────
@@ -190,6 +191,14 @@ export function SettingsScreen({ navigation, route }) {
 
         {/* ── Carte compte (connexion / déconnexion) ─────────────────────── */}
         <AccountCard navigation={navigation} />
+
+        {/* ── Abonnements, commandes (déplacés ici depuis la Galerie, 10 nov.) ── */}
+        <RowSetting emoji="📬" label="Gérer mes abonnements" desc="Tirages et magnets : dates, pause, résiliation"
+          onPress={() => navigation.navigate("SubscriptionList")}
+          right={<Text style={{ color: C.textMuted }}>›</Text>} />
+        <RowSetting emoji="🧾" label="Commandes et paiements" desc="Historique des envois · paiements bientôt"
+          onPress={() => navigation.navigate("SubscriptionHistory")}
+          right={<Text style={{ color: C.textMuted }}>›</Text>} />
 
         {/* ── Section Tri par swipe — Mode Tri ──────────────────────────── */}
         <Section title="🧹 Swipe — Mode Tri" />
@@ -409,6 +418,7 @@ export function SettingsScreen({ navigation, route }) {
 
         {/* [DEV] Test du module de netteté (photos floues, étape 1). __DEV__ seulement. */}
         {__DEV__ && <SharpnessDevTest />}
+        {__DEV__ && <LabelsDevTest />}
 
         {/* ── Section Compte ───────────────────────────────────────────────── */}
         <Section title="Compte" />

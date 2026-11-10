@@ -229,6 +229,8 @@ pour être dans l'app, c'est la **RLS** (sécurité par ligne) qui protège les 
 - Confirmation d'e-mail **activée** par défaut. Le lien du mail mène à une page vide (Site URL =
   localhost) : le compte est bien confirmé, puis « J'ai confirmé, continuer » dans l'app.
 
+> ⚠️ **GELATO RETIRÉ DE L'APP (9 nov. 2026, décision d'Augustin : « on oublie Gelato pour le moment »).** Tout ce paragraphe est de l'archive ; le code et les specs sont dans `archive/gelato/` (README = specs, `app/` = anciens fichiers, `supabase-functions/` = copies). Les fonctions `gelato-cover` / `gelato-price` restent déployées mais ne servent plus. Plus de `services/gelato.js`, `FlatCover`, `PRINT_SPEC`, couverture à plat. Les livres existants sans `product` sont convertis en layflat (`upgradeLegacyBook`, migration du store v3).
+
 **Gelato** (impression ; PDF conforme aux specs, **commande pas encore branchée — standby**) : produit retenu
 `photobooks-hardcover_pf_210x280-mm-8x11-inch_pt_170-gsm-65lb-coated-silk_cl_4-4_ccl_4-4_bt_glued-left_ct_matt-lamination_prt_1-0_cpt_130-gsm-65-lb-cover-coated-silk_ver`
 (livre photo couverture rigide 21×28 cm, pages 30→200 de 2 en 2). Prix vu : 15,46 € HT + 5,39 $ de
@@ -247,6 +249,36 @@ du haut ; dos arrière / dos / dos avant séparés par des charnières de 8 mm ;
 Redéployer : `npx supabase functions deploy gelato-cover --no-verify-jwt` (après `login` + `link`).
 `gelato-price` (coût d'impression + livraison, options `?pageCount=`, `?all=1`, `?country=FR`, `?quote=1`) est dans le
 dépôt, déployée de la même façon ; réponse brute de Gelato, **à lire et nettoyer** quand on reprendra les prix.
+
+**imprimeur.fr (9 nov., branche `feature/catalogue-produit`, fonction déployée, à commiter)** : 2ᵉ fournisseur d'impression (France, Hauts-de-France),
+secret Supabase `ImprimeurFR_API_Key` (clé **`impr_test_`** = rien d'imprimé ni facturé). API : `https://imprimeur.fr/api/v1`, `Authorization: Bearer`,
+doc `imprimeur.fr/docs/api` + `docs/api/openapi.yaml`, 120 appels/min. Fonction `supabase/functions/imprimeur-catalogue` (lecture seule, `--no-verify-jwt`) :
+catalogue (`GET /products`) + port (`POST /shipping/rates`, adresse fictive) + specs fichiers. Produits : album, print, poster, frame, calendar (éditeur seul).
+**Pas de magnets.** Prix HT relevés : album 21×29,7 rigide 14,40 € (24 p.) + 0,26 €/page ; 21×21 rigide 12,00 € + 0,22 €/p. ; port Colissimo 4,97 € / Chronopost 8,25 €
+(forfait par commande) ; tirage 10×15 : 20 minimum, `extra_page_price` 0,20 € (`unit_price` à 0,00 : ambigu, à confirmer). Fichiers : **URL publique** (pas d'upload),
+album = 1 PDF, fond perdu 5 mm ; dpi / couverture / dos **non publiés** (gabarit sur le site). Un 502 Cloudflare passager est arrivé quand 45 appels partent d'un coup
+(→ retry ajouté le 9 nov. : 3 tentatives, attente 2 s puis 4 s ; **fonction à redéployer**). Prix publics du site = « dès », ne pas s'y fier : prendre ceux de l'API.
+**Branché dans l'app (9 nov., ✅ codé, à tester)** : `services/bookProducts.js` = 2 formats layflat (rigide, 24 → 120 pages, fond perdu 5 mm) :
+`a4` 21 × 29,7 vertical (coût 16,90 € HT + 0,39 €/page au-delà de 24) et `paysage` 21 × 15 horizontal (14,90 € + 0,39 €/page) + port 4,97 € ;
+**prix de vente TTC, livraison comprise** : **a4 34,90 € (24 p.)** + 0,65 €/page · **paysage 29,90 €** + 0,65 €/page (prix de base fixés par Augustin le 9 nov. ; marge ≈ 7,2 € / 5,1 € HT à 24 p.,
+≈ 21,8 € / 19,6 € à 120 p., avant frais de paiement ; TVA 20 % = hypothèse). `book.product` (absent = ancien livre Gelato 21×28, 30 → 200 p., inchangé, sans prix) ;
+nouveaux livres = `a4` par défaut ; `PhotoBookScreen` : pastilles de format (remplacent vertical/horizontal pour les nouveaux livres) + ligne de prix ;
+`BookCheckScreen` : prix dans le récap et dans « Commander ». **Gabarits imprimeur.fr reçus le 9 nov. (4 PDF de 26 pages pour 24 pages : 21x29.7, 29.7x21, 21x15, 15x21 cm)** : page 1 = « couverture de Face », pages 1 → N,
+dernière page = « couverture de Dos » ; **pas de dos / tranche, pas de garde blanche, pas de couverture à plat** ; chaque page = **format exact**
+(210×297, 210×150… ; MediaBox = TrimBox = BleedBox → **fond perdu 0**, alors que la fiche album dit 5 mm : à valider par une commande TEST `impr_test_`) ; pas de dpi dans les gabarits
+(150 supposé, sécurité 5 mm supposée). **PDF d'essai layflat codé** (`services/bookPdf.js` `buildPlan`, kinds `front` / `back`, `PrintPageRenderer` ; dos = uni, couleur de fond de la
+couverture ; testé en script : 26 pages / bonnes tailles, pas encore sur l'appareil). La couverture à plat Gelato est archivée (`archive/gelato/`).
+**Haut de l'éditeur (9 nov., ✅ codé, à tester)** : (1) nom de l'album + icône ✓ « enregistré automatiquement » à droite ; (2) carte format « 24 pages · 21 × 29,7 cm » + tarif en gris dessous + à droite les 2 pastilles vertical / horizontal ; **toucher la carte = page « Format du livre »** (`BookFormatChooser` en mode `current`, cartes des formats avec prix pour le nombre de pages actuel) ; (3) carte remplissage : « N / M photos placées », barre, nombre de pages − / +, et **« Compléter automatiquement »** (ordre : *Par date, la plus récente à la fin* ou *Ordre de l'album* ; remplit les cadres vides puis **ajoute des pages** par 2 jusqu'à 120 ; annonce « +N pages · prix » avant de valider ; `completeBook` dans `photoBook.js`). Polices **Élégante et Ronde retirées** (un livre qui les avait repasse en Moderne).
+**Éditeur de couverture (9 nov., ✅ codé, à tester sur appareil)** : à l'arrivée sur la couverture il n'y a presque rien. **Les outils dépendent du toucher** : toucher le **titre** → panneau Titre (texte, police, taille, couleur, position **Auto** [haut / milieu / bas pour les styles « sur la photo »] ou **Manuelle** = titre glissable au doigt, `cover.titleXY = {x, y}` en parts de la couverture) ; toucher la **photo** → deux boutons « Changer la photo » / « Recadrer » (le recadrage garde ses outils). **Style de couverture : toujours visible.** **Couleur de fond : seulement si le style la montre** (`COVER_STYLES_WITH_BG` = centrée, polaroïd, bandeau, titre seul ; proposée tout de suite après le choix du style ; le dos du livre prend toujours cette couleur). Changer de style remet le titre en auto. À vérifier : glisser le titre pendant que l'écran défile (le défilement est coupé pendant le glissé).
+**Double page (9 nov., ✅ codée d'après `Claude outputs/maquette-double-page.html`, à tester sur appareil)** : 5ᵉ bouton « Double page » dans la mise en page (`LayoutPicker`). Une double page = UNE photo sur 2 pages face à face :
+pages de l'aperçu (2–3), (4–5)… = index (1,2), (3,4)… ; **la page 1 et la dernière page (nombre pair) ne peuvent pas** (seules face à la couverture / à la fin). Modèle : page de gauche `{ double: "left", layout: 1, slots: [id], crops }`,
+page de droite `{ double: "right", slots: [null] }` (photo et recadrage seulement à gauche ; `photoBook.js` : `setDouble`, `clearDouble`, `canDouble`, `pagePhotoIds`, `sanitizeDoubles`).
+Rendu : `DoublePage` (`BookPage.js`) = grand cadre sur 2 pages avec marge 5 % aux bouts, pas de marge au centre ; pli en pointillés dans l'éditeur seulement ; `half` = une seule moitié pour le PDF.
+Éditeur : toucher « Double page » (confirmation si des photos retournent dans l'album) → choix de la photo → toucher la photo = « Changer / Recadrer / Séparer en 2 pages » ; choisir 1-4 photos sépare la double page ; réduire le nombre de pages
+coupant une double page la sépare. `completeBook` / `autofill` ignorent la moitié droite. Contrôle qualité : largeur = 1,9 page (≈ 2 356 px à 150 dpi en A4). PDF : chaque moitié = une page avec la même photo décalée.
+`BookPageEditorScreen` d'une page de double page = message « retourne à l'aperçu ». **Pas encore** : « sans marge » (grisé dans la maquette, attend la réponse d'imprimeur.fr sur le fond perdu) ; raccord au centre à vérifier sur un échantillon papier.
+**Pas encore** : commande réelle, URL publique du PDF (Supabase Storage) pour `file_urls`. **Création d'un livre (9 nov., à tester)** : 1re ouverture d'un album → `components/book/BookFormatChooser.js` (présentation du layflat « ouverture à 180° » + les 2 formats avec prix, « Choisir » crée le livre via `createBook(album, product)`) ; le livre démarre **toujours à 24 pages** (le minimum, quelle que soit la taille de l'album ; avant : calculé sur le nombre de photos, ce qui donnait 30 pages). `PhotoBookScreen` ne crée plus le livre tout seul. **Abonnement tirages** : une seule offre = **20 tirages 10×15 à 12,90 € / mois** (prix fixé par Augustin ; hypothèse d'Augustin 0,18 € HT / tirage → coût 8,57 € HT (3,60 + port 4,97) contre 10,75 € HT encaissés → **marge ≈ 2,18 € par envoi**, ≈ 1,74 € avec les frais de paiement)
+(minimum imprimeur.fr ; coût ≈ 9 € HT) ; les choix 5/10/15 tirages et leur grille de prix ont été **supprimés du code** (9 nov.). Magnets inchangés (9,90 €, fabrication manuelle).
 
 ---
 
@@ -850,7 +882,7 @@ Rien d'autre n'a demandé de rebuild depuis.
   dans un album (`GalleryScreen`), le bouton dit « 📖 Livre photo en cours » (ou « 📖 Créer un livre photo ») au lieu de « Mon livre photo · 30 p. » ;
   la feuille « Quel album ? » (`AlbumPickerSheet`) n'affiche plus que le **nombre de photos** de chaque album (plus « livre de 30 pages »).
   **Gardé volontairement** : le nombre de pages sur les livres en cours de la Chambre noire (étagère « 30 pages · N % rempli » et menu appui long).
-  Un livre créé démarre toujours à 30 pages (minimum Gelato) ; réglé ensuite dans l'éditeur.
+  Un livre créé démarre à 24 pages minimum (layflat imprimeur.fr, depuis le 9 nov. ; avant : 30 pages Gelato) ; réglé ensuite dans l'éditeur.
   Quand les magnets / tirages auront leur propre écran de création : prévoir un choix du produit (« ＋ Nouveau » de la Chambre noire, bouton de l'album).
 - **`print_orders.photo_info`** (jsonb, ajouté le 9 nov.) : par photo `{ path, w, h, shape }` (`shape` = portrait · landscape · square), écrit par
   `submitSelection` (`services/printOrders.js`, `shapeOf`). Sert à repérer les photos horizontales. **SQL à relancer** (ou seulement
@@ -858,3 +890,80 @@ Rien d'autre n'a demandé de rebuild depuis.
 - **Format des photos envoyées** : fichier ORIGINAL tel quel (HEIC possible sur iPhone ; à convertir en JPEG avec un imprimeur partenaire).
   **Règle de recadrage pas fixée** : `spec.crop = "none"` pour les tirages 10 × 15 (2:3, alors qu'une photo de téléphone est en 3:4). Proposition (pas validée) :
   remplir le papier (rogner ~11 % au centre) et tourner les photos horizontales, comme pour les magnets ; il faudrait alors adapter la note de la sélection du mois.
+
+
+---
+
+## 17. Session 10 nov. 2026 — recherche par contenu (« l'été 2026 à la plage »)
+
+**Décisions d'Augustin** : on code tout sans nouveau modèle (pas de CLIP) ; dictionnaire français → étiquettes anglaises ; « été » = juillet + août.
+**✅ codé, à tester (étapes 1 à 3) ; pas commité. Il faut un rebuild Android + iOS pour le module natif (Android : déjà fait le 10 nov.).**
+- **Module natif `modules/pellicule-labels/`** (Swift = Vision `VNClassifyImageRequest`, Kotlin = ML Kit Image Labeling `17.0.9`, modèle embarqué).
+  `getLabels(id)` → `{ labels: [{ text, confidence }], width, height }` ou null ; miniature 512 px comme le flou ; étiquettes EN. Enveloppe : `services/imageLabels.js`.
+  **Mesuré (Android d'Augustin, 8 photos WhatsApp)** : ≈ 101 ms / photo (≈ 30 min pour 20 000 photos, une fois). Qualité : bonne pour plage / chien / montagne / forêt / fleurs…,
+  vague sinon (« Fun, Leisure, Vacation, Smile » en tête sur beaucoup de photos). **ML Kit n'a que 430 étiquettes** : PAS Sun, Sea, Snow, Cloud, Water, Child, Kid, Boy, Girl, Birthday, Wedding
+  (liste officielle : developers.google.com/ml-kit/vision/image-labeling/label-map). Il a Sunset, Sky, Baby, Person, Selfie, Beach, Sand, Dog, Cat, Mountain, Forest, Party, Cake…
+  **iOS non testé** (Vision a ~1 300 étiquettes ; à vérifier : child, sea, snow…). Piste future si besoin de mots libres : modèle type CLIP (lourd, rebuild, v2).
+- **Analyse de fond** : `services/photoAnalysisQueue.js` fait 2 passes (netteté PUIS étiquettes), même cache `photo-analysis-v1.json` : `{ m, blur: {…}, tags: { l: [["Beach", 87]…], v } }`
+  (`putEntry` fusionne sans écraser l'autre analyse). Réglages : `constants/labelsConfig.js` (version `LABELS_ALGO_VERSION`, 8 étiquettes gardées ≥ 15 %, recherche ≥ 50 %, sauvegarde tous les 400).
+  `useBlurStore` a `labelsStatus / labelsTotal / labelsDone`. **Changer le module ou ce qu'on garde = monter `LABELS_ALGO_VERSION`.**
+- **Dictionnaire** `constants/searchVocabulary.js` : 86 idées (`id, fr, group, words, labels, minPct?, approx?`), à relire / corriger. Idées `approx` (modèle sans l'étiquette exacte) :
+  Soleil, Enfants (minPct 40), Mer, Neige, Anniversaire, Mariage, Vacances (minPct 80). Les étiquettes en minuscules sont des candidates iOS (comparaison sans casse, `_` = espace).
+- **Lecture de phrase** `services/searchParser.js` (`parseQuery`, `describeQuery`, `matchPeriod`, `duplicateWords`) : sans accents / pluriels ; périodes (saisons, mois, années, Noël = 20→26 déc.,
+  « cet été » = la plus récente commencée, « l'été dernier » = la plus récente terminée, « cette année », « ce mois-ci ») ; plusieurs sujets = « l'un OU l'autre » par défaut (bascule « Les deux à la fois » dans la feuille) ; formules de demande ignorées (« je veux faire un album sur… ») ; mots inconnus + suggestions.
+  Boutons de la feuille : « Créer un album avec ces photos » (applique les filtres ET ouvre `TriMode` avec la file, `handleApplySearch(payload, create)`) et « Appliquer les filtres seulement ».
+  La feuille de recherche monte au-dessus du clavier (écoute `Keyboard`, `Modal statusBarTranslucent`) — corrigé le 10 nov. après test Android.
+  `services/contentSearch.js` (`searchContent` → résultats + `notAnalyzed`), `services/labelSearch.js` (cache, fréquences).
+- **Écran** (maquette `Claude outputs/maquette-recherche-flou.html`, partie 1) : `components/home/ContentSearchSheet.js` (feuille « Chercher dans tes photos » : champ, « J'AI COMPRIS »,
+  résultat dont WhatsApp, avancement de l'analyse, « Appliquer ces filtres ») ; `HomeScreen` mode Album : champ de recherche + pastille NOUVEAU (**à retirer après le lancement**), ligne « Par contenu »
+  dans « Affiner la sélection ». Appliquer crée un filtre `date` (`date-recherche`) et un filtre `contenu` (`contenu-recherche`) dans `albumFilters` (snapshot d'ids + `query`, intersection ET comme les autres).
+  Icône `search` ajoutée à `Icons`. Carte `[DEV]` (Réglages) : `components/dev/LabelsDevTest.js` (test 8 photos, progression, recherche en français, étiquettes fréquentes, seuil −/+10).
+- **Pas encore** : réglage du dictionnaire / des seuils sur les vraies photos ; test iOS ; le filtre est un instantané (si l'analyse continue après « Appliquer », les photos ajoutées ensuite n'y sont pas) ;
+  le filtre « contenu » n'existe qu'en mode Album ; pas de recherche en mode Tri. **Idée suivante : « Magic Album »** (cf. flexilivre.com/album-photo/intelligent : tri qualité, regroupement par moments, couverture
+  selon le thème) en réutilisant ces étiquettes.
+- **Chambre noire refaite (10 nov.) : ✅ codé, à tester** (maquette `Claude outputs/maquette-chambre-noire-tirages-v2.html`, validée) :
+  **une seule ampoule** (celle du coin du bloc ; `DarkroomCover` n'en a plus, lueur recentrée à droite) ; mot **« Coups de cœur »** (cœur + texte) posé au-dessus du fil,
+  **plus de ligne ni de compteurs** « N à imprimer · M imprimées » sous la guirlande (scène 150 px, fil descendu de ~10 px, tirages à 90 %) ;
+  titre « TIRAGES PHOTOS » avec **« ＋ Imprimer » + pastille BIENTÔT** (alerte « Bientôt disponible » : impression à la carte, hors abonnement, pas encore faite) ;
+  les **abonnements TIRAGES** s'affichent **sous la guirlande** (même `SubscriptionRow dark` qu'avant) ; sans aucun abonnement : bouton pointillé « Recevoir mes coups de cœur chaque mois » (NOUVEAU) au même endroit ;
+  la section « ABONNEMENTS » plus bas ne liste que les **magnets** + « Gérer › » + « Ajouter un abonnement », et n'apparaît que si on a déjà un abonnement.
+  **Impression à la carte (maquette, pas codée)** : feuille « Quelles photos imprimer ? » (coups de cœur / un album / toute la photothèque) → grille à cocher (20 tirages minimum, hypothèse imprimeur.fr) → récap + adresse + paiement (standby, prix à fixer).
+- **Chambre noire — suite (10 nov.) : ✅ codé, à tester.** Titres de section en **version D** (`DarkLabel` : voyant rouge + titre gras « Tirages photos » / « Livres photo » + filet lumineux + action à droite ; maquette `maquette-chambre-noire-titres.html`).
+  **Section « Abonnements » retirée** de la Chambre noire : les abonnements TIRAGES restent en brique sous la guirlande ; les magnets ne s'affichent plus dans la Galerie, seulement dans **Réglages** (nouvelles lignes sous la carte compte :
+  « Gérer mes abonnements » → `SubscriptionList` ; « Commandes et paiements » → `SubscriptionHistory` en attendant un vrai écran de commandes / paiement). « ＋ Nouveau » (Livres photo) ouvre la feuille « Quel album ? » (`AlbumPickerSheet`) puis l'éditeur `PhotoBook` ;
+  « ＋ Imprimer » affiche seulement une alerte « Bientôt disponible ».
+
+
+
+---
+
+## 18. Session 10 nov. 2026 (suite) — posters (imprimeur.fr) dans la Chambre noire
+
+**✅ codé, à tester (pas commité).** Maquette validée par Augustin : `Claude outputs/maquette-poster.html` (6 écrans, hors Git).
+- **Relevé imprimeur.fr (API, clé TEST, fonction `imprimeur-catalogue?products=poster`)** : produit `poster`, finition unique `standard` (« Poster seul »), 1 exemplaire minimum.
+  Les formats s'affichent « 20×30 / 30×40 / 42×59 / 59×84 cm » mais les tailles RÉELLES sont **A4 / A3 / A2 / A1** (210×297, 297×420, 420×594, 590×840 mm). Prix HT :
+  3,22 · 4,86 · 10,98 · 15,00 € ; port = forfait par commande (Colissimo 4,97 € / Chronopost 8,25 € HT), **identique pour les 4 formats et pour 5 exemplaires**.
+  Papier pelliculé brillant 250 g (le Fine Art 305 g du site n'est PAS proposé par l'API), livré roulé, production 1-3 j ouvrés. Fichier : un JPG/PNG par exemplaire (URL publique).
+  **Inconnus** : dpi minimum (150 supposé), fond perdu (0 supposé), comportement d'une photo horizontale sur un poster vertical → à valider par une commande TEST.
+- **Prix de vente proposés (TTC, livraison comprise), à confirmer par Augustin** : A4 14,90 · A3 17,90 · A2 27,90 · A1 34,90 € (marge ≈ 4,2 / 5,1 / 7,3 / 9,1 € HT avant frais de paiement ; le port n'est payé qu'une fois par commande).
+- **Code** : `services/posterProducts.js` (formats, prix, coût, marge, `posterQuality` = dpi + part coupée au recadrage « cover », `bestPosterFormat`, textes de la présentation) ·
+  `components/poster/PosterParts.js` (`PosterFrame`, `PosterWall` = bloc de la Chambre noire, `PosterHeroScene`) · écrans `PosterIntroScreen` (présentation, 1re fois seulement via `posterIntroSeen`
+  dans `usePhotoStore`, ⓘ du bloc pour la rouvrir) → `PosterPickScreen` (source : coups de cœur / un album / toute la photothèque avec recherche par contenu, grille 3 colonnes, une coche) →
+  `PosterFormatScreen` (4 formats à l'échelle, prix, qualité Parfait / Bonne / Un peu juste / Trop petite, avertissement si > 25 % de photo coupée) → `PosterRecapScreen` (quantité, nom + adresse,
+  total ; **« Payer » grisé « BIENTÔT »**, rien n'est enregistré ni envoyé). `GalleryHomeScreen` : bloc **POSTERS** (badge NOUVEAU, ⓘ, « ＋ Créer ») entre les tirages et les livres photo.
+  `ContentSearchSheet` : nouvelle prop `pickMode` (un seul bouton « Voir ces photos »). Pas de rebuild nécessaire (JS pur).
+- **Pas encore** : « Ajuster » le recadrage (recadrage au centre seulement) ; panier de plusieurs posters différents ; envoi du fichier (URL publique Supabase Storage) et commande imprimeur.fr ; paiement (standby) ;
+  « Satisfait ou refait » affiché dans la présentation : **à vérifier dans les CGV d'imprimeur.fr** ; la source « photothèque + recherche » sera partagée avec « ＋ Imprimer » des tirages à la carte (pas codé).
+- **Tirages photo : « ＋ Nouveau » + page produit (10 nov.) : ✅ codé, à tester** (maquette `maquette-tirages-nouveau.html`, validée ; icône polaroïd à côté du titre). « ＋ Imprimer / BIENTÔT » est remplacé par **« ＋ Nouveau »** (bloc Tirages photos) → écran **`PrintNew`** (`screens/PrintNewScreen.js`) :
+  présentation du produit (éventail de 3 tirages avec les vrais coups de cœur, pastille 10 × 15 cm, 4 points) puis deux formules : **Abonnement** (12,90 € / mois, 20 tirages → « S'abonner » ouvre `SubscriptionIntro`) et **Tirage simple** (« Choisir » = alerte « Bientôt disponible » : grille de choix, récap et paiement pas codés),
+  « Comment ça marche », « Bon à savoir ». Données : `services/printProducts.js` (formats 10×15 et 10×10, 20 minimum, jusqu'à 1 000 : lus dans l'API imprimeur.fr ; **aucun papier ni finition annoncé par l'API → ne pas écrire « brillant »**).
+  ⚠️ **Prix du tirage simple = EXEMPLE** (14,90 € pour 20, + 0,35 € par tirage en plus) : à fixer par Augustin. Icône `polaroid` ajoutée à `components/Icons.js`.
+  Un flux **Poster** (`PosterIntro` / `PosterPick` / `PosterFormat` / `PosterRecap`, bloc « Posters » de la Chambre noire) a été ajouté en parallèle : pas touché ici.
+
+- **Retouches du 10 nov. (soir) : ✅ codées, à tester.** Chambre noire : ordre Tirages → Livres photo → Posters ; titres de section 15 px, « Posters » en minuscules, « ＋ Nouveau » partout ; blocs en
+  pointillés retirés (tirages et poster) ; texte / icône « Coups de cœur » réduits. `PrintNewScreen` : 3e carte **Magnets** (9,90 € / mois) après « Tirage simple » → `SubscriptionMagnets`.
+  **Étape abonnement et parcours poster recolorés en terracotta** (`C.album` / `C.albumSoft`, plus de vert) : `SubscriptionIntro`, `SubscriptionMagnets`, `SubscriptionSetup`, `SubDaysFields`, `Toggle` (prop `color`) ;
+  les écrans de suivi (`SubscriptionMonth`, `SubscriptionList`, `SubscriptionManage`, `SubscriptionTracking`, `SubscriptionHistory`, `SubscriptionRow` clair) sont aussi en terracotta (demande d'Augustin) ; seul reste vert le liseré « validée » des briques sombres de la Chambre noire (`C.sage3`). Les pastilles de qualité du poster restent vertes / orange / rouges (sens).
+  **Choix de la photo du poster = un seul écran** (`PosterPickScreen` : onglets Coups de cœur · Albums · Photothèque, plus de page « d'où vient la photo ? »).
+  **Poster horizontal** : le poster suit le sens de la photo (`posterIsLandscape`, `posterDims`, `posterSizeLabel`, `PosterFrame landscape`) ; l'ancien message « les posters sont verticaux » est supprimé.
+  ⚠️ imprimeur.fr ne liste que des formats « portrait » pour le poster : on enverra l'image tournée de 90° dans une feuille verticale (même feuille physique) ; à valider par une commande TEST.

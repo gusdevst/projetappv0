@@ -101,6 +101,15 @@ const ICONS = {
     <Path d="M3 8l9 6 9-6" />
   </>),
   filter: (c) => <Path d="M4 5h16l-6 8v6l-4-2v-4z" />,
+  search: (c) => (<>
+    <Circle cx="11" cy="11" r="6.5" />
+    <Path d="M16 16l4.5 4.5" />
+  </>),
+  polaroid: (c) => (<>
+    <Rect x="4.5" y="3" width="15" height="18" rx="2" />
+    <Rect x="7" y="5.5" width="10" height="9.5" rx="1" />
+    <Path d="M8.5 18.2h5" />
+  </>),
   chevronRight: (c) => <Path d="M9 5l7 7-7 7" />,
   close: (c) => <Path d="M6 6l12 12M18 6L6 18" />,
   check: (c) => <Path d="M5 12.5l4.5 4.5L19 7.5" />,

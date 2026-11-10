@@ -7,6 +7,7 @@ import * as PhotoLibrary from "../services/photoLibrary";
 import { loadGpsCache, saveGpsCache } from "../services/gpsCache";
 import { buildContext, reachedIds } from "../services/achievements";
 import { dayKey } from "../services/dateKey";
+import { upgradeLegacyBook } from "../services/photoBook";
 
 // Petits lots + vraie pause entre chaque (voir plus bas) : sur une grosse
 // photothèque (plusieurs milliers de photos), scanner par lots trop gros
@@ -171,6 +172,9 @@ export const usePhotoStore = create(
       setSwipeTutoSeen: (v) => set({ swipeTutoSeen: v }),
       albumTutoSeen: false,                              // mode ALBUM
       setAlbumTutoSeen: (v) => set({ albumTutoSeen: v }),
+      // Page de présentation des posters (Chambre noire) : montrée à la 1re création seulement.
+      posterIntroSeen: false,
+      setPosterIntroSeen: (v) => set({ posterIntroSeen: v }),
 
       // ─── État de la photothèque (NON persisté — rechargé à chaque ouverture) ─
       permission:      "undetermined", // "undetermined" | "granted" | "denied"
@@ -653,9 +657,13 @@ export const usePhotoStore = create(
       // v1 : "favorite" n'est plus une action de swipe (coup de cœur = bouton ❤️ seul) → "skip".
       // v2 : pas de suppression en mode album → tout swipe "delete" de l'album devient "skip"
       //      ("ne pas envoyer dans l'album", photo conservée).
-      version: 2,
+      // v3 : plus de livre Gelato 21 × 28 → les livres sans `product` passent en layflat (voir upgradeLegacyBook).
+      version: 3,
       migrate: (persisted) => {
         if (!persisted) return persisted;
+        if (persisted.books) {
+          persisted.books = Object.fromEntries(Object.entries(persisted.books).map(([id, b]) => [id, upgradeLegacyBook(b)]));
+        }
         const mapVals = (m, fn) =>
           m ? Object.fromEntries(Object.entries(m).map(([dir, action]) => [dir, fn(action)])) : m;
         // favorite → skip (les deux modes)
@@ -687,7 +695,8 @@ export const usePhotoStore = create(
         notifPromptSeen:         state.notifPromptSeen,
         swipeTutoSeen:           state.swipeTutoSeen,
         albumTutoSeen:           state.albumTutoSeen,
-        randomCount:             state.randomCount,
+        posterIntroSeen:         state.posterIntroSeen,
+        randomCount:            state.randomCount,
         shuffleOn:               state.shuffleOn,
         sortPriority:            state.sortPriority,
         freedMo:                 state.freedMo,

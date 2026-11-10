@@ -1,6 +1,6 @@
 // screens/SubscriptionSetupScreen.js
 // Réglage de l'abonnement mensuel « Coups de cœur » (maquette validée, écrans 3 et 4).
-// Deux onglets : « Pour moi » (10 tirages, un seul abonnement) · « Pour un proche »
+// Deux onglets : « Pour moi » (20 tirages, un seul abonnement) · « Pour un proche »
 // (prénom, adresse, nombre de photos, petit mot ; autant d'abonnements qu'on veut).
 // Pour l'instant : enregistre l'abonnement sur le téléphone. Paiement et envoi = étapes suivantes.
 
@@ -15,7 +15,7 @@ import { MagnetTile, PrintTile, useKeptUrls } from "../components/ProductArt";
 import { SHADOW } from "../components/home/ui";
 import { C, FONT } from "../constants/theme";
 import {
-  SUB_PHOTOS, SUB_GIFT_CHOICES, SUB_FORMAT_LABEL, SUB_SEND_DAY, SUB_VALIDATE_BY, SUB_PRODUCTS, SUB_PRICES, priceLabelFor,
+  SUB_PHOTOS, SUB_FORMAT_LABEL, SUB_SEND_DAY, SUB_VALIDATE_BY, SUB_PRODUCTS, SUB_PRICES, priceLabelFor,
 } from "../constants/subscription";
 import SubDaysFields from "../components/SubDaysFields";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
@@ -68,23 +68,7 @@ function ValidateRow({ value, onToggle, sub }) {
         <Text style={{ fontSize: 13.5, fontWeight: "500", color: C.text }}>Je valide chaque envoi</Text>
         <Text style={{ fontSize: 11, color: C.textMuted }}>{sub}</Text>
       </View>
-      <Toggle value={value} onToggle={onToggle} />
-    </View>
-  );
-}
-
-function Stepper({ value, onMinus, onPlus, canMinus, canPlus }) {
-  const btn = (label, on, enabled) => (
-    <TouchableOpacity onPress={on} disabled={!enabled} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-      style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: enabled ? C.sage : C.bgMuted }}>
-      <Text style={{ fontSize: 17, fontWeight: "600", color: enabled ? C.accent : C.textMuted }}>{label}</Text>
-    </TouchableOpacity>
-  );
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-      {btn("−", onMinus, canMinus)}
-      <Text style={{ fontSize: 17, fontWeight: "700", color: C.text, minWidth: 22, textAlign: "center" }}>{value}</Text>
-      {btn("+", onPlus, canPlus)}
+      <Toggle value={value} onToggle={onToggle} color={C.album} />
     </View>
   );
 }
@@ -104,7 +88,7 @@ function ProductPicker({ value, onChange }) {
       <PrintTile uri={urls[1]} index={1} width={62} style={{ position: "absolute", left: 40, top: 20, zIndex: 2, transform: [{ rotate: "4deg" }] }} />
     </View>
   );
-  const priceText = (k) => k === "prints" ? `dès ${Object.values(SUB_PRICES.prints)[0]}` : `${Object.values(SUB_PRICES.magnets)[0]} / mois`;
+  const priceText = (k) => `${Object.values(SUB_PRICES[k])[0]} / mois`;
   return (
     <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
       {["magnets", "prints"].map((k) => {
@@ -112,7 +96,7 @@ function ProductPicker({ value, onChange }) {
         const on = value === k;
         return (
           <TouchableOpacity key={k} onPress={() => onChange(k)} activeOpacity={0.85}
-            style={[{ flex: k === "magnets" ? 1.12 : 0.88, borderRadius: 18, padding: 10, backgroundColor: on ? C.sage : C.bgCard, borderWidth: 2, borderColor: on ? C.accent : "transparent" }, SHADOW]}>
+            style={[{ flex: k === "magnets" ? 1.12 : 0.88, borderRadius: 18, padding: 10, backgroundColor: on ? C.albumSoft : C.bgCard, borderWidth: 2, borderColor: on ? C.album : "transparent" }, SHADOW]}>
             {art(k)}
             {k === "magnets" && (
               <View style={{ position: "absolute", right: 8, top: 8, zIndex: 5, backgroundColor: C.album, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
@@ -121,7 +105,7 @@ function ProductPicker({ value, onChange }) {
             )}
             <Text style={{ fontSize: 14, fontWeight: "700", color: C.text, marginTop: 8 }}>{k === "magnets" ? "Magnets" : "Tirages"}</Text>
             <Text style={{ fontSize: 11, color: C.textMid, marginTop: 1 }}>{k === "magnets" ? "9 aimants 5 × 5 cm" : "10 × 15 cm"}</Text>
-            <Text style={{ fontSize: 12, fontWeight: "700", color: k === "magnets" ? C.accent : C.textMid, marginTop: 5 }}>{priceText(k)}</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: k === "magnets" ? C.album : C.textMid, marginTop: 5 }}>{priceText(k)}</Text>
           </TouchableOpacity>
         );
       })}
@@ -150,13 +134,12 @@ export function SubscriptionSetupScreen({ navigation, route }) {
   const [giftAddress, setGiftAddress]       = useState("");
   const [giftComplement, setGiftComplement] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
-  const [giftCount, setGiftCount]     = useState(10);
   const [giftValidate, setGiftValidate] = useState(true);
   const [giftDays, setGiftDays]         = useState({ selectionDay: SUB_SEND_DAY, sendDay: SUB_VALIDATE_BY });
 
   const isSelf = tab === "self";
   const prod   = SUB_PRODUCTS[product];
-  const count  = prod.fixedCount ?? (isSelf ? SUB_PHOTOS : giftCount);
+  const count  = prod.fixedCount ?? SUB_PHOTOS;
   const price  = priceLabelFor(count, product);
 
   // Pourquoi le bouton est grisé (affiché sous le bouton).
@@ -168,14 +151,8 @@ export function SubscriptionSetupScreen({ navigation, route }) {
   } else {
     if (giftName.trim().length < 2) blocked = "Ajoute le prénom de ton proche.";
     else if (giftAddress.trim().length < MIN_ADDRESS) blocked = "Ajoute son adresse de livraison.";
-    else if (!price) blocked = `Le prix pour ${giftCount} photos n'est pas encore fixé.`;
+    else if (!price) blocked = "Le prix n'est pas encore fixé.";
   }
-
-  const changeCount = (dir) => {
-    const i = SUB_GIFT_CHOICES.indexOf(giftCount);
-    const next = SUB_GIFT_CHOICES[i + dir];
-    if (next) setGiftCount(next);
-  };
 
   async function submit() {
     if (!session) {
@@ -245,7 +222,7 @@ export function SubscriptionSetupScreen({ navigation, route }) {
               </Field>
               <SubDaysFields {...myDays} onChange={setMyDays} />
               <ValidateRow value={myValidate} onToggle={() => setMyValidate((v) => !v)} sub="Sinon, la sélection part toute seule" />
-              <Banner icon="🔒" bg={C.sage} color={C.green}>
+              <Banner icon="🔒" bg={C.albumSoft} color={C.album}>
                 Tes photos ne sont envoyées à l'imprimeur qu'après ta validation.
               </Banner>
             </>
@@ -269,12 +246,10 @@ export function SubscriptionSetupScreen({ navigation, route }) {
                   <Field label="Format"><Value>5 × 5 cm, aimantés, carrés</Value></Field>
                 </>
               ) : (
-                <Field label="Photos par mois"
-                  right={<Stepper value={giftCount} onMinus={() => changeCount(-1)} onPlus={() => changeCount(1)}
-                    canMinus={SUB_GIFT_CHOICES.indexOf(giftCount) > 0}
-                    canPlus={SUB_GIFT_CHOICES.indexOf(giftCount) < SUB_GIFT_CHOICES.length - 1} />}>
-                  <Value>{SUB_GIFT_CHOICES.join(", ")}</Value>
-                </Field>
+                <>
+                  <Field label="Tirages par mois"><Value>{count} {prod.units}</Value></Field>
+                  <Field label="Format"><Value>{SUB_FORMAT_LABEL}, papier brillant</Value></Field>
+                </>
               )}
               <Field label={product === "magnets" ? "Petit mot glissé dans l'envoi" : "Petit mot au dos de la 1re photo"}>
                 <Input value={giftMessage} onChangeText={setGiftMessage} multiline maxLength={120}
@@ -306,7 +281,7 @@ export function SubscriptionSetupScreen({ navigation, route }) {
             activeOpacity={0.85}
             disabled={!!blocked}
             onPress={submit}
-            style={[{ height: 50, borderRadius: 25, backgroundColor: C.accent, alignItems: "center", justifyContent: "center", opacity: blocked ? 0.4 : 1 }, !blocked && SHADOW]}
+            style={[{ height: 50, borderRadius: 25, backgroundColor: C.album, alignItems: "center", justifyContent: "center", opacity: blocked ? 0.4 : 1 }, !blocked && SHADOW]}
           >
             <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
               {isSelf ? "S'abonner" : "Offrir"}{price ? ` · ${price} / mois` : ""}

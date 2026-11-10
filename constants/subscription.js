@@ -12,7 +12,7 @@
 export const SUB_PRODUCTS = {
   prints: {
     key: "prints", label: "Tirages photo", unit: "tirage", units: "tirages",
-    tagline: "10 × 15 cm, papier brillant", fixedCount: null,
+    tagline: "20 tirages 10 × 15 cm, papier brillant", fixedCount: 20, // 20 = minimum par commande chez imprimeur.fr (9 nov. 2026)
     spec: { widthMm: 102, heightMm: 152, crop: "none", finish: "gloss" },
   },
   magnets: {
@@ -23,19 +23,23 @@ export const SUB_PRODUCTS = {
 };
 export const productOf = (sub) => SUB_PRODUCTS[sub?.product] ?? SUB_PRODUCTS.prints; // anciens abonnements = tirages
 
-export const SUB_PRICE_LABEL  = "7,99 €";   // par mois et par abonnement, livraison incluse (10 tirages)
-export const SUB_PHOTOS       = 10;         // tirages par mois (abonnement « pour moi »)
-export const SUB_GIFT_CHOICES = [5, 10, 15, 20]; // « pour un proche » : nombre de tirages au choix
+// Tirages : UNE seule offre depuis le 9 nov. 2026 = 20 tirages 10 × 15 cm (minimum par commande chez imprimeur.fr,
+// qui ne sait pas faire moins). Hypothèse d'Augustin (9 nov.) : 0,18 € HT par tirage → 3,60 € + 4,97 € de port Colissimo = 8,57 € HT.
+// Prix 12,90 € TTC (fixé par Augustin) = 10,75 € HT → ≈ +2,18 € par envoi, ≈ +1,74 € avec les frais de paiement (Stripe ≈ 1,5 % + 0,25 €).
+export const SUB_PRICE_LABEL  = "12,90 €";  // par mois et par abonnement, livraison incluse (20 tirages)
+export const SUB_PHOTOS       = 20;         // tirages par mois (abonnement « pour moi »)
 export const SUB_MAGNETS      = 9;          // magnets par mois (pour moi comme pour un proche)
 export const SUB_MAGNETS_PRICE_LABEL = "9,90 €";
 
 // Prix par type d'envoi et par nombre de photos (modifiables ici). Tirages : +3 € par tranche de 5 dès 10.
 // Absent = prix pas fixé (le bouton d'abonnement reste grisé).
 export const SUB_PRICES = {
-  prints:  { 5: "4,99 €", 10: SUB_PRICE_LABEL, 15: "10,99 €", 20: "13,99 €" },
+  prints:  { [SUB_PHOTOS]: SUB_PRICE_LABEL },
   magnets: { [SUB_MAGNETS]: SUB_MAGNETS_PRICE_LABEL },
 };
-export const priceLabelFor = (count, product = "prints") => SUB_PRICES[product]?.[count] ?? null;
+// Une seule offre par produit : tout abonnement tirages = 20 tirages au prix SUB_PRICE_LABEL.
+export const priceLabelFor = (count, product = "prints") =>
+  SUB_PRICES[product]?.[count] ?? (product === "prints" ? SUB_PRICE_LABEL : null);
 // "10,99 €" → 1099 (centimes) ; 0 si le prix n'est pas fixé.
 export const priceCentsFor = (count, product = "prints") => {
   const label = priceLabelFor(count, product);

@@ -15,8 +15,8 @@ import { SUB_MAGNETS, SUB_MAGNETS_PRICE_LABEL } from "../constants/subscription"
 
 function Chip({ text }) {
   return (
-    <View style={{ backgroundColor: C.sage, borderRadius: 99, paddingHorizontal: 11, paddingVertical: 5 }}>
-      <Text style={{ fontSize: 11.5, fontWeight: "600", color: C.accent }}>{text}</Text>
+    <View style={{ backgroundColor: C.albumSoft, borderRadius: 99, paddingHorizontal: 11, paddingVertical: 5 }}>
+      <Text style={{ fontSize: 11.5, fontWeight: "600", color: C.album }}>{text}</Text>
     </View>
   );
 }
@@ -24,8 +24,8 @@ function Chip({ text }) {
 function Bullet({ children }) {
   return (
     <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start", marginTop: 10 }}>
-      <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: C.sage, alignItems: "center", justifyContent: "center" }}>
-        <Icon name="check" size={12} color={C.accent} strokeWidth={3} />
+      <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center" }}>
+        <Icon name="check" size={12} color={C.album} strokeWidth={3} />
       </View>
       <Text style={{ flex: 1, fontSize: 13, lineHeight: 18, color: C.text }}>{children}</Text>
     </View>
@@ -71,11 +71,11 @@ export function SubscriptionMagnetsScreen({ navigation }) {
           <Text style={{ fontSize: 12.5, color: C.textMid }}>/ mois · livraison comprise</Text>
         </View>
         <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate("SubscriptionSetup", { product: "magnets" })}
-          style={[{ height: 50, borderRadius: 25, backgroundColor: C.accent, alignItems: "center", justifyContent: "center", marginTop: 8 }, SHADOW]}>
+          style={[{ height: 50, borderRadius: 25, backgroundColor: C.album, alignItems: "center", justifyContent: "center", marginTop: 8 }, SHADOW]}>
           <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>Choisir les magnets</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("SubscriptionSetup", { product: "prints" })} style={{ marginTop: 10 }}>
-          <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.accent, textAlign: "center" }}>Plutôt des tirages photo ?</Text>
+          <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.album, textAlign: "center" }}>Plutôt des tirages photo ?</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

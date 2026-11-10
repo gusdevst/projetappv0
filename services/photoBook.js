@@ -12,20 +12,23 @@
 // Toutes les fonctions renvoient un NOUVEAU livre (on ne modifie jamais
 // l'ancien) → Zustand voit le changement et l'écran se redessine.
 
-// Un seul format papier : 21 × 28 cm (Gelato, voir PRINT_SPEC dans bookCheck.js).
-// Au choix : "portrait" (vertical, défaut) ou "landscape" (horizontal) — valable pour tout le livre.
-// Nombre de pages : de 30 à 200, de 2 en 2.
-export const BOOK_PAGES = { min: 30, max: 200, step: 2 };
+import { BOOK_PRODUCTS, DEFAULT_BOOK_PRODUCT, bookSpec } from "./bookProducts";
+
+// Formats : voir services/bookProducts.js. Livres imprimeur.fr layflat (book.product = "a4" ou "paysage"), 24 → 120 pages, de 2 en 2.
+// (L'ancien format Gelato 21 × 28 est retiré de l'app : archive/gelato/README.md.)
 export const ORIENTATIONS = ["portrait", "landscape"];
 export const BOOK_LAYOUTS = [1, 2, 3, 4];
 
-// Rapport hauteur / largeur d'une page : portrait = 28/21 (4/3), paysage = 21/28 (3/4).
-export const pageRatio = (book) => (book?.orientation === "landscape" ? 3 / 4 : 4 / 3);
-export const isLandscape = (book) => book?.orientation === "landscape";
+// Nombre de pages autorisé pour CE livre.
+export const pagesRange = (book) => bookSpec(book).pages;
 
-// Ramène un nombre de pages saisi à une valeur autorisée (paire, entre min et max).
-export function clampPages(n) {
-  const { min, max, step } = BOOK_PAGES;
+// Rapport hauteur / largeur d'une page : 21×29,7 = 1,414 · 21×15 = 0,714.
+export const pageRatio = (book) => { const s = bookSpec(book); return s.heightMm / s.widthMm; };
+export const isLandscape = (book) => bookSpec(book).orientation === "landscape";
+
+// Ramène un nombre de pages saisi à une valeur autorisée (paire, entre min et max) pour ce livre.
+export function clampPages(n, book) {
+  const { min, max, step } = pagesRange(book);
   const v = Math.round((Number(n) || min) / step) * step;
   return Math.min(max, Math.max(min, v));
 }
@@ -90,7 +93,7 @@ export function isLightHex(hex) {
 }
 
 // Réglages de la couverture (les clés ; l'écran les traduit en police / taille / couleur).
-export const COVER_FONTS  = ["moderne", "elegante", "manuscrite", "affiche", "calligraphie", "ronde"];
+export const COVER_FONTS  = ["moderne", "manuscrite", "affiche", "calligraphie"]; // « Élégante » et « Ronde » retirées le 9 nov. (un livre qui les avait repasse en « Moderne »)
 export const COVER_SIZES  = ["S", "M", "L"];
 export const COVER_COLORS = ["blanc", "noir", "terracotta", "sauge"];
 export const COVER_POS    = ["haut", "milieu", "bas"];
@@ -132,20 +135,68 @@ export function resetCrop(book, pageIndex, photoId) {
 const emptyPage = (layout = DEFAULT_PER_PAGE) => ({ layout, slots: Array(layout).fill(null) });
 const touch = (book) => ({ ...book, updatedAt: Date.now() });
 
-// Plus petit nombre de pages où l'album tient à 2 photos par page (30 minimum, 200 maximum).
-export function pickFormat(photoCount) {
-  return clampPages(Math.ceil(photoCount / DEFAULT_PER_PAGE));
+// ─── Double page ────────────────────────────────────────────────────────────
+// Une double page = UNE photo sur 2 pages face à face. Les doubles pages de l'aperçu sont (pages 2–3), (4–5)… en numéros
+// d'affichage, soit les index (1,2), (3,4)… : la page 0 est seule face à l'intérieur de la couverture et, si le
+// livre a un nombre pair de pages, la dernière est seule face à « Fin du livre » → pas de double page possible pour elles.
+// Représentation : page de gauche { double: "left", layout: 1, slots: [idPhoto], crops } · page de droite { double: "right",
+// layout: 1, slots: [null] } (la photo et son recadrage ne sont gardés qu'à gauche ; le cadre de recadrage couvre les 2 pages).
+export const isDoubleLeft  = (p) => p?.double === "left";
+export const isDoubleRight = (p) => p?.double === "right";
+export const isDoublePage  = (p) => !!p?.double;
+export const spreadLeftOf  = (pageIndex) => (pageIndex % 2 === 1 ? pageIndex : pageIndex - 1);
+export const canDouble     = (book, pageIndex) => { const l = spreadLeftOf(pageIndex); return l >= 1 && l + 1 < book.pages.length; };
+// Index de la page de gauche si cette page fait partie d'une double page, sinon null.
+export const doubleLeftIndex = (book, i) => (isDoubleLeft(book.pages[i]) ? i : isDoubleRight(book.pages[i]) ? i - 1 : null);
+// Photos affichées par cette page (une moitié de double page montre la photo de la page de gauche).
+export function pagePhotoIds(book, i) {
+  const l = doubleLeftIndex(book, i);
+  return (l != null ? book.pages[l] : book.pages[i]).slots.filter(Boolean);
+}
+// Une page de droite sans page de gauche (ou l'inverse), après un changement du nombre de pages, redevient une page vide normale.
+function sanitizeDoubles(pages) {
+  return pages.map((p, i) => {
+    if (isDoubleLeft(p) && !isDoubleRight(pages[i + 1])) return emptyPage();
+    if (isDoubleRight(p) && !isDoubleLeft(pages[i - 1])) return emptyPage();
+    return p;
+  });
+}
+// Transforme les 2 pages face à face autour de pageIndex en double page (vide). Leurs photos retournent dans l'album.
+export function setDouble(book, pageIndex) {
+  if (!canDouble(book, pageIndex)) return book;
+  const l = spreadLeftOf(pageIndex);
+  if (isDoubleLeft(book.pages[l])) return book;
+  const pages = book.pages.map((p, i) =>
+    i === l ? { layout: 1, slots: [null], double: "left" } : i === l + 1 ? { layout: 1, slots: [null], double: "right" } : p
+  );
+  return touch({ ...book, pages });
+}
+// Sépare la double page : 2 pages vides normales (la photo retourne dans l'album).
+export function clearDouble(book, pageIndex) {
+  const l = doubleLeftIndex(book, pageIndex);
+  if (l == null) return book;
+  const pages = book.pages.map((p, i) => (i === l || i === l + 1 ? emptyPage() : p));
+  return touch({ ...book, pages });
 }
 
-// Nouveau livre pré-rempli dans l'ordre de l'album.
-export function createBook(album) {
+// Plus petit nombre de pages où l'album tient à 2 photos par page (dans les limites du format du livre).
+export function pickFormat(photoCount, book) {
+  return clampPages(Math.ceil(photoCount / DEFAULT_PER_PAGE), book);
+}
+
+// Nouveau livre pré-rempli dans l'ordre de l'album. `product` = format choisi à la création ("a4" ou "paysage",
+// défaut : A4 vertical layflat). Il démarre à 24 pages (le minimum), même si l'album est grand : voir completeBook pour le compléter.
+export function createBook(album, product = DEFAULT_BOOK_PRODUCT) {
   const ids = album.photoIds;
-  const format = pickFormat(ids.length);
+  if (!BOOK_PRODUCTS[product]) product = DEFAULT_BOOK_PRODUCT;
+  const orientation = BOOK_PRODUCTS[product].orientation;
+  const format = pagesRange({ product, orientation }).min; // un livre démarre TOUJOURS au minimum (24 pages), l'utilisateur en ajoute ou complète ensuite
   const pages = Array.from({ length: format }, () => emptyPage());
   return autofill(
     {
       albumId: album.id,
-      orientation: "portrait",
+      product,
+      orientation,
       format,
       cover: { photoId: ids[0] ?? null, title: album.name, font: "moderne", size: "M", color: "blanc", pos: "bas",
                style: DEFAULT_COVER_STYLE, bg: DEFAULT_COVER_BG },
@@ -165,10 +216,27 @@ export function placedMap(book) {
 
 // Changer de format. Moins de pages → les photos des pages coupées retournent dans l'album.
 export function setFormat(book, format) {
-  format = clampPages(format);
+  format = clampPages(format, book);
   let pages = book.pages.slice(0, format);
   while (pages.length < format) pages.push(emptyPage());
-  return touch({ ...book, format, pages });
+  return touch({ ...book, format, pages: sanitizeDoubles(pages) }); // une double page dont une moitié disparaît est séparée
+}
+
+// Changer de format (livre imprimeur.fr) : "a4" (21 × 29,7 vertical) ou "paysage" (21 × 15 horizontal).
+// L'orientation suit le format. Les photos restent ; si le nouveau format a moins de pages, celles en trop retournent dans l'album.
+export function setProduct(book, key) {
+  const p = BOOK_PRODUCTS[key];
+  if (!p || book.product === key) return book;
+  return setFormat(setOrientation({ ...book, product: key, orientation: book.orientation }, p.orientation), book.format);
+}
+
+// Convertit un livre créé avant le 9 nov. 2026 (format Gelato, sans `product`) en livre layflat : vertical → "a4",
+// horizontal → "paysage"; pages ramenées entre 24 et 120 (les photos des pages en trop retournent dans l'album).
+// Un livre déjà converti est rendu tel quel.
+export function upgradeLegacyBook(book) {
+  if (!book || BOOK_PRODUCTS[book.product]) return book;
+  const key = book.orientation === "landscape" ? "paysage" : "a4";
+  return setFormat({ ...book, product: key, orientation: BOOK_PRODUCTS[key].orientation }, book.format);
 }
 
 // Changer d'orientation (vertical / horizontal). Les photos restent, seule la forme des cadres change.
@@ -184,6 +252,7 @@ export function setOrientation(book, orientation) {
 
 // Changer la mise en page d'une page. Les photos en trop sortent du livre.
 export function setLayout(book, pageIndex, layout) {
+  if (isDoublePage(book.pages[pageIndex])) book = clearDouble(book, pageIndex); // 1 à 4 photos : on sort de la double page
   const pages = book.pages.map((p, pi) => {
     if (pi !== pageIndex) return p;
     const kept = p.slots.filter(Boolean).slice(0, layout);
@@ -217,8 +286,30 @@ export function clearSlot(book, pageIndex, slotIndex) {
 export function autofill(book, albumPhotoIds) {
   const placed = placedMap(book);
   const free = albumPhotoIds.filter((id) => placed[id] === undefined);
-  const pages = book.pages.map((p) => ({ ...p, slots: p.slots.map((id) => id ?? free.shift() ?? null) }));
+  const pages = book.pages.map((p) => (isDoubleRight(p) ? p : { ...p, slots: p.slots.map((id) => id ?? free.shift() ?? null) }));
   return touch({ ...book, pages });
+}
+
+// Compléter le livre avec les photos de l'album pas encore placées : d'abord les cadres vides, puis on AJOUTE des pages
+// (2 par 2, 2 photos par page) jusqu'au maximum du format. order : "date" = de la plus ancienne à la plus récente (la plus
+// récente à la fin) · "album" = dans l'ordre de l'album. dates : { idPhoto: date en ms }. Les photos déjà placées ne bougent pas.
+export const COMPLETE_ORDERS = [
+  { key: "date",  label: "Par date",         hint: "la plus récente à la fin" },
+  { key: "album", label: "Ordre de l'album", hint: "comme dans l'album" },
+];
+export function completeBook(book, albumPhotoIds, { order = "date", dates = {} } = {}) {
+  const placed = placedMap(book);
+  let free = albumPhotoIds.filter((id) => placed[id] === undefined);
+  if (order === "date") {
+    free = free.map((id, i) => [id, i]).sort((a, b) => (dates[a[0]] ?? 0) - (dates[b[0]] ?? 0) || a[1] - b[1]).map((x) => x[0]);
+  }
+  const queue = free.slice();
+  const pages = book.pages.map((p) => (isDoubleRight(p) ? p : { ...p, slots: p.slots.map((id) => id ?? queue.shift() ?? null) }));
+  const { max, step } = pagesRange(book);
+  while (queue.length && pages.length + step <= max) {
+    for (let k = 0; k < step; k++) pages.push({ layout: DEFAULT_PER_PAGE, slots: Array.from({ length: DEFAULT_PER_PAGE }, () => queue.shift() ?? null) });
+  }
+  return touch({ ...book, format: pages.length, pages });
 }
 
 // Modifier le titre d'une page : setPageTitle(book, 4, { text: "Plage" }).
@@ -244,10 +335,24 @@ export function setCover(book, patch) {
   return touch({ ...book, cover: { ...book.cover, ...patch } });
 }
 
-// Changer de style de couverture : le titre repasse en couleur automatique (lisible sur le nouveau fond).
+// Styles où la couleur de fond se VOIT sur la face avant (les autres : la photo couvre tout). Le choix du fond
+// n'est proposé que pour ceux-là. (Le dos du livre prend toujours la couleur de fond choisie.)
+export const COVER_STYLES_WITH_BG = ["centree", "polaroid", "bandeau", "titre"];
+export const styleNeedsBg = (style) => COVER_STYLES_WITH_BG.includes(style ?? DEFAULT_COVER_STYLE);
+
+// Titre de couverture : position AUTOMATIQUE (cover.titleXY absent : haut / milieu / bas ou zone du style) ou
+// MANUELLE (cover.titleXY = { x, y }, centre du titre en parts de la couverture, 0 → 1, déplacé au doigt).
+// Point de départ du mode manuel = là où le titre est en automatique.
+export function autoTitleXY(cover) {
+  const style = cover?.style ?? DEFAULT_COVER_STYLE;
+  if (style === "pleine" || style === "cadre") return { x: 0.5, y: { haut: 0.14, milieu: 0.5, bas: 0.86 }[cover?.pos] ?? 0.86 };
+  return { x: 0.5, y: { centree: 0.85, polaroid: 0.84, bandeau: 0.84, titre: 0.5 }[style] ?? 0.85 };
+}
+
+// Changer de style de couverture : le titre repasse en couleur et en position automatiques (lisible sur le nouveau style).
 export function setCoverStyle(book, style) {
   if (!COVER_STYLES.some((s) => s.key === style) || (book.cover.style ?? DEFAULT_COVER_STYLE) === style) return book;
-  return setCover(book, { style, color: "auto" });
+  return setCover(book, { style, color: "auto", titleXY: undefined });
 }
 
 // Changer la couleur de fond : si le titre est en automatique, il se réadapte tout seul.
@@ -279,8 +384,10 @@ export function syncWithAlbum(book, albumPhotoIds) {
 export function bookStats(book, albumPhotoIds) {
   const placed = placedMap(book);
   const placedCount = albumPhotoIds.filter((id) => placed[id] !== undefined).length;
-  const slots  = book.pages.reduce((n, p) => n + p.slots.length, 0);
-  const filled = book.pages.reduce((n, p) => n + p.slots.filter(Boolean).length, 0);
-  const emptyPages = book.pages.filter((p) => p.slots.every((id) => !id)).length;
+  // La moitié droite d'une double page n'a pas de cadre à elle : elle ne compte ni comme cadre ni comme page vide.
+  const own = book.pages.filter((p) => !isDoubleRight(p));
+  const slots  = own.reduce((n, p) => n + p.slots.length, 0);
+  const filled = own.reduce((n, p) => n + p.slots.filter(Boolean).length, 0);
+  const emptyPages = own.filter((p) => p.slots.every((id) => !id)).length;
   return { placedCount, total: albumPhotoIds.length, fillRatio: slots ? filled / slots : 0, emptyPages };
 }

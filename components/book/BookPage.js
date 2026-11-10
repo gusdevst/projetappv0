@@ -5,7 +5,9 @@
 // La mise en page = des LIGNES de cadres. Ex. 3 photos : 1 grand en haut, 2 en bas.
 // Les nombres dans ROWS sont les numéros de cadre (0, 1, 2…).
 
+import { useRef, useState } from "react";
 import { View, TouchableOpacity } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Image } from "expo-image";
 import Text from "../AppText";
 import { C, FONT } from "../../constants/theme";
@@ -110,6 +112,80 @@ export function BlankPage({ size, ratio = 1, label }) {
   );
 }
 
+// Zone touchable autour du titre (couverture). Sans onPress : le titre laisse passer les touchers (aperçu simple).
+// Sélectionné : entouré de pointillés.
+function TitleTap({ onPress, selected, children }) {
+  if (!onPress) return <View pointerEvents="none">{children}</View>;
+  return (
+    <TouchableOpacity activeOpacity={0.8} onPress={onPress}
+      style={{ borderWidth: 1.5, borderStyle: "dashed", borderColor: selected ? C.album : "transparent", borderRadius: 8, paddingVertical: 2 }}>
+      {children}
+    </TouchableOpacity>
+  );
+}
+
+// Titre de couverture en position MANUELLE : centre en (xy.x, xy.y) = parts de la couverture. Glissable si draggable.
+function ManualTitle({ xy, W, H, width, textStyle, shadow, title, selected, onPress, draggable, onMove, onMoveEnd, onDrag }) {
+  const [h, setH] = useState(textStyle.lineHeight ?? 24);
+  const start = useRef(xy);
+  const last = useRef(xy);
+  const clamp = (v) => Math.min(0.95, Math.max(0.05, v));
+  const pan = Gesture.Pan().runOnJS(true).enabled(!!draggable).minDistance(2)
+    .onBegin(() => { start.current = xy; last.current = xy; onDrag?.(true); })
+    .onUpdate((e) => {
+      last.current = { x: clamp(start.current.x + e.translationX / W), y: clamp(start.current.y + e.translationY / H) };
+      onMove?.(last.current);
+    })
+    .onEnd(() => { onMoveEnd?.(last.current); })
+    .onFinalize(() => { onDrag?.(false); });
+  return (
+    <GestureDetector gesture={pan}>
+      <View onLayout={(e) => setH(e.nativeEvent.layout.height)}
+        style={{ position: "absolute", left: xy.x * W - width / 2, top: xy.y * H - h / 2, width }}>
+        <TitleTap onPress={onPress} selected={selected}>
+          <Text numberOfLines={2} style={[textStyle, shadow && { textShadowColor: "rgba(0,0,0,0.22)", textShadowRadius: 8 }]}>{title}</Text>
+        </TitleTap>
+      </View>
+    </GestureDetector>
+  );
+}
+
+// Double page : UNE photo sur 2 pages face à face (layflat). Dessinée comme un grand cadre qui passe par-dessus le milieu,
+// avec la même marge que les autres pages tout autour (pas de marge au centre).
+//   size = largeur d'UNE page · ratio = hauteur / largeur d'une page · crop = recadrage de la photo (cadre = les 2 pages)
+//   half = "left" | "right" : ne dessine QUE cette page (rendu pour l'impression) ; sans half : les 2 pages côte à côte.
+//   seam : trait pointillé au centre du livre (éditeur seulement, jamais imprimé) · selected : cadre entouré.
+export function DoublePage({ url, size, ratio = 1, crop, half, selected, onPress, seam, editable, onCropChange, onLoaded, flat }) {
+  const mini = size < 60;
+  const H = Math.round(size * ratio);
+  const pad = mini ? 1.5 : size * 0.05;
+  const frameW = 2 * size - 2 * pad;
+  const frameH = H - 2 * pad;
+  const W = half ? size : 2 * size;
+  const Wrap = onPress ? TouchableOpacity : View;
+  return (
+    <Wrap activeOpacity={0.9} onPress={onPress}
+      style={{ width: W, height: H, backgroundColor: "#ffffff", borderRadius: flat ? 0 : mini ? 2 : 6, overflow: "hidden" }}>
+      {/* le « grand livre » de 2 pages, décalé pour ne montrer que la moitié demandée */}
+      <View style={{ position: "absolute", top: 0, left: half === "right" ? -size : 0, width: 2 * size, height: H }}>
+        <View style={{ position: "absolute", left: pad, top: pad, width: frameW, height: frameH, overflow: "hidden", borderRadius: mini ? 1 : 3,
+          backgroundColor: url ? C.bgMuted : mini ? C.border : C.bgCard, borderWidth: url || mini ? 0 : 1.5, borderStyle: "dashed", borderColor: "#cfcdc4",
+          alignItems: "center", justifyContent: "center" }}>
+          {url
+            ? <CroppedImage url={url} crop={crop} editable={editable} onChange={onCropChange} onLoaded={onLoaded} />
+            : !mini && <Text style={{ color: "#b5b3a9", fontSize: Math.max(14, size * 0.06) }}>+</Text>}
+        </View>
+        {selected && (
+          <View pointerEvents="none" style={{ position: "absolute", left: pad, top: pad, width: frameW, height: frameH, borderWidth: 3, borderColor: C.album, borderRadius: 3 }} />
+        )}
+        {seam && !mini && (
+          <View pointerEvents="none" style={{ position: "absolute", left: size - 1, top: 0, bottom: 0, borderLeftWidth: 1.5, borderStyle: "dashed", borderColor: "rgba(184,101,63,0.75)" }} />
+        )}
+      </View>
+    </Wrap>
+  );
+}
+
 // ─── Réglages du titre de couverture ────────────────────────────────────────
 // Les clés (moderne, S, blanc, bas…) viennent de services/photoBook.js ; ici on
 // les traduit en vraie police / taille / couleur.
@@ -117,11 +193,9 @@ export function BlankPage({ size, ratio = 1, label }) {
 export const COVER_STYLE = {
   font: {
     moderne:      { label: "Moderne",      family: FONT,                          weight: "600" },
-    elegante:     { label: "Élégante",     family: "PlayfairDisplay_600SemiBold", weight: "normal" },
     manuscrite:   { label: "Manuscrite",   family: "Caveat_600SemiBold",          weight: "normal" },
     affiche:      { label: "Affiche",      family: "BebasNeue_400Regular",        weight: "normal" },
     calligraphie: { label: "Calligraphie", family: "GreatVibes_400Regular",       weight: "normal" },
-    ronde:        { label: "Ronde",        family: "Fredoka_600SemiBold",         weight: "normal" },
   },
   size:  { S: 0.10, M: 0.14, L: 0.20 }, // part de la largeur de la couverture
   color: { blanc: "#ffffff", noir: C.text, terracotta: C.album, sauge: C.sage },
@@ -146,7 +220,11 @@ export function coverTitleColor(cover) {
 // flat : pas de coins arrondis (rendu pour l'impression) · onImageLoad : appelée quand la photo est chargée.
 // La photo suit son recadrage (cover.crop). editable : pincer / glisser pour recadrer (onCropChange(crop) au lâcher) ·
 // cropPreview : réglages appliqués en direct pendant un glissé de curseur (ex. { tilt }).
-export function BookCover({ cover, size, ratio = 1, urlById, onPress, flat, onImageLoad, bleed, editable, onCropChange, cropPreview }) {
+// Édition du TITRE (écran de couverture) : onTitlePress = toucher le titre · titleSelected = entouré en pointillés ·
+// titleDraggable + cover.titleXY = déplaçable au doigt (onTitleMove en direct, onTitleMoveEnd au lâcher, onTitleDrag(true / false) au début / à la fin).
+// photoSelected = la photo est entourée (onPress = toucher la photo).
+export function BookCover({ cover, size, ratio = 1, urlById, onPress, flat, onImageLoad, bleed, editable, onCropChange, cropPreview,
+  onTitlePress, titleSelected, titleDraggable, onTitleMove, onTitleMoveEnd, onTitleDrag, photoSelected }) {
   const url = cover.photoId ? urlById[cover.photoId] : null;
   const mini = size < 60;
   const style = cover.style ?? "pleine";
@@ -198,28 +276,35 @@ export function BookCover({ cover, size, ratio = 1, urlById, onPress, flat, onIm
         <View pointerEvents="none" style={{ position: "absolute", left: cx + 0.07 * cW, top: cy + 0.07 * cH, width: 0.86 * cW, height: 0.86 * cH,
           borderWidth: mini ? 0.5 : Math.max(1, cW * 0.007), borderColor: "rgba(255,255,255,0.9)" }} />
       )}
-      {onPress && !editable && !mini && photo && (
-        <View style={{ position: "absolute", top: photo.t + 8, right: W - (photo.l + photo.w) + 8, backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-          <Text style={{ fontSize: 10.5, fontWeight: "600", color: C.text }}>Changer la photo</Text>
-        </View>
+      {photoSelected && !editable && !mini && photo && (
+        <View pointerEvents="none" style={{ position: "absolute", left: photo.l, top: photo.t, width: photo.w, height: photo.h, borderWidth: 3, borderColor: C.album }} />
       )}
       {style === "titre" && !mini && (
         <View pointerEvents="none" style={{ position: "absolute", left: cx + 0.38 * cW, width: 0.24 * cW, top: cy + cH / 2 - fontSize * 1.5,
           height: Math.max(1, cW * 0.007), backgroundColor: color, opacity: 0.5 }} />
       )}
-      {!mini && !!cover.title && (onPhoto ? (
+      {!mini && !!cover.title && (cover.titleXY ? (
+        // Position MANUELLE : le titre est posé où l'utilisateur l'a glissé.
+        <ManualTitle xy={cover.titleXY} W={W} H={H} width={cW * 0.84} textStyle={textStyle} shadow={onPhoto}
+          title={cover.title} selected={titleSelected} onPress={onTitlePress} draggable={titleDraggable}
+          onMove={onTitleMove} onMoveEnd={onTitleMoveEnd} onDrag={onTitleDrag} />
+      ) : onPhoto ? (
         // Le titre est posé sur la photo : en haut, au milieu ou en bas selon le réglage « Position ».
-        <View pointerEvents="none" style={{ position: "absolute", left: cx, top: cy, width: cW, height: cH,
+        <View pointerEvents="box-none" style={{ position: "absolute", left: cx, top: cy, width: cW, height: cH,
           paddingHorizontal: cW * 0.08, paddingVertical: cH * 0.09, justifyContent: (COVER_STYLE.pos[cover.pos] ?? COVER_STYLE.pos.bas).justify }}>
-          <Text numberOfLines={2} style={[textStyle, { textShadowColor: "rgba(0,0,0,0.22)", textShadowRadius: 8 }]}>
-            {cover.title}
-          </Text>
+          <TitleTap onPress={onTitlePress} selected={titleSelected}>
+            <Text numberOfLines={2} style={[textStyle, { textShadowColor: "rgba(0,0,0,0.22)", textShadowRadius: 8 }]}>
+              {cover.title}
+            </Text>
+          </TitleTap>
         </View>
       ) : titleZone && (
         // Le titre a sa zone (sous la photo, dans le bandeau, dans le cadre blanc…) : centré dedans.
-        <View pointerEvents="none" style={{ position: "absolute", left: titleZone.l, top: titleZone.t, width: titleZone.w, height: titleZone.h,
+        <View pointerEvents="box-none" style={{ position: "absolute", left: titleZone.l, top: titleZone.t, width: titleZone.w, height: titleZone.h,
           paddingHorizontal: titleZone.w * 0.07, justifyContent: "center" }}>
-          <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.4} style={textStyle}>{cover.title}</Text>
+          <TitleTap onPress={onTitlePress} selected={titleSelected}>
+            <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.4} style={textStyle}>{cover.title}</Text>
+          </TitleTap>
         </View>
       ))}
     </TouchableOpacity>

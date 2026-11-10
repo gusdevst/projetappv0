@@ -20,7 +20,7 @@ import { C, S, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import {
   setLayout, setPageTitle, placePhoto, clearSlot, placedMap, getCrop, setCrop, resetCrop,
-  COVER_FONTS, PAGE_TITLE_POS, PAGE_TITLE_SIZES, pageRatio, isLandscape, layoutRows,
+  COVER_FONTS, PAGE_TITLE_POS, PAGE_TITLE_SIZES, pageRatio, isLandscape, layoutRows, doubleLeftIndex,
 } from "../services/photoBook";
 
 const POS_LABEL = { haut: "Haut", milieu: "Milieu", bas: "Bas" };
@@ -44,6 +44,28 @@ export function BookPageEditorScreen({ navigation, route }) {
   const [liveTilt, setLiveTilt] = useState(null);                          // redressement pendant le glissé du curseur
 
   if (!album || !book || !book.pages[pi]) return <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} />;
+
+  // Une page qui fait partie d'une double page ne se règle pas ici : la photo couvre 2 pages (voir l'aperçu du livre).
+  if (book.pages[pi].double) {
+    const l = doubleLeftIndex(book, pi);
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+        <View style={{ padding: S.pad, paddingTop: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <BackButton accentColor={C.album} onPress={() => navigation.goBack()} />
+            <Text style={{ flex: 1, fontSize: 19, color: C.text, fontWeight: "600" }}>Pages {l + 1}–{l + 2}</Text>
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <NavArrow label="‹" disabled={pi === 0} onPress={() => setPi(pi - 1)} />
+              <NavArrow label="›" disabled={pi >= book.format - 1} onPress={() => setPi(pi + 1)} />
+            </View>
+          </View>
+          <Text style={{ fontSize: 14, color: C.textMid, lineHeight: 20, marginTop: 24 }}>
+            Ces deux pages forment une double page : une seule photo les couvre. Retourne à l'aperçu du livre pour la changer, la recadrer ou la séparer.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const save  = (next) => setBook(albumId, next);
   const landscape = isLandscape(book);

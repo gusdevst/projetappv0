@@ -20,6 +20,8 @@ import { PrintPageRenderer } from "../components/book/PrintPageRenderer";
 import { useBookPdf } from "../hooks/useBookPdf";
 import { checkBook } from "../services/bookCheck";
 import { pageRatio } from "../services/photoBook";
+import { bookSpec, bookPriceCents } from "../services/bookProducts";
+import { formatEuro } from "../constants/subscription";
 
 // Une ligne de contrôle : pastille ✓ (ok) ou ! (alerte), texte, lien « Voir ›».
 function CheckRow({ ok, title, sub, onSee, first }) {
@@ -75,6 +77,8 @@ export function BookCheckScreen({ navigation, route }) {
 
   if (!album || !book || !res) return <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} />;
 
+  const spec = bookSpec(book);
+  const price = bookPriceCents(book);
   const goEditor = (pageIndex) => navigation.navigate("BookPageEditor", { albumId, pageIndex });
   const back = () => (view === "summary" ? navigation.goBack() : setView("summary"));
   const headSub = view === "summary" ? "Livre photo" : "Vérifier ton livre";
@@ -108,7 +112,7 @@ export function BookCheckScreen({ navigation, route }) {
               <View style={{ flex: 1 }}>
                 <Text numberOfLines={2} style={{ fontSize: 16, fontWeight: "600", color: C.text }}>{book.cover.title || album.name}</Text>
                 <Text style={{ fontSize: 12.5, color: C.textMid, lineHeight: 19, marginTop: 4 }}>
-                  {book.format} pages · {book.orientation === "landscape" ? "horizontal" : "vertical"}{"\n"}21 × 28 cm · {plural(albumIds.length, "photo", "photos")}
+                  {book.format} pages · {spec.orientation === "landscape" ? "horizontal" : "vertical"}{"\n"}{spec.sizeLabel}{spec.finishLabel ? ` · ${spec.finishLabel}` : ""}{"\n"}{plural(albumIds.length, "photo", "photos")}{price != null ? ` · ${formatEuro(price)} TTC` : ""}
                 </Text>
               </View>
             </View>
@@ -121,8 +125,8 @@ export function BookCheckScreen({ navigation, route }) {
                 onSee={res.coverOk ? null : () => navigation.goBack()} />
               {!res.pagesOk && (
                 <CheckRow ok={false}
-                  title={`${book.format} pages : trop peu pour l'impression`}
-                  sub="L'imprimeur demande 30 pages minimum. Choisis un autre format dans l'éditeur."
+                  title={`${book.format} pages : hors des limites d'impression`}
+                  sub={`L'imprimeur accepte de ${res.pagesMin} à ${res.pagesMax} pages. Change le nombre de pages dans l'éditeur.`}
                   onSee={() => navigation.goBack()} />
               )}
               <CheckRow ok={res.emptyPages.length === 0}
@@ -206,7 +210,7 @@ export function BookCheckScreen({ navigation, route }) {
                   <>
                     <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, textAlign: "center" }}>PDF prêt ✓</Text>
                     <Text style={{ fontSize: 12.5, color: C.textMid, textAlign: "center", marginTop: 4, marginBottom: 14 }}>
-                      {book.cover.title || album.name} · {pdf.state.result.pages} pages · 21 × 28 cm · {pdf.state.result.sizeMo} Mo
+                      {book.cover.title || album.name} · {pdf.state.result.pages} pages · {spec.sizeLabel} · {pdf.state.result.sizeMo} Mo
                     </Text>
                     {pdf.state.slowPages > 0 && (
                       <Text style={{ fontSize: 12, color: C.album, textAlign: "center", marginBottom: 12 }}>
@@ -222,14 +226,14 @@ export function BookCheckScreen({ navigation, route }) {
                       <Text style={{ color: C.textMid, fontWeight: "700", fontSize: 14.5 }}>Le refaire</Text>
                     </TouchableOpacity>
                     <Text style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 16, marginTop: 12 }}>
-                      Ce PDF est un essai : page 1 = couverture à plat (4ᵉ, dos, face), puis une page blanche, les pages intérieures et une page blanche de fin.
+                      Ce PDF est un essai au format du gabarit imprimeur.fr : page 1 = couverture de face, puis les pages du livre une par une, et la dernière page = couverture de dos.
                     </Text>
                   </>
                 ) : (
                   <>
                     <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>📄 Créer un PDF d'essai</Text>
                     <Text style={{ fontSize: 12.5, color: C.textMid, lineHeight: 18, marginTop: 4, marginBottom: 12 }}>
-                      La couverture à plat (dimensions demandées à Gelato) et chaque page (21 × 28 cm, fond perdu de 4 mm) sont dessinées à la taille d'impression, puis assemblées en un PDF que tu peux regarder et partager. Aucune photo n'est envoyée nulle part.
+                      {`La couverture de face, chaque page et la couverture de dos (${spec.sizeLabel}, format exact du gabarit imprimeur.fr) sont dessinées à la taille d'impression, puis assemblées en un PDF que tu peux regarder et partager. Aucune photo n'est envoyée nulle part.`}
                     </Text>
                     {pdf.state.phase === "error" && (
                       <Text style={{ fontSize: 12, color: C.red, marginBottom: 10 }}>Échec : {pdf.state.error}</Text>
@@ -256,6 +260,11 @@ export function BookCheckScreen({ navigation, route }) {
               <Text style={{ fontSize: 12.5, color: C.textMid, lineHeight: 18, marginTop: 4 }}>
                 Impression et livraison chez un partenaire. Il faudra un compte et ton accord pour envoyer les photos.
               </Text>
+              {price != null && (
+                <Text style={{ fontSize: 13, color: C.text, marginTop: 8 }}>
+                  Prix : <Text style={{ fontWeight: "700" }}>{formatEuro(price)}</Text> TTC, livraison comprise.
+                </Text>
+              )}
             </View>
           </>
         )}

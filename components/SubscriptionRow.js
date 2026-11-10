@@ -97,9 +97,9 @@ export default function SubscriptionRow({ sub, st, urls = [], onPress, onMenu, h
         <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }} numberOfLines={1}>
           {sub.count} {product.units}{price ? ` · ${price} / mois` : ""}
         </Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", marginTop: 5, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: onTone ? C.sage : C.bgMuted }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", marginTop: 5, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: onTone ? C.albumSoft : C.bgMuted }}>
           {chip.tone === "todo" && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.album }} />}
-          <Text style={{ fontSize: 10.5, fontWeight: "700", color: onTone ? C.accent : C.textMuted }} numberOfLines={1}>{chip.text}</Text>
+          <Text style={{ fontSize: 10.5, fontWeight: "700", color: onTone ? C.album : C.textMuted }} numberOfLines={1}>{chip.text}</Text>
         </View>
       </View>
       {hideMenu ? <View style={{ width: 6 }} /> : (

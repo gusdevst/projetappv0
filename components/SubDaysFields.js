@@ -43,7 +43,7 @@ function DaySheet({ visible, title, hint, value, min, max, onPick, onClose }) {
               return (
                 <View key={d} style={{ width: `${100 / 7}%`, padding: 3 }}>
                   <TouchableOpacity disabled={!ok} onPress={() => onPick(d)} activeOpacity={0.8}
-                    style={{ height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: on ? C.accent : C.bgCard, opacity: ok ? 1 : 0.3 }}>
+                    style={{ height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: on ? C.album : C.bgCard, opacity: ok ? 1 : 0.3 }}>
                     <Text style={{ fontSize: 15, fontWeight: on ? "700" : "500", color: on ? "#fff" : C.text }}>{d}</Text>
                   </TouchableOpacity>
                 </View>

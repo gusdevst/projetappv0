@@ -15,6 +15,7 @@ import Text from "../components/AppText";
 import HomeHeader from "../components/home/HomeHeader";
 import TriHero from "../components/home/TriHero";
 import FolderSheet from "../components/home/FolderSheet";
+import ContentSearchSheet from "../components/home/ContentSearchSheet";
 import Icon from "../components/Icons";
 import { SectionTitle, ListRow, SHADOW } from "../components/home/ui";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -379,8 +380,14 @@ export function HomeScreen({ navigation, route }) {
   const duree = formatDuration(joursRestants);
 
   // Filtres du mode Album, rangés par ligne : lieux (« Par lieu ») et le reste = périodes (« Par date »).
-  const placeFilters = albumFilters.filter((f) => f.type === "lieu");
-  const dateFilters  = albumFilters.filter((f) => f.type !== "lieu");
+  // + « Par contenu » (recherche : plage, chien…), qui vient de la feuille de recherche.
+  const placeFilters   = albumFilters.filter((f) => f.type === "lieu");
+  const contentFilters = albumFilters.filter((f) => f.type === "contenu");
+  const dateFilters    = albumFilters.filter((f) => f.type !== "lieu" && f.type !== "contenu");
+
+  // Recherche (feuille « Chercher dans tes photos ») : ce qu'on a tapé, pour le remettre à la réouverture.
+  const [showSearch, setShowSearch] = useState(false);
+  const searchQuery = (contentFilters[0] ?? dateFilters.find((f) => f.query))?.query ?? "";
 
   // Filtres combinés (mode album, intersection ET) : on précalcule un Set d'ids par filtre.
   const albumFilterSets = useMemo(
@@ -502,6 +509,41 @@ export function HomeScreen({ navigation, route }) {
     ];
   }, []);
 
+  // Recherche appliquée : la période devient un filtre « date », le sujet un filtre « contenu »
+  // (même mécanisme que les autres : ids des photos, intersection ET). Une seule recherche à la fois :
+  // elle remplace l'ancien sujet, et l'ancienne période seulement si la nouvelle phrase en contient une.
+  // create = true (« Créer un album avec ces photos ») : on lance aussi le tri tout de suite, sur la
+  // sélection obtenue (nouveaux filtres + les autres filtres encore actifs : lieu, dossier…).
+  function handleApplySearch({ query, dateIds, contentIds, dateLabel, contentLabel }, create = false) {
+    setShowSearch(false);
+    const toRemove = albumFilters.filter((f) => f.type === "contenu" || (dateIds && f.type !== "lieu"));
+    toRemove.forEach((f) => removeAlbumFilter(f.id));
+    if (dateIds) {
+      addAlbumFilter({ id: "date-recherche", type: "date", label: dateLabel, photoIds: dateIds, query });
+    }
+    if (contentIds) {
+      addAlbumFilter({ id: "contenu-recherche", type: "contenu", label: contentLabel, photoIds: contentIds, query });
+    }
+    if (!create) return;
+
+    // La file est calculée ici (le store ne sera à jour qu'au prochain affichage).
+    const removed = new Set(toRemove.map((f) => f.id));
+    const sets = [
+      ...albumFilters.filter((f) => !removed.has(f.id)).map((f) => new Set(f.photoIds)),
+      ...(dateIds ? [new Set(dateIds)] : []),
+      ...(contentIds ? [new Set(contentIds)] : []),
+    ];
+    let pool = libraryPhotos.filter((p) => !albumExcludedIds.has(p.id));
+    if (albumPhotoIds) pool = pool.filter((p) => albumPhotoIds.has(p.id));
+    pool = pool.filter((p) => sets.every((s) => s.has(p.id)));
+    const q = inDateRange(applyFilter(pool, activeFilter), dateRange);
+    if (q.length === 0) {
+      Alert.alert("Aucune photo", "Avec tes autres filtres (lieu, dossier…), aucune photo ne correspond. Retire-en un pour continuer.");
+      return;
+    }
+    navigation.navigate("TriMode", { preQueue: q, skipToAlbum: true });
+  }
+
   function handleCalendarConfirm(from, to, label) {
     setShowCalendar(false);
     const range = { from, to: to || null, label: label || null };
@@ -517,7 +559,7 @@ export function HomeScreen({ navigation, route }) {
         return;
       }
       // Une seule période à la fois (la ✕ de « Par date » l'efface) : on remplace l'ancienne.
-      albumFilters.filter((f) => f.type !== "lieu").forEach((f) => removeAlbumFilter(f.id));
+      albumFilters.filter((f) => f.type !== "lieu" && f.type !== "contenu").forEach((f) => removeAlbumFilter(f.id));
       addAlbumFilter({
         id: `date-${from.getTime()}_${to ? to.getTime() : "now"}`,
         type: "date",
@@ -579,7 +621,24 @@ export function HomeScreen({ navigation, route }) {
             : <View style={[{ borderRadius: 16, backgroundColor: C.albumSoft }, style]} />;
           return (
             <View>
-              <View style={{ alignItems: "center", marginTop: 6 }}>
+              {/* Champ de recherche : ouvre la feuille « Chercher dans tes photos » */}
+              <TouchableOpacity
+                onPress={() => setShowSearch(true)}
+                activeOpacity={0.85}
+                style={[{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.bgCard, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, marginTop: 4 }, SHADOW]}
+              >
+                <Icon name="search" size={18} color={C.album} />
+                <Text style={{ flex: 1, fontSize: 14.5, color: searchQuery ? C.text : C.textMuted }} numberOfLines={1}>
+                  {searchQuery ? searchQuery : "l'été 2026 à la plage"}
+                </Text>
+                {!searchQuery && (
+                  <View style={{ backgroundColor: C.albumSoft, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+                    <Text style={{ fontSize: 10.5, fontWeight: "700", color: C.album, letterSpacing: 0.5 }}>NOUVEAU</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <View style={{ alignItems: "center", marginTop: 14 }}>
                 <Text style={{ color: C.album }}>
                   <Text style={{ fontSize: 38, fontWeight: "600" }}>{queue.length} </Text>
                   <Text style={{ fontSize: 20, fontWeight: "600" }}>photo{queue.length > 1 ? "s" : ""}</Text>
@@ -650,6 +709,15 @@ export function HomeScreen({ navigation, route }) {
                   right={dateFilters.length ? "close" : "chevron"}
                   onClear={() => dateFilters.forEach((f) => removeAlbumFilter(f.id))}
                   onPress={() => setShowCalendar(true)}
+                />
+                <ListRow
+                  icon="eye" iconColor={C.album} iconBg={C.albumSoft} title="Par contenu"
+                  sub={contentFilters.length ? contentFilters.map((f) => f.label).join(" · ") : "Plage, chien, montagne, fête…"}
+                  subColor={contentFilters.length ? C.album : undefined}
+                  active={contentFilters.length > 0} activeColor={C.album}
+                  right={contentFilters.length ? "close" : "chevron"}
+                  onClear={() => contentFilters.forEach((f) => removeAlbumFilter(f.id))}
+                  onPress={() => setShowSearch(true)}
                 />
                 <ListRow
                   icon="pin" iconColor={C.album} iconBg={C.albumSoft} title="Par lieu"
@@ -774,6 +842,15 @@ export function HomeScreen({ navigation, route }) {
         shortcuts={dateShortcuts}
         onConfirm={handleCalendarConfirm}
         onCancel={() => setShowCalendar(false)}
+      />
+
+      {/* ── Feuille « Chercher dans tes photos » (mode Album) ───────── */}
+      <ContentSearchSheet
+        visible={showSearch}
+        onClose={() => setShowSearch(false)}
+        initialQuery={searchQuery}
+        color={C_ALBUM}
+        onApply={handleApplySearch}
       />
 
       {/* ── Feuille « Choisir un dossier » ─────────────────────────── */}

@@ -3,22 +3,21 @@
 // pour qu'elle soit « photographiée » (captureRef) puis mise dans le PDF.
 // Il attend que les photos soient chargées avant de prévenir (onReady), avec une limite de temps.
 //
-// job : { key, kind: "cover" | "page", pageIndex? } · geo : voir pageGeometry() dans services/bookPdf.js
+// job : { key, kind: "front" / "back" (couverture de face / de dos) | "page", pageIndex? } · geo : voir pageGeometry() dans services/bookPdf.js
 // onReady(key, ok) : ok = false si les photos n'ont pas fini de charger à temps.
 
 import { useEffect, useRef } from "react";
 import { View } from "react-native";
-import { BookPage } from "./BookPage";
-import { FlatCover } from "./FlatCover";
+import { BookPage, BookCover, DoublePage } from "./BookPage";
+import { coverBgHex, getCrop, doubleLeftIndex, pagePhotoIds, isDoubleLeft } from "../../services/photoBook";
 
 const OFFSCREEN = -20000; // loin à gauche : dessinée, mais jamais visible
 const SETTLE_MS = 250;    // petite pause après le dernier chargement (mise en place des photos)
 const TIMEOUT_MS = 15000; // au-delà, on capture quand même (et on le signale)
 
-// Pour la couverture, job porte aussi : dims (dimensions Gelato) et geo (voir coverGeometry).
 // job.urlById (facultatif) : adresses des photos en pleine qualité pour CETTE page (fichiers locaux, voir useBookPdf).
 export function PrintPageRenderer({ job, book, urlById: defaultUrls, geo: pageGeo, viewRef, onReady }) {
-  const geo = job?.kind === "cover" ? job.geo : pageGeo;
+  const geo = pageGeo;
   const urlById = job?.urlById ?? defaultUrls;
   const loaded = useRef(0);
   const finished = useRef(false);
@@ -34,8 +33,9 @@ export function PrintPageRenderer({ job, book, urlById: defaultUrls, geo: pageGe
 
   const page = job?.kind === "page" ? book.pages[job.pageIndex] : null;
   const expected = !job ? 0
-    : job.kind === "cover" ? (book.cover.style !== "titre" && book.cover.photoId && urlById[book.cover.photoId] ? 1 : 0)
-    : (page?.slots ?? []).filter((id) => id && urlById[id]).length;
+    : job.kind === "front" ? (book.cover.style !== "titre" && book.cover.photoId && urlById[book.cover.photoId] ? 1 : 0)
+    : job.kind === "back" ? 0
+    : pagePhotoIds(book, job.pageIndex).filter((id) => urlById[id]).length;
 
   const finish = (ok) => {
     if (finished.current || !job) return;
@@ -64,9 +64,25 @@ export function PrintPageRenderer({ job, book, urlById: defaultUrls, geo: pageGe
       pointerEvents="none"
       style={{ position: "absolute", left: OFFSCREEN, top: 0, width: geo.widthPt, height: geo.heightPt, backgroundColor: "#ffffff" }}
     >
-      {job.kind === "cover" ? (
-        // Couverture à plat : 4ᵉ · dos · face avant, avec le rabat et le fond perdu tout autour.
-        <FlatCover cover={book.cover} dims={job.dims} width={geo.widthPt} urlById={urlById} flat onImageLoad={onImageLoad} />
+      {job.kind === "back" ? (
+        // Couverture de DOS (layflat) : uni, dans la couleur de fond choisie pour la couverture.
+        <View style={{ width: geo.widthPt, height: geo.heightPt, backgroundColor: coverBgHex(book.cover.bg) }} />
+      ) : job.kind === "front" ? (
+        // Couverture de FACE (layflat) : une page au format exact, comme le gabarit imprimeur.fr.
+        <BookCover cover={book.cover} size={geo.widthPt} ratio={geo.heightPt / geo.widthPt} urlById={urlById} flat onImageLoad={onImageLoad} />
+      ) : page?.double ? (
+        // Moitié d'une double page : la photo est dessinée sur les 2 pages, on ne garde que cette moitié.
+        (() => {
+          const l = doubleLeftIndex(book, job.pageIndex);
+          const owner = book.pages[l];
+          const id = owner.slots[0];
+          return (
+            <View style={{ padding: geo.bleedPt }}>
+              <DoublePage url={id ? urlById[id] : null} size={geo.trimWidthPt} ratio={geo.trimHeightPt / geo.trimWidthPt}
+                crop={id ? getCrop(owner, id) : undefined} half={isDoubleLeft(page) ? "left" : "right"} flat onLoaded={onImageLoad} />
+            </View>
+          );
+        })()
       ) : (
         // Page intérieure : marge blanche = fond perdu, puis la page rognée.
         <View style={{ padding: geo.bleedPt }}>

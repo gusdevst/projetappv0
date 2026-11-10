@@ -5,13 +5,13 @@
 import { TouchableOpacity, View } from "react-native";
 import { C } from "../constants/theme";
 
-export function Toggle({ value, onToggle }) {
+export function Toggle({ value, onToggle, color = C.accent }) {
   return (
     <TouchableOpacity
       onPress={onToggle}
       style={{
         width: 46, height: 26, borderRadius: 13,
-        backgroundColor: value ? C.accent : C.border,
+        backgroundColor: value ? color : C.border,
         justifyContent: "center", paddingHorizontal: 2,
       }}
     >

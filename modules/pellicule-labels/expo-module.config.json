@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["PelliculeLabelsModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.pellicule.labels.PelliculeLabelsModule"]
+  }
+}

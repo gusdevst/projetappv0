@@ -21,8 +21,8 @@ const labelOf = (x) => (x.kind === "self" ? "Pour moi" : x.name);
 
 function Pill({ text, on }) {
   return (
-    <View style={{ backgroundColor: on ? C.sage : C.bgMuted, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-      <Text style={{ fontSize: 9.5, fontWeight: "700", color: on ? C.accent : C.textMuted }}>{text}</Text>
+    <View style={{ backgroundColor: on ? C.albumSoft : C.bgMuted, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
+      <Text style={{ fontSize: 9.5, fontWeight: "700", color: on ? C.album : C.textMuted }}>{text}</Text>
     </View>
   );
 }
@@ -71,8 +71,8 @@ export function SubscriptionListScreen({ navigation }) {
                 onPress={() => navigation.navigate("SubscriptionManage", { subId: x.id })}
                 style={[{ backgroundColor: C.bgCard, borderRadius: 16, padding: 14 }, SHADOW]}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: x.kind === "self" ? C.sage2 : C.albumSoft }}>
-                    <Text style={{ fontSize: 17, fontWeight: "800", color: x.kind === "self" ? C.accent : C.album }}>{initial}</Text>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: x.kind === "self" ? "#ecd3c3" : C.bgMuted }}>
+                    <Text style={{ fontSize: 17, fontWeight: "800", color: x.kind === "self" ? C.album : C.textMid }}>{initial}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 14.5, fontWeight: "500", color: C.text }} numberOfLines={1}>{labelOf(x)}</Text>
@@ -92,7 +92,7 @@ export function SubscriptionListScreen({ navigation }) {
                 ) : (
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                     <Text style={{ fontSize: 12, color: C.textMid }}>Sélection de {monthName(month)}</Text>
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: C.accent }}>À valider · avant le {sendDay}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: C.album }}>À valider · avant le {sendDay}</Text>
                   </View>
                 )}
               </TouchableOpacity>

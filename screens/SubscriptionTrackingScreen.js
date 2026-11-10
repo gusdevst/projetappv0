@@ -48,8 +48,8 @@ export function SubscriptionTrackingScreen({ navigation, route }) {
       <StatusBar barStyle="dark-content" />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 24, paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
         <View style={{ alignItems: "center" }}>
-          <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: C.sage, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-            <Icon name="check" size={36} color={C.accent} strokeWidth={2.6} />
+          <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+            <Icon name="check" size={36} color={C.album} strokeWidth={2.6} />
           </View>
           <Text style={{ fontSize: 23, fontWeight: "700", color: C.text }}>C'est parti !</Text>
           <Text style={{ fontSize: 12.5, color: C.textMid, textAlign: "center", marginTop: 5 }}>
@@ -68,9 +68,9 @@ export function SubscriptionTrackingScreen({ navigation, route }) {
               const last = i === STAGES.length - 1;
               return (
                 <View key={st.key} style={{ flexDirection: "row", gap: 12, paddingBottom: last ? 0 : 18 }}>
-                  {!last && <View style={{ position: "absolute", left: 11, top: 24, bottom: 0, width: 2, backgroundColor: done ? C.sage3 : C.border }} />}
-                  <View style={[{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: done ? C.accent : C.bgMuted },
-                    now && { backgroundColor: C.bgCard, borderWidth: 2.5, borderColor: C.accent }]}>
+                  {!last && <View style={{ position: "absolute", left: 11, top: 24, bottom: 0, width: 2, backgroundColor: done ? "#e3b79f" : C.border }} />}
+                  <View style={[{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: done ? C.album : C.bgMuted },
+                    now && { backgroundColor: C.bgCard, borderWidth: 2.5, borderColor: C.album }]}>
                     {done && <Icon name="check" size={13} color="#fff" strokeWidth={3.2} />}
                   </View>
                   <View style={{ flex: 1 }}>
@@ -90,7 +90,7 @@ export function SubscriptionTrackingScreen({ navigation, route }) {
               const done = s?.status === "validated";
               return (
                 <ListRow key={x.id}
-                  thumb={<View style={{ width: 44, height: 44, borderRadius: 11, backgroundColor: C.sage, alignItems: "center", justifyContent: "center" }}><Text style={{ fontSize: 20 }}>📮</Text></View>}
+                  thumb={<View style={{ width: 44, height: 44, borderRadius: 11, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center" }}><Text style={{ fontSize: 20 }}>📮</Text></View>}
                   title={`${x.kind === "self" ? "Pour moi" : x.name} · ${mois}`}
                   sub={done ? "Validée" : `Encore à valider · avant le ${subDays(x).sendDay}`}
                   onPress={() => navigation.navigate(done ? "SubscriptionTracking" : "SubscriptionMonth", done ? { subId: x.id, month } : { subId: x.id })} />

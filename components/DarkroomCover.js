@@ -1,15 +1,19 @@
 // components/DarkroomCover.js
 // Vignette « chambre noire » de la carte Coups de cœur (Galerie) :
-// fond rouge, ampoule, fil avec des tirages pincés = les derniers Coups de cœur,
+// fond rouge, fil avec des tirages pincés = les derniers Coups de cœur,
 // teintés de rouge comme sous la lampe. Pas assez de photos → tirages vierges.
+// PAS d'ampoule ici (10 nov.) : la seule ampoule est celle du coin du bloc « Chambre noire » (GalleryHomeScreen),
+// la lueur est centrée dessous. Le haut de la vignette reste libre pour le mot « Coups de cœur » (posé par l'écran).
 // Le dessin s'adapte au format : plus la carte est large, plus il y a de tirages (3 à 5).
 // Usage : <DarkroomCover urls={[url1, url2, ...]} width={220} height={108} />
 
 import { View } from "react-native";
-import Svg, { Defs, RadialGradient, Stop, ClipPath, Rect, Circle, Line, Path, G, Image } from "react-native-svg";
+import Svg, { Defs, RadialGradient, Stop, ClipPath, Rect, Path, G, Image } from "react-native-svg";
 import { DARKROOM as D } from "../constants/theme";
 
 const INCLINE = [-6, 3, -3, 6, -4]; // inclinaison de chaque tirage (degrés)
+const WO = 6.7;   // le fil est descendu de ~10 px (repère 100) pour laisser la place au mot « Coups de cœur »
+const PRINT = 0.9; // taille des tirages (1 = plein format)
 
 // Nombre de tirages qui tiennent sur le fil selon la largeur du dessin.
 // (tirages plus grands qu'avant pour qu'on voie bien les photos : 3 à 4 seulement)
@@ -20,39 +24,30 @@ export default function DarkroomCover({ urls = [], width = 100, height = 100, ra
   const W = (100 * width) / height;
   const n = printsFor(width, height);
   const xs = Array.from({ length: n }, (_, i) => (W * (i + 0.5)) / n);
-  const sag = (x) => 30 + 10 * (1 - ((2 * x) / W - 1) ** 2); // hauteur du fil à l'abscisse x
-  const bulbX = W * 0.74;
+  const sag = (x) => 30 + WO + 10 * (1 - ((2 * x) / W - 1) ** 2); // hauteur du fil à l'abscisse x
 
   return (
     // View arrondie autour du dessin : sur Android, Svg seul ne coupe pas les coins.
     <View style={{ width, height, borderRadius: radius, overflow: "hidden" }}>
       <Svg width={width} height={height} viewBox={`0 0 ${W} 100`}>
         <Defs>
-          <RadialGradient id="dc-glow" cx="72%" cy="24%" r="60%">
+          <RadialGradient id="dc-glow" cx="90%" cy="0%" r="75%">
             <Stop offset="0" stopColor={D.glow[0]} />
             <Stop offset="0.45" stopColor={D.glow[1]} />
             <Stop offset="1" stopColor={D.glow[2]} />
-          </RadialGradient>
-          <RadialGradient id="dc-bulb" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor={D.bulb} />
-            <Stop offset="0.5" stopColor={D.halo} stopOpacity="0.9" />
-            <Stop offset="1" stopColor={D.halo} stopOpacity="0" />
           </RadialGradient>
           <ClipPath id="dc-photo">
             <Rect x="-15" y="2.5" width="30" height="31" />
           </ClipPath>
         </Defs>
 
-        {/* Décor : fond, ampoule, fil */}
+        {/* Décor : fond, fil */}
         <Rect width={W} height="100" fill="url(#dc-glow)" />
-        <Circle cx={bulbX} cy="16" r="14" fill="url(#dc-bulb)" />
-        <Circle cx={bulbX} cy="16" r="4" fill={D.bulb} />
-        <Line x1={bulbX} y1="0" x2={bulbX} y2="12" stroke={D.wire} strokeWidth="1" />
-        <Path d={`M-2,30 Q${W / 2},50 ${W + 2},30`} fill="none" stroke={D.wire} strokeWidth="1.2" />
+        <Path d={`M-2,${30 + WO} Q${W / 2},${50 + WO} ${W + 2},${30 + WO}`} fill="none" stroke={D.wire} strokeWidth="1.2" />
 
         {/* Tirages pincés sur le fil */}
         {xs.map((x, i) => (
-          <G key={i} transform={`translate(${x},${sag(x)}) rotate(${INCLINE[i]})`}>
+          <G key={i} transform={`translate(${x},${sag(x)}) rotate(${INCLINE[i]}) scale(${PRINT})`}>
             <Rect x="-17" y="0" width="34" height="42" rx="1.5" fill={D.paper} />
             {urls[i] && (
               <>

@@ -27,6 +27,7 @@ import { PhotoBookScreen }        from "../screens/PhotoBookScreen";
 import { BookPageEditorScreen }   from "../screens/BookPageEditorScreen";
 import { AuthScreen }             from "../screens/AuthScreen";
 import { BookCheckScreen }        from "../screens/BookCheckScreen";
+import { PrintNewScreen } from "../screens/PrintNewScreen";
 import { SubscriptionIntroScreen } from "../screens/SubscriptionIntroScreen";
 import { SubscriptionSetupScreen } from "../screens/SubscriptionSetupScreen";
 import { SubscriptionMagnetsScreen } from "../screens/SubscriptionMagnetsScreen";
@@ -37,6 +38,10 @@ import { SubscriptionTrackingScreen } from "../screens/SubscriptionTrackingScree
 import { SubscriptionHistoryScreen } from "../screens/SubscriptionHistoryScreen";
 import { BlurCalibrationScreen } from "../screens/BlurCalibrationScreen";
 import { BlurryPhotosScreen } from "../screens/BlurryPhotosScreen";
+import { PosterIntroScreen } from "../screens/PosterIntroScreen";
+import { PosterPickScreen } from "../screens/PosterPickScreen";
+import { PosterFormatScreen } from "../screens/PosterFormatScreen";
+import { PosterRecapScreen } from "../screens/PosterRecapScreen";
 import { usePhotoStore }         from "../store/usePhotoStore";
 
 const Stack = createStackNavigator();
@@ -110,6 +115,7 @@ export function AppNavigator() {
       <Stack.Screen name="PhotoBook"   component={PhotoBookScreen} />
       <Stack.Screen name="BookPageEditor" component={BookPageEditorScreen} />
       <Stack.Screen name="BookCheck"   component={BookCheckScreen} />
+      <Stack.Screen name="PrintNew" component={PrintNewScreen} />
       <Stack.Screen name="SubscriptionIntro" component={SubscriptionIntroScreen} />
       <Stack.Screen name="SubscriptionMagnets" component={SubscriptionMagnetsScreen} />
       <Stack.Screen name="SubscriptionSetup" component={SubscriptionSetupScreen} />
@@ -120,6 +126,10 @@ export function AppNavigator() {
       <Stack.Screen name="SubscriptionHistory" component={SubscriptionHistoryScreen} />
       <Stack.Screen name="Auth"        component={AuthScreen} />
       <Stack.Screen name="BlurryPhotos" component={BlurryPhotosScreen} />
+      <Stack.Screen name="PosterIntro"  component={PosterIntroScreen} />
+      <Stack.Screen name="PosterPick"   component={PosterPickScreen} />
+      <Stack.Screen name="PosterFormat" component={PosterFormatScreen} />
+      <Stack.Screen name="PosterRecap"  component={PosterRecapScreen} />
       {__DEV__ && <Stack.Screen name="BlurCalibration" component={BlurCalibrationScreen} />}
     </Stack.Navigator>
   );

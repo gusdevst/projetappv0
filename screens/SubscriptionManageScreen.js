@@ -121,7 +121,7 @@ export function SubscriptionManageScreen({ navigation, route }) {
             <Text style={{ fontSize: 16, fontWeight: "600", color: C.text }}>Dates d'envoi · {label}</Text>
             <SubDaysFields {...subDays(sub)} onChange={(d) => updateSub(sub.id, d)} />
             <TouchableOpacity onPress={() => setDaysOpen(false)} activeOpacity={0.85}
-              style={[{ height: 48, borderRadius: 24, backgroundColor: C.accent, alignItems: "center", justifyContent: "center", marginTop: 16 }, SHADOW]}>
+              style={[{ height: 48, borderRadius: 24, backgroundColor: C.album, alignItems: "center", justifyContent: "center", marginTop: 16 }, SHADOW]}>
               <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>Terminé</Text>
             </TouchableOpacity>
           </View>

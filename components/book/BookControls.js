@@ -4,7 +4,7 @@
 
 import { View, TouchableOpacity } from "react-native";
 import Text from "../AppText";
-import { BookPage } from "./BookPage";
+import { BookPage, DoublePage } from "./BookPage";
 import { SHADOW } from "../home/ui";
 import { C } from "../../constants/theme";
 import { BOOK_LAYOUTS } from "../../services/photoBook";
@@ -50,10 +50,13 @@ export function ToolButton({ icon, label, accent, onPress }) {
   );
 }
 
-// 4 boutons « 1 photo · 2 photos · 3 photos · 4 photos ». Les mini-pages suivent l'orientation du livre.
-export function LayoutPicker({ value, onChange, landscape }) {
+// 4 boutons « 1 photo · 2 photos · 3 photos · 4 photos » + « Double page » (une photo sur 2 pages face à face).
+// Les mini-pages suivent l'orientation du livre. doubleState : "off" | "on" | "disabled" (page seule face à la couverture / à la fin) ·
+// onDouble : touché. Sans onDouble, le bouton « Double page » n'est pas affiché (ex. éditeur d'une seule page).
+export function LayoutPicker({ value, onChange, landscape, doubleState = "off", onDouble }) {
+  const ratio = landscape ? 3 / 4 : 4 / 3;
   return (
-    <View style={{ flexDirection: "row", gap: 8 }}>
+    <View style={{ flexDirection: "row", gap: 7 }}>
       {BOOK_LAYOUTS.map((n) => {
         const on = value === n;
         return (
@@ -61,13 +64,23 @@ export function LayoutPicker({ value, onChange, landscape }) {
             style={{ flex: 1, alignItems: "center", paddingTop: 8, paddingBottom: 6, borderRadius: 14,
               backgroundColor: on ? C.albumSoft : C.bgCard, borderWidth: 2, borderColor: on ? C.album : C.bgCard }}>
             <BookPage page={{ layout: n, slots: Array(n).fill(null) }} size={landscape ? 44 : 32}
-              ratio={landscape ? 3 / 4 : 4 / 3} urlById={{}} />
-            <Text style={{ fontSize: 11, marginTop: 4, color: on ? C.album : C.textMuted, fontWeight: on ? "600" : "500" }}>
+              ratio={ratio} urlById={{}} />
+            <Text style={{ fontSize: 10.5, marginTop: 4, color: on ? C.album : C.textMuted, fontWeight: on ? "600" : "500" }}>
               {n} photo{n > 1 ? "s" : ""}
             </Text>
           </TouchableOpacity>
         );
       })}
+      {onDouble && (
+        <TouchableOpacity onPress={onDouble} accessibilityLabel="Double page : une photo sur deux pages"
+          style={{ flex: 1.35, alignItems: "center", paddingTop: 8, paddingBottom: 6, borderRadius: 14, opacity: doubleState === "disabled" ? 0.4 : 1,
+            backgroundColor: doubleState === "on" ? C.albumSoft : C.bgCard, borderWidth: 2, borderColor: doubleState === "on" ? C.album : C.bgCard }}>
+          <DoublePage size={landscape ? 22 : 16} ratio={ratio} url={null} />
+          <Text style={{ fontSize: 10.5, marginTop: 4, color: doubleState === "on" ? C.album : C.textMuted, fontWeight: doubleState === "on" ? "600" : "500" }}>
+            Double page
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

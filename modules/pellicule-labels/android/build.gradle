@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.pellicule.labels'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.pellicule.labels"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+}
+
+dependencies {
+  // ML Kit « Image Labeling » : modèle embarqué dans l'app (marche hors ligne, rien n'est envoyé).
+  implementation 'com.google.mlkit:image-labeling:17.0.9'
+}

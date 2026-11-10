@@ -201,8 +201,8 @@ export function SubscriptionMonthScreen({ navigation, route }) {
         {/* Gérer cet abonnement : historique, dates, pause, résiliation */}
         <TouchableOpacity onPress={() => navigation.navigate("SubscriptionManage", { subId: sub.id })} activeOpacity={0.8}
           style={[{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.bgCard, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 12 }, SHADOW]}>
-          <Icon name="gear" size={14} color={C.accent} strokeWidth={2.1} />
-          <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.accent }}>Gérer</Text>
+          <Icon name="gear" size={14} color={C.album} strokeWidth={2.1} />
+          <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.album }}>Gérer</Text>
         </TouchableOpacity>
       </View>
 
@@ -240,12 +240,12 @@ export function SubscriptionMonthScreen({ navigation, route }) {
               <Text style={{ fontSize: 12, color: C.textMuted }}>disponibles</Text>
             </View>
             <View style={{ height: 9, backgroundColor: C.bgMuted, borderRadius: 5, overflow: "hidden", marginTop: 8 }}>
-              <View style={{ width: `${Math.round((poolIds.length / sub.count) * 100)}%`, height: 9, backgroundColor: C.accent, borderRadius: 5 }} />
+              <View style={{ width: `${Math.round((poolIds.length / sub.count) * 100)}%`, height: 9, backgroundColor: C.album, borderRadius: 5 }} />
             </View>
           </View>
           <View style={{ flex: 1 }} />
           <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate("Main", { screen: "Home" })}
-            style={[{ height: 50, borderRadius: 25, backgroundColor: C.accent, alignItems: "center", justifyContent: "center", marginBottom: 20 }, SHADOW]}>
+            style={[{ height: 50, borderRadius: 25, backgroundColor: C.album, alignItems: "center", justifyContent: "center", marginBottom: 20 }, SHADOW]}>
             <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>Continuer à trier</Text>
           </TouchableOpacity>
         </View>
@@ -262,10 +262,10 @@ export function SubscriptionMonthScreen({ navigation, route }) {
               </View>
             )}
 
-            <View style={{ flexDirection: "row", gap: 10, alignItems: "center", backgroundColor: C.sage, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12 }}>
+            <View style={{ flexDirection: "row", gap: 10, alignItems: "center", backgroundColor: C.albumSoft, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12 }}>
               <Text style={{ fontSize: 14 }}>{validated ? "✅" : "⏳"}</Text>
-              <Text style={{ flex: 1, fontSize: 12, color: C.green }}>
-                {validated ? (sel?.restored ? "Sélection validée et envoyée depuis un autre téléphone." : "Sélection validée. L'impression est en préparation.") : <>À valider avant le <Text style={{ fontWeight: "700", color: C.green }}>{subDays(sub).sendDay} {monthName(month)}</Text></>}
+              <Text style={{ flex: 1, fontSize: 12, color: C.album }}>
+                {validated ? (sel?.restored ? "Sélection validée et envoyée depuis un autre téléphone." : "Sélection validée. L'impression est en préparation.") : <>À valider avant le <Text style={{ fontWeight: "700", color: C.album }}>{subDays(sub).sendDay} {monthName(month)}</Text></>}
               </Text>
             </View>
 
@@ -285,8 +285,8 @@ export function SubscriptionMonthScreen({ navigation, route }) {
               <View style={{ alignItems: "center", marginTop: 14 }}>
                 <TouchableOpacity onPress={redrawAll} activeOpacity={0.8}
                   style={[{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: C.bgCard, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 14 }, SHADOW]}>
-                  <Icon name="shuffle" size={15} color={C.accent} strokeWidth={2.2} />
-                  <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.accent }}>Tout retirer au sort</Text>
+                  <Icon name="shuffle" size={15} color={C.album} strokeWidth={2.2} />
+                  <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.album }}>Tout retirer au sort</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -306,7 +306,7 @@ export function SubscriptionMonthScreen({ navigation, route }) {
           {!validated && (
             <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: C.bg, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 26, borderTopWidth: 1, borderTopColor: C.border }}>
               <TouchableOpacity activeOpacity={0.85} disabled={photoIds.length === 0} onPress={validate}
-                style={[{ height: 50, borderRadius: 25, backgroundColor: C.accent, alignItems: "center", justifyContent: "center", opacity: photoIds.length === 0 ? 0.4 : 1 }, SHADOW]}>
+                style={[{ height: 50, borderRadius: 25, backgroundColor: C.album, alignItems: "center", justifyContent: "center", opacity: photoIds.length === 0 ? 0.4 : 1 }, SHADOW]}>
                 <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
                   {sub.kind === "self" ? "Valider et imprimer" : `Valider et envoyer à ${sub.name}`}
                 </Text>
@@ -350,7 +350,7 @@ export function SubscriptionMonthScreen({ navigation, route }) {
 
             {!validated && (
               <TouchableOpacity activeOpacity={0.85} onPress={() => { setTarget(viewIdx); setMode("menu"); }}
-                style={{ height: 50, borderRadius: 25, backgroundColor: C.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                style={{ height: 50, borderRadius: 25, backgroundColor: C.album, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <Icon name="refresh" size={17} color="#fff" strokeWidth={2.4} />
                 <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>Changer cette photo</Text>
               </TouchableOpacity>
@@ -402,13 +402,13 @@ export function SubscriptionMonthScreen({ navigation, route }) {
       <Modal visible={!!upload} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={{ flex: 1, backgroundColor: "rgba(35,39,31,0.55)", alignItems: "center", justifyContent: "center", padding: 32 }}>
           <View style={{ backgroundColor: C.bg, borderRadius: 20, padding: 24, alignItems: "center", width: "100%" }}>
-            <ActivityIndicator size="large" color={C.accent} />
+            <ActivityIndicator size="large" color={C.album} />
             <Text style={{ fontSize: 15, fontWeight: "600", color: C.text, marginTop: 14 }}>Envoi de tes photos…</Text>
             <Text style={{ fontSize: 12.5, color: C.textMuted, marginTop: 4 }}>
               {upload ? `${Math.min(upload.done + 1, upload.total)} / ${upload.total}` : ""}
             </Text>
             <View style={{ height: 8, alignSelf: "stretch", backgroundColor: C.bgMuted, borderRadius: 4, overflow: "hidden", marginTop: 14 }}>
-              <View style={{ height: 8, width: `${upload && upload.total ? Math.round((upload.done / upload.total) * 100) : 0}%`, backgroundColor: C.accent, borderRadius: 4 }} />
+              <View style={{ height: 8, width: `${upload && upload.total ? Math.round((upload.done / upload.total) * 100) : 0}%`, backgroundColor: C.album, borderRadius: 4 }} />
             </View>
             <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 12, textAlign: "center" }}>Garde l'app ouverte jusqu'à la fin.</Text>
           </View>
