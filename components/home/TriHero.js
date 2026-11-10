@@ -9,6 +9,7 @@ import Svg, { Defs, LinearGradient, Stop, Ellipse, Rect, Path, G, Circle } from 
 import Text from "../AppText";
 import Icon from "../Icons";
 import { C } from "../../constants/theme";
+import FallingPhoto from "./FallingPhoto";
 
 const SESSION_CHOICES = [10, 20, 30, 40, 50];
 
@@ -18,8 +19,10 @@ const SHADOW = {
 };
 
 // Illustration : une photo qui tombe dans un bac (maquette sauge).
-function TubIllustration() {
+// `photoUrl` : une vraie photo de l'appareil (la prochaine à trier) remplace la photo dessinée.
+function TubIllustration({ photoUrl }) {
   return (
+    <View style={{ width: 150, height: 104 }}>
     <Svg width={150} height={104} viewBox="0 0 170 120">
       <Defs>
         <LinearGradient id="tub" x1="0" y1="0" x2="0" y2="1">
@@ -34,19 +37,24 @@ function TubIllustration() {
       <Rect x="118" y="44" width="30" height="34" rx="5" fill={C.sage} transform="rotate(12 133 61)" />
       <Path d="M30 66 h110 l-10 42 a6 6 0 0 1 -6 4 H46 a6 6 0 0 1 -6 -4z" fill="url(#tub)" />
       <Ellipse cx="85" cy="66" rx="55" ry="9" fill="#e9e9e3" stroke="#d3d3cb" />
-      <G transform="rotate(-6 85 46)">
-        <Rect x="56" y="12" width="58" height="58" rx="11" fill="url(#card)" />
-        <Rect x="68" y="26" width="34" height="26" rx="4" fill="#fff" opacity={0.55} />
-        <Circle cx="93" cy="33" r="3.5" fill={C.accent} />
-        <Path d="M68 50 L79 38 L87 45 L93 40 L102 50Z" fill={C.accent} />
-      </G>
+      {!photoUrl && (
+        <G transform="rotate(-6 85 46)">
+          <Rect x="56" y="12" width="58" height="58" rx="11" fill="url(#card)" />
+          <Rect x="68" y="26" width="34" height="26" rx="4" fill="#fff" opacity={0.55} />
+          <Circle cx="93" cy="33" r="3.5" fill={C.accent} />
+          <Path d="M68 50 L79 38 L87 45 L93 40 L102 50Z" fill={C.accent} />
+        </G>
+      )}
     </Svg>
+    {!!photoUrl && <FallingPhoto uri={photoUrl} left={46} top={7} size={58} rotate="-6deg" radius={11} />}
+    </View>
   );
 }
 
 export default function TriHero({
   allSorted, dureeVal, dureeUnit, rhythmLabel, progressPct, triees, totalGalerie,
   randomCount, onChangeRandomCount,
+  photoUrl,
   shuffleOn, onToggleShuffle,
   ctaTitle, ctaSub, ctaDisabled, onLaunch,
 }) {
@@ -58,7 +66,7 @@ export default function TriHero({
   return (
     <View style={{ marginBottom: 6 }}>
       <View style={{ alignItems: "center" }}>
-        <TubIllustration />
+        <TubIllustration photoUrl={photoUrl} />
 
         {allSorted ? (
           <Text style={{ fontSize: 24, fontWeight: "600", color: C.accent, marginTop: 6 }}>🎉 Tout est trié !</Text>

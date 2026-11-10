@@ -14,6 +14,7 @@ import {
 import Text from "../components/AppText";
 import HomeHeader from "../components/home/HomeHeader";
 import TriHero from "../components/home/TriHero";
+import AlbumHero from "../components/home/AlbumHero";
 import FolderSheet from "../components/home/FolderSheet";
 import ContentSearchSheet from "../components/home/ContentSearchSheet";
 import Icon from "../components/Icons";
@@ -604,6 +605,7 @@ export function HomeScreen({ navigation, route }) {
               progressPct={progressPct}
               triees={triees}
               totalGalerie={totalGalerie}
+              photoUrl={queue[0]?.url}
               randomCount={randomCount}
               onChangeRandomCount={setRandomCount}
               shuffleOn={shuffleOn}
@@ -620,76 +622,20 @@ export function HomeScreen({ navigation, route }) {
           );
         })()}
 
-        {/* ── Mode ALBUM : héros « Ton prochain album » (filtres, mosaïque, bouton) ── */}
+        {/* ── Mode ALBUM : haut calqué sur le mode Tri (AlbumHero, piste A du 10 nov.), puis « Affiner la sélection » ── */}
         {!isMenage && (() => {
           const busy = libraryLoading || albumFiltering;
-          const preview = queue.slice(0, 3);
-          const extra = Math.max(0, queue.length - 3);
-          const tile = (p, style) => p
-            ? <ExpoImage key={p.id} source={{ uri: p.url }} contentFit="cover" style={[{ borderRadius: 16, backgroundColor: C.albumSoft }, style]} />
-            : <View style={[{ borderRadius: 16, backgroundColor: C.albumSoft }, style]} />;
+          const totalMo = queue.reduce((t, p) => t + (p.size || 0), 0);
           return (
             <View>
-              <View style={{ alignItems: "center", marginTop: 14 }}>
-                <Text style={{ color: C.album }}>
-                  <Text style={{ fontSize: 38, fontWeight: "600" }}>{queue.length} </Text>
-                  <Text style={{ fontSize: 20, fontWeight: "600" }}>photo{queue.length > 1 ? "s" : ""}</Text>
-                </Text>
-                {/* Poids de la sélection (Mo / Go) + période couverte */}
-                {queue.length > 0 && (
-                  <>
-                    <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 1 }}>
-                      {formatSize(queue.reduce((t, p) => t + (p.size || 0), 0))}
-                    </Text>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
-                      <Icon name="calendar" size={14} color={C.album} />
-                      <Text style={{ fontSize: 13, color: C.text }}>{periodLabel(queue)}</Text>
-                    </View>
-                  </>
-                )}
-              </View>
-
-
-              {/* Mosaïque : 1 grande photo + 2 petites (la dernière affiche "+N") */}
-              {preview.length > 0 ? (
-                <View style={{ flexDirection: "row", gap: 7, height: 175, marginTop: 10 }}>
-                  {tile(preview[0], { flex: 1.6, height: 175 })}
-                  <View style={{ flex: 1, gap: 7 }}>
-                    {tile(preview[1], { flex: 1 })}
-                    <View style={{ flex: 1 }}>
-                      {tile(preview[2], { flex: 1 })}
-                      {extra > 0 && (
-                        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16, backgroundColor: "rgba(35,39,31,0.42)", alignItems: "center", justifyContent: "center" }}>
-                          <Text style={{ color: "#fff", fontWeight: "600", fontSize: 16 }}>+{extra}</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              ) : (
-                <View style={{ height: 120, marginTop: 10, borderRadius: 16, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ color: C.textMid, fontSize: 12.5 }}>{busy ? "Chargement de tes photos…" : "Aucune photo avec ces filtres"}</Text>
-                </View>
-              )}
-
-              <TouchableOpacity
-                onPress={handleCTA}
-                disabled={busy || queue.length === 0}
-                style={{ marginTop: 16, backgroundColor: C.album, borderRadius: 16, paddingVertical: 11, alignItems: "center",
-                  opacity: busy || queue.length === 0 ? 0.6 : 1,
-                  shadowColor: C.album, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.28, shadowRadius: 12,
-                  // Android : pas d'ombre quand le bouton est grisé (ombre + transparence = rectangle gris)
-                  elevation: busy || queue.length === 0 ? 0 : 4 }}
-              >
-                <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>
-                  {busy ? "Chargement…" : queue.length === 0 ? "Ajuste tes filtres" : "Créer un album"}
-                </Text>
-                {!busy && queue.length > 0 && (
-                  <Text style={{ fontSize: 12, fontWeight: "500", color: "rgba(255,255,255,0.85)", marginTop: 1 }}>
-                    {queue.length} photo{queue.length > 1 ? "s" : ""}
-                  </Text>
-                )}
-              </TouchableOpacity>
+              <AlbumHero
+                count={queue.length}
+                totalLibrary={Math.max(libraryPhotos.length - albumExcludedIds.size, queue.length)}
+                infoLine={queue.length > 0 ? `${formatSize(totalMo)} · ${periodLabel(queue)}` : null}
+                photoUrl={queue[0]?.url}
+                busy={busy}
+                onLaunch={handleCTA}
+              />
 
               {/* Affiner la sélection */}
               <SectionTitle title="Affiner la sélection" />

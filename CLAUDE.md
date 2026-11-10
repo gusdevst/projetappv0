@@ -1003,3 +1003,11 @@ Rien d'autre n'a demandé de rebuild depuis.
   `PosterFrame` props `crop` / `editable` / `onCropChange`), boutons − / ＋ / « Recentrer » ; 4 pastilles de format avec la qualité de la photo **à ce zoom** (`posterQuality(photo, key, zoom)` = dpi ÷ zoom, la donnée que
   Augustin aime) ; **prix discret** (une ligne au-dessus du bouton « Continuer », plus sur chaque format). Le recadrage `{ scale, x, y }` passe à `PosterRecapScreen` (aperçu recadré). Pas de rotation ni de redressement (le livre en a).
   À vérifier : le pincer / glisser dans un `ScrollView` (le geste doit gagner sur le défilement) ; la fabrication du fichier final doit appliquer ce même recadrage.
+
+## 19. Accueil : haut du mode Album calqué sur le mode Tri (10 nov. 2026) — ✅ codé, à tester
+Maquette validée : `Claude outputs/maquette-album-accueil.html` (piste A + vraie photo dans le bac du mode Tri).
+- **Mode Tri** (`TriHero`, prop `photoUrl`) : la photo qui tombe dans le bac est une **vraie photo de l'appareil = la prochaine à trier** (`queue[0]` dans `HomeScreen`) ; sans photo, le dessin d'origine reste.
+- **Mode Album** : nouveau `components/home/AlbumHero.js` (même construction que le mode Tri, en terracotta) : album ouvert dessiné + vraie photo de la sélection (`queue[0]`) → « Ton prochain album : **48 photos** »
+  → « 2,3 Go · du 3 juin au 28 août 2026 » → barre « 48 sur 12 480 photos de ta photothèque » → « Créer un album ». **Plus de mosaïque ni de gros chiffre.** « Affiner la sélection » et tout le bas ne changent pas.
+  **Pas de bouton loupe à côté de « Créer un album »** (idée gardée pour plus tard, décision d'Augustin) ; la barre est gardée (à confirmer à l'usage).
+- `components/home/FallingPhoto.js` : photo réelle, cadre blanc, inclinée, posée par-dessus un dessin SVG (partagée par les deux héros).
