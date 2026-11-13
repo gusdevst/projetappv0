@@ -110,6 +110,11 @@ const ICONS = {
     <Rect x="7" y="5.5" width="10" height="9.5" rx="1" />
     <Path d="M8.5 18.2h5" />
   </>),
+  // Ampoule : onglet « Labo » (la Chambre noire).
+  bulb: (c) => (<>
+    <Path d="M9 18h6M10 21h4" />
+    <Path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" />
+  </>),
   chevronRight: (c) => <Path d="M9 5l7 7-7 7" />,
   close: (c) => <Path d="M6 6l12 12M18 6L6 18" />,
   check: (c) => <Path d="M5 12.5l4.5 4.5L19 7.5" />,

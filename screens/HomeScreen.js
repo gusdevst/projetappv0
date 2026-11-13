@@ -18,6 +18,7 @@ import AlbumHero from "../components/home/AlbumHero";
 import FolderSheet from "../components/home/FolderSheet";
 import ContentSearchSheet from "../components/home/ContentSearchSheet";
 import AlbumLaunchSheet from "../components/home/AlbumLaunchSheet";
+import MyAlbums from "../components/home/MyAlbums";
 import Icon from "../components/Icons";
 import { SectionTitle, ListRow, SHADOW } from "../components/home/ui";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -743,6 +744,9 @@ export function HomeScreen({ navigation, route }) {
                   />
                 </>
               )}
+
+              {/* Mes albums : ils ont quitté l'onglet Galerie (devenu « Labo »), 13 nov. */}
+              <MyAlbums navigation={navigation} />
             </View>
           );
         })()}

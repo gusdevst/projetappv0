@@ -1,5 +1,5 @@
 // components/TabBar.js
-// Barre du bas : Accueil · Progression · [⇄ Tri / Album] · Galerie · Réglages.
+// Barre du bas : Accueil · Progression · [⇄ Tri / Album] · Labo (ex-Galerie = la Chambre noire) · Réglages.
 // Le gros bouton central bascule le mode de l'accueil (vert = Tri, terracotta = Album)
 // et ramène sur l'accueil si on était sur un autre onglet.
 
@@ -7,7 +7,7 @@ import { View, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Text from "./AppText";
 import Icon from "./Icons";
-import { C } from "../constants/theme";
+import { C, DARKROOM } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useSubscriptionTodo } from "../hooks/useSubscriptionTodo";
 
@@ -15,7 +15,7 @@ import { useSubscriptionTodo } from "../hooks/useSubscriptionTodo";
 const TABS = {
   Home:        { icon: "home",  label: "Accueil" },
   ProgressTab: { icon: "chart", label: "Progression" },
-  GalleryTab:  { icon: "grid",  label: "Galerie" },
+  GalleryTab:  { icon: "bulb",  label: "Labo", color: DARKROOM.glow[0] }, // la Chambre noire (13 nov. : ex-« Galerie »), rouge quand elle est active
   SettingsTab: { icon: "gear",  label: "Réglages" },
 };
 
@@ -39,7 +39,7 @@ export function TabBar({ state, navigation }) {
   const item = (route, i) => {
     const focused = state.index === i;
     const t = TABS[route.name];
-    const color = focused ? modeColor : C.textMuted;
+    const color = focused ? (t.color ?? modeColor) : C.textMuted;
     return (
       <TouchableOpacity
         key={route.key}
