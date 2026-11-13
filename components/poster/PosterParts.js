@@ -10,6 +10,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Text from "../AppText";
 import { C, DARKROOM as D } from "../../constants/theme";
 import { CroppedImage } from "../book/CroppedImage";
+import { COVER_STYLE } from "../book/BookPage";
 import { DEFAULT_CROP } from "../../services/photoBook";
 import { POSTER_FORMATS } from "../../services/posterProducts";
 
@@ -18,8 +19,12 @@ export const POSTER_RATIO = 297 / 210;
 
 // Poster : `width` = largeur totale (bord blanc compris). `landscape` = poster horizontal (feuille tournée à 90°).
 // Sans photo : aplat sauge. `crop` : recadrage choisi ({ scale, x, y }) ; `editable` + `onCropChange` : glisser / pincer pour le régler.
-export function PosterFrame({ uri, width, tint = 0, border = 3, landscape = false, crop, editable = false, onCropChange, style }) {
+// `title` (facultatif) : { text, font, pos, color } — titre posé sur la photo (font = clé de COVER_STYLE.font, pos = haut / milieu / bas,
+// color = "blanc" / "noir"). Marge de 8 % de la largeur : bien en dehors des 5 mm de sécurité d'impression.
+export function PosterFrame({ uri, width, tint = 0, border = 3, landscape = false, crop, editable = false, onCropChange, style, title }) {
   const inner = width - border * 2;
+  const font = COVER_STYLE.font[title?.font] ?? COVER_STYLE.font.moderne;
+  const dark = title?.color === "noir";
   return (
     <View style={[{
       width, height: (landscape ? inner / POSTER_RATIO : inner * POSTER_RATIO) + border * 2, backgroundColor: "#fff", padding: border,
@@ -29,6 +34,16 @@ export function PosterFrame({ uri, width, tint = 0, border = 3, landscape = fals
         {!!uri && (crop || editable
           ? <CroppedImage url={uri} crop={{ ...DEFAULT_CROP, ...crop }} editable={editable} onChange={onCropChange} />
           : <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />)}
+        {!!title?.text?.trim() && (
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, padding: inner * 0.08,
+            justifyContent: (COVER_STYLE.pos[title.pos] ?? COVER_STYLE.pos.bas).justify }}>
+            <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.5}
+              style={{ textAlign: "center", fontFamily: font.family, fontWeight: font.weight, fontSize: inner * 0.1, lineHeight: inner * 0.115,
+                color: dark ? "#23271f" : "#ffffff", textShadowColor: dark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.35)", textShadowRadius: inner * 0.02 }}>
+              {title.text.trim()}
+            </Text>
+          </View>
+        )}
         {tint > 0 && <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: D.tint, opacity: tint }} />}
       </View>
     </View>

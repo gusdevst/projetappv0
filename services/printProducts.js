@@ -6,7 +6,9 @@
 // Les coffrets (Box…) et ScrapBooking existent chez eux mais l'API les refuse (« non commandables ») : volontairement absents.
 //
 // ⚠️ PRIX DU TIRAGE SIMPLE = EXEMPLE (maquette du 10 nov.), à fixer par Augustin. Repère : abonnement 12,90 € TTC pour 20 ;
-// coût estimé ≈ 8,57 € HT (20 × 0,18 + 4,97 de port Colissimo). Modifier ici = modifier partout.
+// coût CONFIRMÉ par le support (11 nov.) = 0,20 € HT par tirage, sans dégressivité, + 4,97 € de port Colissimo par commande
+// → 20 tirages = 8,97 € HT. Un tirage en plus à 0,35 € TTC (0,29 € HT) ne laisse que 0,09 € : relever `extraCents` (≥ 45).
+// Modifier ici = modifier partout.
 
 export const PRINT_PRODUCT = {
   name: "Tirages photo",

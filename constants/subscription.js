@@ -13,7 +13,9 @@ export const SUB_PRODUCTS = {
   prints: {
     key: "prints", label: "Tirages photo", unit: "tirage", units: "tirages",
     tagline: "20 tirages 10 × 15 cm, papier brillant", fixedCount: 20, // 20 = minimum par commande chez imprimeur.fr (9 nov. 2026)
-    spec: { widthMm: 102, heightMm: 152, crop: "none", finish: "gloss" },
+    // Fichier exact 100 × 150 mm (API imprimeur.fr, 11 nov.) ; une photo 3:4 est recadrée au centre pour remplir le 2:3 (« cover »),
+    // car la fiche dit seulement « si le ratio ne correspond pas, l'image est centrée » (à confirmer : marges blanches ou rognage ?).
+    spec: { widthMm: 100, heightMm: 150, crop: "cover", finish: "gloss", minDpi: 150 },
   },
   magnets: {
     key: "magnets", label: "Magnets", unit: "magnet", units: "magnets",

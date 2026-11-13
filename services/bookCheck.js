@@ -2,7 +2,7 @@
 // Contrôles d'un livre photo avant impression (logique pure : pas d'UI, pas de store).
 // Les règles d'impression (pages min / max, dpi, fond perdu…) viennent de services/bookProducts.js (bookSpec).
 // L'ancienne règle Gelato (PRINT_SPEC) est archivée dans archive/gelato/.
-import { getCrop, isDoubleLeft, isDoubleRight } from "./photoBook";
+import { getCrop, getCoverCrop, isDoubleLeft, isDoubleRight } from "./photoBook";
 import { bookSpec } from "./bookProducts";
 
 // Largeur du cadre en part de la page (voir ROWS dans components/book/BookPage.js).
@@ -38,6 +38,17 @@ export function checkBook(book, albumIds, photoById) {
   // Le style « Titre seul » n'a pas de photo : rien à vérifier de ce côté.
   const coverOk = book.cover?.style === "titre" || (!!coverId && !!photoById[coverId]);
 
+  // Photo de couverture assez grande ? Même règle que les pages : largeur visible de la photo à 150 dpi (× zoom du recadrage).
+  // « Pleine page », « Cadre fin » et « Bandeau » : la photo couvre toute la largeur ; « Photo centrée » et « Polaroïd » : 72 %.
+  let coverLow = null;
+  const cphoto = coverId ? photoById[coverId] : null;
+  if (book.cover?.style !== "titre" && cphoto?.width && cphoto?.height) {
+    const share = ["centree", "polaroid"].includes(book.cover?.style) ? 0.72 : 1;
+    const need = Math.round(((share * spec.widthMm) / 25.4) * spec.minDpi * (getCoverCrop(book.cover).scale || 1));
+    const have = Math.min(cphoto.width, cphoto.height);
+    if (have < need) coverLow = { have, need };
+  }
+
   const emptyPages = [];
   const lowQuality = [];
   const placed = new Set();
@@ -59,5 +70,5 @@ export function checkBook(book, albumIds, photoById) {
   const unplaced = albumIds.filter((id) => !placed.has(id)).length;
   // Nombre de pages accepté par l'imprimeur du format choisi (layflat : 24 → 120).
   const pagesOk = book.format >= spec.pages.min && book.format <= spec.pages.max && book.format % spec.pages.step === 0;
-  return { coverOk, pagesOk, pagesMin: spec.pages.min, pagesMax: spec.pages.max, emptyPages, lowQuality, unplaced };
+  return { coverOk, coverLow, pagesOk, pagesMin: spec.pages.min, pagesMax: spec.pages.max, emptyPages, lowQuality, unplaced };
 }

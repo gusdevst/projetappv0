@@ -1,5 +1,6 @@
 // screens/PosterPickScreen.js
 // Choisir LA photo du poster, sur UN SEUL écran (pas de page « d'où vient la photo ? » en plus) :
+//   (une seule photo cochée = poster simple, plusieurs = pêle-mêle : détecté tout seul, plus d'interrupteur) ;
 //   trois onglets en haut — Coups de cœur · Albums (pastilles d'albums) · Photothèque (avec recherche par contenu) —
 //   puis la grille (3 colonnes, une seule coche) et « Choisir cette photo » → écran du format.
 // La recherche « l'été 2026 à la plage » réutilise ContentSearchSheet (mode `pickMode` : un seul bouton).
@@ -16,19 +17,20 @@ import ContentSearchSheet from "../components/home/ContentSearchSheet";
 import { SHADOW } from "../components/home/ui";
 import { C } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
+import { COLLAGE_MIN, COLLAGE_MAX } from "../services/posterCollage";
 
 const COLS = 3;
 const GAP = 4;
 const frNum = (n) => n.toLocaleString("fr-FR");
 
 // Une case de la grille (mémorisée : la photothèque peut compter des milliers de photos).
-const Cell = ({ photo, size, selected, onPress }) => (
+const Cell = ({ photo, size, selected, order, onPress }) => (
   <TouchableOpacity activeOpacity={0.85} onPress={() => onPress(photo.id)}
     style={{ width: size, height: size * (4 / 3), borderRadius: 5, overflow: "hidden", backgroundColor: C.albumSoft, borderWidth: selected ? 3 : 0, borderColor: C.album }}>
     <Image source={{ uri: photo.url }} style={{ width: "100%", height: "100%" }} contentFit="cover" recyclingKey={photo.id} />
     {selected && (
       <View style={{ position: "absolute", right: 5, top: 5, width: 20, height: 20, borderRadius: 10, backgroundColor: C.album, alignItems: "center", justifyContent: "center" }}>
-        <Icon name="check" size={12} color="#fff" strokeWidth={3} />
+        {order ? <Text style={{ fontSize: 11, fontWeight: "700", color: "#fff" }}>{order}</Text> : <Icon name="check" size={12} color="#fff" strokeWidth={3} />}
       </View>
     )}
     {!!photo.width && (
@@ -60,7 +62,7 @@ export function PosterPickScreen({ navigation }) {
 
   const [tab, setTab] = useState(() => (keptPhotos.length > 0 ? "kept" : "library")); // onglet de départ
   const [albumId, setAlbumId] = useState(null);       // null = le premier album
-  const [selectedId, setSelectedId] = useState(null);
+  const [sel, setSel] = useState([]);                 // ids cochés, dans l'ordre : 1 photo = poster simple, 2 et plus = pêle-mêle (détecté automatiquement)
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState(null);         // { query, label, ids:Set|null }
 
@@ -73,8 +75,15 @@ export function PosterPickScreen({ navigation }) {
 
   const photos = tab === "kept" ? keptPhotos : tab === "album" ? (currentAlbum?.photos ?? []) : libraryList;
   const cell = Math.floor((SW - GAP * (COLS + 1)) / COLS);
+  const ready = sel.length >= 1;
+  const isCollage = sel.length >= COLLAGE_MIN; // plusieurs photos cochées = pêle-mêle, sans interrupteur
 
-  function changeTab(t) { setTab(t); setSelectedId(null); }
+  function changeTab(t) { setTab(t); } // la sélection suit d'un onglet / d'un album à l'autre
+  // Toucher une photo la coche (numérotée dans l'ordre), la retoucher la décoche. Jusqu'à COLLAGE_MAX photos.
+  const toggleSelect = useCallback((id) => setSel((cur) => {
+    if (cur.includes(id)) return cur.filter((x) => x !== id);
+    return cur.length >= COLLAGE_MAX ? cur : [...cur, id];
+  }), []);
 
   function onApplySearch(r) {
     // Période et contenu se combinent par intersection (comme les filtres de l'accueil).
@@ -86,7 +95,6 @@ export function PosterPickScreen({ navigation }) {
     }
     const label = [r.placeLabel, r.dateLabel, r.contentLabel].filter(Boolean).join(" · ");
     setSearch({ query: r.query, label, ids });
-    setSelectedId(null);
     setSearchOpen(false);
   }
 
@@ -103,7 +111,7 @@ export function PosterPickScreen({ navigation }) {
         <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 18, fontWeight: "700", color: C.text }}>Quelle photo en poster ?</Text>
-          <Text style={{ fontSize: 12, color: C.textMuted }}>Un poster = une photo. Touche celle à imprimer.</Text>
+          <Text style={{ fontSize: 12, color: C.textMuted }}>{`Une photo pour un poster, plusieurs pour un pêle-mêle (jusqu'à ${COLLAGE_MAX}).`}</Text>
         </View>
       </View>
 
@@ -127,7 +135,7 @@ export function PosterPickScreen({ navigation }) {
                 {albumList.map(({ album, photos: ph }) => {
                   const on = currentAlbum?.album.id === album.id;
                   return (
-                    <TouchableOpacity key={album.id} activeOpacity={0.8} onPress={() => { setAlbumId(album.id); setSelectedId(null); }}
+                    <TouchableOpacity key={album.id} activeOpacity={0.8} onPress={() => { setAlbumId(album.id); }}
                       style={{ borderRadius: 99, paddingHorizontal: 13, paddingVertical: 7, backgroundColor: on ? C.album : C.bgCard, borderWidth: 1, borderColor: on ? C.album : C.border }}>
                       <Text style={{ fontSize: 12.5, fontWeight: "600", color: on ? "#fff" : C.textMid }}>{album.name} · {frNum(ph.length)}</Text>
                     </TouchableOpacity>
@@ -148,7 +156,7 @@ export function PosterPickScreen({ navigation }) {
               {search ? search.query : "Chercher : « l'été 2026 à la plage »…"}
             </Text>
             {!!search && (
-              <TouchableOpacity onPress={() => { setSearch(null); setSelectedId(null); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity onPress={() => { setSearch(null); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={{ fontSize: 15, color: C.textMuted }}>✕</Text>
               </TouchableOpacity>
             )}
@@ -158,7 +166,7 @@ export function PosterPickScreen({ navigation }) {
       )}
 
       <Text style={{ fontSize: 11.5, color: C.textMuted, marginHorizontal: 18, marginTop: 10, marginBottom: 6 }}>
-        {`${frNum(photos.length)} photo${photos.length > 1 ? "s" : ""}`}
+        {`${frNum(photos.length)} photo${photos.length > 1 ? "s" : ""}`}{sel.length > 0 ? ` · ${sel.length} sélectionnée${sel.length > 1 ? "s" : ""}` : ""}
       </Text>
       <FlatList
         data={photos}
@@ -169,8 +177,9 @@ export function PosterPickScreen({ navigation }) {
         initialNumToRender={24}
         windowSize={7}
         removeClippedSubviews
+        extraData={sel}
         renderItem={({ item }) => (
-          <MemoCell photo={item} size={cell} selected={item.id === selectedId} onPress={setSelectedId} />
+          <MemoCell photo={item} size={cell} selected={sel.includes(item.id)} order={isCollage ? sel.indexOf(item.id) + 1 : 0} onPress={toggleSelect} />
         )}
         ListEmptyComponent={
           <Text style={{ textAlign: "center", color: C.textMuted, fontSize: 13, marginTop: 40 }}>
@@ -180,10 +189,18 @@ export function PosterPickScreen({ navigation }) {
       />
 
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: C.bg, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 26, borderTopWidth: 1, borderTopColor: C.border }}>
-        <TouchableOpacity activeOpacity={0.85} disabled={!selectedId}
-          onPress={() => navigation.navigate("PosterFormat", { photoId: selectedId })}
-          style={[{ height: 50, borderRadius: 25, backgroundColor: selectedId ? C.album : C.border, alignItems: "center", justifyContent: "center" }, selectedId && SHADOW]}>
-          <Text style={{ color: selectedId ? "#fff" : C.textMuted, fontSize: 15, fontWeight: "700" }}>Choisir cette photo</Text>
+        <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginBottom: 8 }}>
+          {sel.length === 0 ? "Touche une photo, ou plusieurs pour un pêle-mêle"
+            : sel.length === 1 ? "Touche d'autres photos pour faire un pêle-mêle"
+            : sel.length >= COLLAGE_MAX ? `${COLLAGE_MAX} photos : le maximum · touche une photo cochée pour la décocher`
+            : "Pêle-mêle · touche une photo cochée pour la décocher"}
+        </Text>
+        <TouchableOpacity activeOpacity={0.85} disabled={!ready}
+          onPress={() => (isCollage ? navigation.navigate("PosterCollage", { photoIds: sel }) : navigation.navigate("PosterFormat", { photoId: sel[0] }))}
+          style={[{ height: 50, borderRadius: 25, backgroundColor: ready ? C.album : C.border, alignItems: "center", justifyContent: "center" }, ready && SHADOW]}>
+          <Text style={{ color: ready ? "#fff" : C.textMuted, fontSize: 15, fontWeight: "700" }}>
+            {!ready ? "Choisir" : isCollage ? `Composer · ${sel.length} photos` : "Choisir cette photo"}
+          </Text>
         </TouchableOpacity>
       </View>
 

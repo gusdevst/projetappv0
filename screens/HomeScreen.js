@@ -17,6 +17,7 @@ import TriHero from "../components/home/TriHero";
 import AlbumHero from "../components/home/AlbumHero";
 import FolderSheet from "../components/home/FolderSheet";
 import ContentSearchSheet from "../components/home/ContentSearchSheet";
+import AlbumLaunchSheet from "../components/home/AlbumLaunchSheet";
 import Icon from "../components/Icons";
 import { SectionTitle, ListRow, SHADOW } from "../components/home/ui";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -309,6 +310,8 @@ export function HomeScreen({ navigation, route }) {
 
   // ── Sélecteur de dossier ─────────────────────────────────────────────────
   const [selectedAlbum,   setSelectedAlbum]   = useState(null);
+  const [launchSheetOpen, setLaunchSheetOpen] = useState(false); // feuille « Dans quel album ? »
+  const [launchQueue, setLaunchQueue] = useState([]);              // photos qu'elle va faire passer en revue
   const [albumPhotoIds,   setAlbumPhotoIds]   = useState(null);
   const [showAlbumModal,  setShowAlbumModal]  = useState(false);
   const [availableAlbums, setAvailableAlbums] = useState([]);
@@ -419,8 +422,21 @@ export function HomeScreen({ navigation, route }) {
       if (shuffleOn) usePhotoStore.getState().bumpShuffleLaunch(); // badge « Joueur »
       navigation.navigate("Swipe", { queue: q, mode: "menage" });
     } else {
-      navigation.navigate("TriMode", { preQueue: queue, skipToAlbum: true });
+      // Mode Album : feuille « Dans quel album ? » (nouvel album ou album existant), puis le tri démarre directement.
+      setLaunchQueue(queue);
+      setLaunchSheetOpen(true);
     }
+  }
+
+  // Lance le tri Album sur la sélection actuelle, dans l'album choisi (ou créé à l'instant).
+  function launchAlbumSort(albumId, albumName) {
+    setLaunchSheetOpen(false);
+    navigation.navigate("Swipe", { queue: launchQueue, mode: "album", albumId, albumName });
+  }
+  function handleCreateAlbumAndSort(name) {
+    usePhotoStore.getState().createAlbum(name);
+    const created = usePhotoStore.getState().albums.slice(-1)[0];
+    launchAlbumSort(created.id, created.name);
   }
 
   // ── Reprendre un tri Album en cours (mode Album) ─────────────────────────
@@ -551,7 +567,8 @@ export function HomeScreen({ navigation, route }) {
       Alert.alert("Aucune photo", "Avec tes autres filtres (lieu, dossier…), aucune photo ne correspond. Retire-en un pour continuer.");
       return;
     }
-    navigation.navigate("TriMode", { preQueue: q, skipToAlbum: true });
+    setLaunchQueue(q);
+    setLaunchSheetOpen(true);
   }
 
   function handleCalendarConfirm(from, to, label) {
@@ -662,11 +679,6 @@ export function HomeScreen({ navigation, route }) {
                       </Text>
                     )}
                   </View>
-                  {!searchQuery && (
-                    <View style={{ backgroundColor: C.albumSoft, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-                      <Text style={{ fontSize: 10.5, fontWeight: "700", color: C.album, letterSpacing: 0.5 }}>NOUVEAU</Text>
-                    </View>
-                  )}
                   {searchFilters.length > 0 && (
                     <TouchableOpacity
                       onPress={() => searchFilters.forEach((f) => removeAlbumFilter(f.id))}
@@ -812,6 +824,15 @@ export function HomeScreen({ navigation, route }) {
       />
 
       {/* ── Feuille « Chercher dans tes photos » (mode Album) ───────── */}
+      <AlbumLaunchSheet
+        visible={launchSheetOpen}
+        onClose={() => setLaunchSheetOpen(false)}
+        count={launchQueue.length}
+        albums={albums}
+        libraryPhotos={libraryPhotos}
+        onCreate={handleCreateAlbumAndSort}
+        onPick={(a) => launchAlbumSort(a.id, a.name)}
+      />
       <ContentSearchSheet
         visible={showSearch}
         onClose={() => setShowSearch(false)}

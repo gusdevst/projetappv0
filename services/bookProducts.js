@@ -14,9 +14,10 @@
 //
 // ⚠️ Les prix « cost » viennent de l'API imprimeur.fr (fonction `imprimeur-catalogue`, relevé du 9 nov. 2026, prix HT
 //    de NOTRE compte). Si imprimeur.fr change ses tarifs, relancer la fonction et mettre à jour ce fichier.
-// ⚠️ ENCORE À CONFIRMER : (1) fond perdu — la fiche album d'imprimeur.fr parle de « 5 mm de fond perdu » mais les gabarits sont au
-//    format exact : on suit les gabarits (bleedMm = 0) ; à valider avec une commande TEST (clé impr_test_, rien n'est imprimé) ;
-//    (2) dpi minimum (150 supposé), zone de sécurité (5 mm supposée). Aucun des deux n'est dans les gabarits.
+// ✅ CONFIRMÉ par le support imprimeur.fr (11 nov. 2026) : le PDF est au FORMAT FINI exact (pas de page plus grande) ; les 5 mm de fond
+//    perdu sont COMPRIS dans ce format : le fond va jusqu'au bord, mais AUCUN texte / visage / élément important dans les 5 mm du bord
+//    (= marge de sécurité) ; 150 dpi minimum ; RVB (sRGB accepté). La couverture rigide a le même format que les pages (rembord et
+//    tranche gérés chez eux, le visuel peut être très légèrement ajusté). Intérieur des couvertures non imprimé (page de garde blanche).
 //
 // Gelato (ancien livre 21 × 28 cm, 30 → 200 pages) est retiré de l'app : voir archive/gelato/README.md.
 
@@ -25,9 +26,9 @@ const LAYFLAT = {
   finish: "layflat",
   finishLabel: "Layflat · couverture rigide",
   pages: { min: 24, max: 120, step: 2 },
-  bleedMm: 0,  // gabarits = format exact, sans fond perdu (voir plus haut)
-  safeMm: 5,   // hypothèse (à confirmer)
-  minDpi: 150, // hypothèse (à confirmer)
+  bleedMm: 0,  // le fond perdu est DANS le format fini : la page du PDF = le format exact
+  safeMm: 5,   // confirmé : rien d'important dans les 5 mm du bord
+  minDpi: 150, // confirmé : 150 dpi minimum
 };
 
 export const BOOK_PRODUCTS = {

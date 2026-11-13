@@ -1,6 +1,6 @@
 // components/SubscriptionRow.js
 // Une ligne « abonnement en cours » de la Galerie (maquette validée le 8 nov.) :
-// vignette (magnets ou tirages avec les vrais coups de cœur) · « Magnets · pour moi » · prix · pastille d'état · « ··· ».
+// vignette (magnets ou tirages avec les vrais coups de cœur) · « Magnets · pour moi » · « Abonnement · 20 tirages par mois » (pas de prix : 11 nov.) · pastille d'état · « ··· ».
 // `st` = résultat de subStatus() (services/printSelection.js).
 // `dark` = style CHAMBRE NOIRE (maquette validée le 9 nov., mélange B + D) : brique brun-rouge pleine comme les bacs de la
 // guirlande, liseré lumineux à gauche selon l'état (rouge = à valider, vert = validée, gris = pause / à venir),
@@ -11,7 +11,7 @@ import Text from "./AppText";
 import { MagnetTile, PrintTile } from "./ProductArt";
 import { SHADOW } from "./home/ui";
 import { C, DARKROOM as D } from "../constants/theme";
-import { priceLabelFor, productOf, dayLabel } from "../constants/subscription";
+import { productOf, dayLabel } from "../constants/subscription";
 import { STAGES } from "../services/printSelection";
 
 function Thumb({ magnets, urls, dark }) {
@@ -47,7 +47,6 @@ export default function SubscriptionRow({ sub, st, urls = [], onPress, onMenu, h
   const magnets = sub.product === "magnets";
   const product = productOf(sub);
   const chip = chipOf(st);
-  const price = priceLabelFor(sub.count, product.key);
   const onTone = chip.tone !== "off";
 
   // ── Chambre noire : brique sombre + liseré lumineux ──
@@ -65,7 +64,7 @@ export default function SubscriptionRow({ sub, st, urls = [], onPress, onMenu, h
             {magnets ? "Magnets" : "Tirages"} · {sub.kind === "self" ? "pour moi" : sub.name}
           </Text>
           <Text style={{ fontSize: 11, color: D.halo, opacity: 0.8, marginTop: 1 }} numberOfLines={1}>
-            {sub.count} {product.units}{price ? ` · ${price} / mois` : ""}
+            Abonnement · {sub.count} {product.units} par mois
           </Text>
           {chip.tone === "todo" ? (
             // L'action à faire : pastille rouge vive
@@ -95,7 +94,7 @@ export default function SubscriptionRow({ sub, st, urls = [], onPress, onMenu, h
           {magnets ? "Magnets" : "Tirages"} · {sub.kind === "self" ? "pour moi" : sub.name}
         </Text>
         <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }} numberOfLines={1}>
-          {sub.count} {product.units}{price ? ` · ${price} / mois` : ""}
+          Abonnement · {sub.count} {product.units} par mois
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", marginTop: 5, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: onTone ? C.albumSoft : C.bgMuted }}>
           {chip.tone === "todo" && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.album }} />}

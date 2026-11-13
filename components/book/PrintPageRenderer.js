@@ -9,6 +9,8 @@
 import { useEffect, useRef } from "react";
 import { View } from "react-native";
 import { BookPage, BookCover, DoublePage } from "./BookPage";
+import BackCover from "./BackCover";
+import { bookSpec } from "../../services/bookProducts";
 import { coverBgHex, getCrop, doubleLeftIndex, pagePhotoIds, isDoubleLeft } from "../../services/photoBook";
 
 const OFFSCREEN = -20000; // loin à gauche : dessinée, mais jamais visible
@@ -65,11 +67,12 @@ export function PrintPageRenderer({ job, book, urlById: defaultUrls, geo: pageGe
       style={{ position: "absolute", left: OFFSCREEN, top: 0, width: geo.widthPt, height: geo.heightPt, backgroundColor: "#ffffff" }}
     >
       {job.kind === "back" ? (
-        // Couverture de DOS (layflat) : uni, dans la couleur de fond choisie pour la couverture.
-        <View style={{ width: geo.widthPt, height: geo.heightPt, backgroundColor: coverBgHex(book.cover.bg) }} />
+        // Couverture de DOS (layflat) : couleur de fond de la couverture + logo Pellicule et « Fait avec Pellicule ❤️ » au centre.
+        <BackCover bg={book.cover.bg} size={geo.widthPt} ratio={geo.heightPt / geo.widthPt} />
       ) : job.kind === "front" ? (
         // Couverture de FACE (layflat) : une page au format exact, comme le gabarit imprimeur.fr.
-        <BookCover cover={book.cover} size={geo.widthPt} ratio={geo.heightPt / geo.widthPt} urlById={urlById} flat onImageLoad={onImageLoad} />
+        <BookCover cover={book.cover} size={geo.widthPt} ratio={geo.heightPt / geo.widthPt} urlById={urlById} flat onImageLoad={onImageLoad}
+          safe={{ x: bookSpec(book).safeMm / bookSpec(book).widthMm, y: bookSpec(book).safeMm / bookSpec(book).heightMm }} />
       ) : page?.double ? (
         // Moitié d'une double page : la photo est dessinée sur les 2 pages, on ne garde que cette moitié.
         (() => {

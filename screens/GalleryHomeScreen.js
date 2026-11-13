@@ -3,7 +3,7 @@
 // 1. PELLICULE — « Mes albums » en LISTE (mosaïque, nom, nombre de photos, menu ···), ＋ dans le titre, puis « Sans album ».
 // 2. CHAMBRE NOIRE — bloc rouge sombre pleine largeur : tout ce qu'on fait imprimer, déjà visible :
 //    TIRAGES PHOTOS = Coups de cœur (guirlande, mot « Coups de cœur » au-dessus du fil, sans compteurs) + abonnements TIRAGES (brique dessous)
-//    + « ＋ Nouveau » (page produit « Nouveaux tirages » : abonnement ou tirage simple) ; Livres photo (étagère de couvertures). Les abonnements se gèrent dans Réglages.
+//    + « ＋ Créer » (page produit « Nouveaux tirages » : abonnement ou tirage simple) ; Livres photo (étagère de couvertures). Les abonnements se gèrent dans Réglages.
 //    Une seule ampoule : celle du coin du bloc (maquette `maquette-chambre-noire-tirages-v2.html`, validée le 10 nov.).
 // Toucher un élément ouvre seulement SON détail. La corbeille n'est plus ici : elle vit dans la carte « Cette semaine » de l'accueil.
 
@@ -63,7 +63,7 @@ function Cover({ urls, height }) {
 }
 
 // Titre de section de la Chambre noire (maquette « titres », version D validée le 10 nov.) :
-// petit voyant rouge + titre en gras + filet lumineux qui s'estompe + action à droite (« ＋ Nouveau », « ＋ Créer »).
+// petit voyant rouge + titre en gras + filet lumineux qui s'estompe + action à droite (« ＋ Créer » sur chaque produit).
 // `badge` : pastille « NOUVEAU » à côté du titre. `onInfo` : petit ⓘ avant l'action (ex. rouvrir la présentation du poster).
 function DarkLabel({ title, right, onRight, soon, badge, onInfo }) {
   return (
@@ -144,8 +144,8 @@ export function GalleryHomeScreen({ navigation }) {
     const rev = [...keptAlive].reverse();
     return (rev.length > 5 ? rev.slice(3, 6) : rev.slice(0, 3)).map((p) => p.url);
   }, [keptAlive]);
-  const posterIntroSeen = usePhotoStore((s) => s.posterIntroSeen);
-  const openPoster = () => navigation.navigate(posterIntroSeen ? "PosterPick" : "PosterIntro");
+  // « ＋ Créer » et le bloc ouvrent toujours la page produit du poster (plus de ⓘ), d'où on choisit sa photo.
+  const openPoster = () => navigation.navigate("PosterIntro");
   const toPrint = keptAlive.filter((p) => !printedMap[p.id]);
   const garland = toPrint.length ? toPrint : keptAlive;
   const keptUrls = garland.slice(-printsFor(HEART_W, HEART_H)).reverse().map((p) => p.url);
@@ -303,7 +303,7 @@ export function GalleryHomeScreen({ navigation }) {
           <Text style={{ fontSize: 21, fontWeight: "700", color: D.paper }}>Chambre noire</Text>
 
           {/* Tirages photos : guirlande des coups de cœur (mot au-dessus du fil) + abonnements tirages dessous */}
-          <DarkLabel title="Tirages photos" right="＋ Nouveau" onRight={() => navigation.navigate("PrintNew")} />
+          <DarkLabel title="Tirages photos" right="＋ Créer" onRight={() => navigation.navigate("PrintNew")} />
           <TouchableOpacity activeOpacity={0.85} onPress={() => open({ section: "kept" })}>
             <DarkroomCover urls={keptUrls} width={HEART_W} height={HEART_H} radius={16} />
             <View pointerEvents="none" style={{ position: "absolute", left: 16, top: 11, flexDirection: "row", alignItems: "center", gap: 7 }}>
@@ -320,7 +320,7 @@ export function GalleryHomeScreen({ navigation }) {
           </View>
 
           {/* Livres photo : étagère de couvertures */}
-          <DarkLabel title="Livres photo" right="＋ Nouveau" onRight={() => setBookPickerOpen(true)} />
+          <DarkLabel title="Livres photo" right="＋ Créer" onRight={() => setBookPickerOpen(true)} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 4 }}>
             {bookList.map(({ book, album }) => {
               const ids = album.photoIds.filter((id) => urlById[id]);
@@ -354,7 +354,7 @@ export function GalleryHomeScreen({ navigation }) {
           </ScrollView>
 
           {/* Posters : 3 cadres accrochés au fil (maquette `maquette-poster.html`). 1re fois = présentation, ensuite choix de la photo. */}
-          <DarkLabel title="Posters" badge="NOUVEAU" right="＋ Nouveau" onRight={openPoster} onInfo={() => navigation.navigate("PosterIntro")} />
+          <DarkLabel title="Posters" badge="NOUVEAU" right="＋ Créer" onRight={openPoster} />
           <TouchableOpacity activeOpacity={0.85} onPress={openPoster}>
             <PosterWall urls={posterUrls} width={HEART_W} />
           </TouchableOpacity>

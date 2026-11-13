@@ -11,6 +11,9 @@ import Text from "../components/AppText";
 import BackButton from "../components/BackButton";
 import AddressInput from "../components/AddressInput";
 import { PosterFrame } from "../components/poster/PosterParts";
+import CollagePoster from "../components/poster/CollagePoster";
+import { useBookFonts } from "../components/book/bookFonts";
+import { collageLayout, collagePhotoOrder } from "../services/posterCollage";
 import { SHADOW } from "../components/home/ui";
 import { C, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
@@ -18,7 +21,8 @@ import { formatEuro } from "../constants/subscription";
 import { POSTER_FORMATS, POSTER_MAX_QTY, DEFAULT_POSTER_FORMAT, posterPriceCents, posterIsLandscape, posterSizeLabel } from "../services/posterProducts";
 
 export function PosterRecapScreen({ navigation, route }) {
-  const { photoId, format, crop } = route.params ?? {};
+  const { photoId, format, crop, collage, title } = route.params ?? {}; // collage : poster pêle-mêle (plusieurs photos)
+  useBookFonts(); // titre du pêle-mêle
   const f = POSTER_FORMATS[format] ?? POSTER_FORMATS[DEFAULT_POSTER_FORMAT];
   const libraryPhotos = usePhotoStore((s) => s.libraryPhotos);
   const kept = usePhotoStore((s) => s.kept);
@@ -26,6 +30,13 @@ export function PosterRecapScreen({ navigation, route }) {
     () => libraryPhotos.find((p) => p.id === photoId) ?? kept.find((p) => p.id === photoId) ?? null,
     [libraryPhotos, kept, photoId],
   );
+  const cPhotos = useMemo(() => {
+    if (!collage) return [];
+    const byId = new Map([...kept, ...libraryPhotos].map((p) => [p.id, p]));
+    return collage.photoIds.map((id) => byId.get(id)).filter(Boolean);
+  }, [collage, libraryPhotos, kept]);
+  const cCells = useMemo(() => (collage ? collageLayout(collage.style, cPhotos.length, { seed: collage.seed, hasTitle: !!collage.title }) : []), [collage, cPhotos.length]);
+  const cOrder = useMemo(() => collagePhotoOrder(cPhotos.length, collage?.seed ?? 0), [collage, cPhotos.length]);
   const [qty, setQty] = useState(1);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -51,10 +62,14 @@ export function PosterRecapScreen({ navigation, route }) {
         </View>
 
         <View style={[...card, { flexDirection: "row", gap: 14, marginTop: 14 }]}>
-          <PosterFrame uri={photo?.url} crop={crop} width={posterIsLandscape(photo) ? 104 : 78} landscape={posterIsLandscape(photo)} />
+          {collage
+            ? <CollagePoster width={86} photos={cPhotos} cells={cCells} order={cOrder} crops={collage.crops} bg={collage.bg} title={collage.title} titleFont={collage.titleFont} />
+            : <PosterFrame uri={photo?.url} crop={crop} title={title} width={posterIsLandscape(photo) ? 104 : 78} landscape={posterIsLandscape(photo)} />}
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 15, fontWeight: "700", color: C.text }}>Poster {f.name}</Text>
-            <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{posterSizeLabel(f.key, posterIsLandscape(photo))}{posterIsLandscape(photo) ? " · horizontal" : ""}</Text>
+            <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+              {collage ? `${posterSizeLabel(f.key, false)} · pêle-mêle, ${cPhotos.length} photos` : `${posterSizeLabel(f.key, posterIsLandscape(photo))}${posterIsLandscape(photo) ? " · horizontal" : ""}`}
+            </Text>
             <Text style={{ fontSize: 12, color: C.textMuted }}>Papier brillant 250 g</Text>
             <Text style={{ fontSize: 12, color: C.textMuted }}>Livré roulé et protégé</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 14, alignSelf: "flex-start", marginTop: 8, backgroundColor: C.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 3 }}>

@@ -14,6 +14,7 @@ import BackButton from "../components/BackButton";
 import Icon from "../components/Icons";
 import { BookPage, BlankPage, BookCover, DoublePage, COVER_STYLE } from "../components/book/BookPage";
 import BookFormatChooser from "../components/book/BookFormatChooser";
+import BackCover from "../components/book/BackCover";
 import { BOOK_PRODUCTS, BOOK_PRODUCT_KEYS, bookSpec, bookPriceCents } from "../services/bookProducts";
 import { formatEuro } from "../constants/subscription";
 import PhotoPickerSheet from "../components/book/PhotoPickerSheet";
@@ -79,9 +80,10 @@ export function PhotoBookScreen({ navigation, route }) {
   const [coverEdit, setCoverEdit] = useState(false);
   const [liveTilt, setLiveTilt] = useState(null);
   const [bgOpen, setBgOpen] = useState(false);
+  const [coverSide, setCoverSide] = useState("face"); // couverture : "face" (titre, photo, style) ou "dos" (couleur + logo Pellicule)
   const [styleOpen, setStyleOpen] = useState(false);
   const stripRef = useRef(null); // bande « Toutes les pages »
-  useEffect(() => { if (cur !== COVER) { setCoverEdit(false); setLiveTilt(null); setSel(null); setLiveXY(null); } }, [cur]);
+  useEffect(() => { if (cur !== COVER) { setCoverEdit(false); setLiveTilt(null); setSel(null); setLiveXY(null); setCoverSide("face"); } }, [cur]);
   useEffect(() => { setDblSel(false); setDblEdit(false); }, [cur]);
   // La bande des miniatures suit la page affichée (utile au-delà des premières pages).
   useEffect(() => {
@@ -356,8 +358,14 @@ export function PhotoBookScreen({ navigation, route }) {
         {/* Double page (ou couverture seule) — glisser vers la gauche / la droite tourne les pages */}
         <GestureDetector gesture={swipe}>
         <View style={{ marginTop: 10, alignItems: "center" }}>
-          {cur === COVER ? (
+          {cur === COVER && coverSide === "dos" ? (
+            // Dos du livre : couleur de fond + logo Pellicule au centre (identique pour tous les livres).
+            <View style={{ borderRadius: 8, overflow: "hidden", shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.16, shadowRadius: 14, elevation: 4 }}>
+              <BackCover bg={book.cover.bg} size={Math.round(pageW * (landscape ? 1.5 : 1.25))} ratio={ratio} />
+            </View>
+          ) : cur === COVER ? (
             <BookCover cover={liveXY ? { ...book.cover, titleXY: liveXY } : book.cover}
+              safe={{ x: spec.safeMm / spec.widthMm, y: spec.safeMm / spec.heightMm }}
               size={Math.round(pageW * (landscape ? 1.5 : 1.25))} ratio={ratio} urlById={urlById}
               onPress={coverEdit ? undefined : () => setSel(hasCoverPhoto && sel !== "photo" ? "photo" : null)}
               photoSelected={sel === "photo" && !coverEdit}
@@ -387,9 +395,22 @@ export function PhotoBookScreen({ navigation, route }) {
         </View>
         </GestureDetector>
 
+        {/* Couverture : voir la face ou le dos */}
+        {cur === COVER && (
+          <View style={{ alignSelf: "center", flexDirection: "row", backgroundColor: C.bgMuted, borderRadius: 99, padding: 3, marginTop: 12 }}>
+            {[["face", "Face"], ["dos", "Dos"]].map(([k, label]) => (
+              <TouchableOpacity key={k} onPress={() => { setCoverSide(k); setSel(null); setCoverEdit(false); setLiveXY(null); }}
+                style={{ paddingHorizontal: 22, height: 32, borderRadius: 99, alignItems: "center", justifyContent: "center", backgroundColor: coverSide === k ? C.album : "transparent" }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: coverSide === k ? "#fff" : C.textMid }}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginTop: 10 }}>
           {cur === COVER
-            ? (coverEdit ? "Pince pour zoomer · glisse pour déplacer"
+            ? (coverSide === "dos" ? "Le logo Pellicule est ajouté au centre du dos de chaque livre."
+              : coverEdit ? "Pince pour zoomer · glisse pour déplacer"
               : sel === "title" && titleManual ? "Glisse le titre où tu veux sur la couverture"
               : sel ? "" : "Touche le titre ou la photo pour les modifier")
             : dl != null ? (dblEdit ? "Pince pour zoomer · glisse pour déplacer"
@@ -433,6 +454,7 @@ export function PhotoBookScreen({ navigation, route }) {
         {/* COUVERTURE : les outils dépendent de ce que l'utilisateur a touché (la photo ou le titre). */}
         {cur === COVER && (
           <>
+            {coverSide === "face" && (<>
             {/* Pas de titre → on peut en ajouter un */}
             {!book.cover.title && sel !== "title" && !coverEdit && (
               <TouchableOpacity onPress={() => setSel("title")}
@@ -565,10 +587,13 @@ export function PhotoBookScreen({ navigation, route }) {
               )}
             </View>
 
-            {/* Couleur de fond : seulement pour les styles où le fond se voit (voir COVER_STYLES_WITH_BG dans photoBook.js) */}
-            {styleNeedsBg(coverStyleKey) && (
+            </>)}
+
+            {/* Couleur de fond : sur la face, seulement pour les styles où le fond se voit (COVER_STYLES_WITH_BG) ;
+                sur le dos, toujours (le dos prend cette couleur). */}
+            {(coverSide === "dos" || styleNeedsBg(coverStyleKey)) && (
               <>
-                <Text style={sectionStyle}>COULEUR DE FOND</Text>
+                <Text style={sectionStyle}>{coverSide === "dos" ? "COULEUR DU DOS" : "COULEUR DE FOND"}</Text>
                 <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 12, ...SHADOW }}>
                   {/* La couleur actuelle : on la touche pour voir toutes les couleurs */}
                   <TouchableOpacity onPress={() => setBgOpen(!bgOpen)} activeOpacity={0.8}
@@ -578,7 +603,7 @@ export function PhotoBookScreen({ navigation, route }) {
                       <Text style={{ fontSize: 14, fontWeight: "600", color: C.text }}>
                         {COVER_BGS.find((c) => c.key === (book.cover.bg ?? "creme"))?.label}
                       </Text>
-                      <Text style={{ fontSize: 11.5, color: C.textMuted }}>Sert aussi au dos du livre</Text>
+                      <Text style={{ fontSize: 11.5, color: C.textMuted }}>{coverSide === "dos" ? "Même couleur que la couverture" : "Sert aussi au dos du livre"}</Text>
                     </View>
                     <Text style={{ fontSize: 13, fontWeight: "700", color: C.album }}>{bgOpen ? "Fermer ▴" : "Changer ▾"}</Text>
                   </TouchableOpacity>

@@ -123,6 +123,12 @@ export function BookCheckScreen({ navigation, route }) {
                 title={res.coverOk ? "Couverture prête" : "Il manque la photo de couverture"}
                 sub={res.coverOk ? "Photo et titre choisis" : "Choisis-en une dans l'éditeur."}
                 onSee={res.coverOk ? null : () => navigation.goBack()} />
+              {res.coverLow && (
+                <CheckRow ok={false}
+                  title="La photo de couverture est un peu petite"
+                  sub={`Elle fait ${res.coverLow.have} px, il en faut environ ${res.coverLow.need} pour un beau rendu (150 dpi).`}
+                  onSee={() => navigation.goBack()} />
+              )}
               {!res.pagesOk && (
                 <CheckRow ok={false}
                   title={`${book.format} pages : hors des limites d'impression`}

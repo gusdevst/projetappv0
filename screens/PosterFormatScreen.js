@@ -7,20 +7,24 @@
 // Le recadrage choisi voyage jusqu'au récapitulatif (route.params.crop) : `{ scale, x, y }` en parts du cadre.
 
 import { useState, useMemo } from "react";
-import { View, ScrollView, TouchableOpacity, StatusBar, useWindowDimensions } from "react-native";
+import { View, ScrollView, TouchableOpacity, TextInput, StatusBar, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Text from "../components/AppText";
 import BackButton from "../components/BackButton";
 import { PosterFrame, POSTER_RATIO } from "../components/poster/PosterParts";
+import { COVER_STYLE } from "../components/book/BookPage";
+import CollagePoster from "../components/poster/CollagePoster";
+import { useBookFonts } from "../components/book/bookFonts";
 import { SHADOW } from "../components/home/ui";
-import { C } from "../constants/theme";
+import { C, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { formatEuro } from "../constants/subscription";
-import { DEFAULT_CROP, MAX_ZOOM } from "../services/photoBook";
+import { DEFAULT_CROP, MAX_ZOOM, COVER_FONTS } from "../services/photoBook";
 import {
   POSTER_FORMATS, POSTER_FORMAT_KEYS,
   posterIsLandscape, posterSizeLabel, posterQuality, posterQualityLevel, bestPosterFormat, posterPriceCents,
 } from "../services/posterProducts";
+import { COLLAGE_RATIO, collageLayout, collagePhotoOrder, collageQuality, bestCollageFormat } from "../services/posterCollage";
 
 const TONES = {
   good: { bg: C.sage, fg: C.green },
@@ -40,13 +44,31 @@ export function PosterFormatScreen({ navigation, route }) {
     () => libraryPhotos.find((p) => p.id === photoId) ?? kept.find((p) => p.id === photoId) ?? null,
     [libraryPhotos, kept, photoId],
   );
-  const [fmt, setFmt] = useState(() => bestPosterFormat(photo));
+  // Pêle-mêle : plusieurs photos composées sur l'écran précédent (route.params.collage) ; la qualité = la plus petite photo.
+  const collage = route.params?.collage ?? null;
+  useBookFonts(); // titre du pêle-mêle (Caveat)
+  const cPhotos = useMemo(() => {
+    if (!collage) return [];
+    const byId = new Map([...kept, ...libraryPhotos].map((p) => [p.id, p]));
+    return collage.photoIds.map((id) => byId.get(id)).filter(Boolean);
+  }, [collage, libraryPhotos, kept]);
+  const cCells = useMemo(() => (collage ? collageLayout(collage.style, cPhotos.length, { seed: collage.seed, hasTitle: !!collage.title }) : []), [collage, cPhotos.length]);
+  const cOrder = useMemo(() => collagePhotoOrder(cPhotos.length, collage?.seed ?? 0), [collage, cPhotos.length]);
+  const qualityOf = (k, zoom) => (collage
+    ? { dpi: collageQuality(cPhotos, cCells, k, cOrder, collage.crops)?.dpi ?? null }
+    : (photo ? posterQuality(photo, k, zoom) : null));
+
+  const [fmt, setFmt] = useState(() => (collage ? bestCollageFormat(cPhotos, cCells, cOrder, collage.crops) : bestPosterFormat(photo)));
   const [crop, setCrop] = useState(DEFAULT_CROP);
-  const landscape = posterIsLandscape(photo); // poster horizontal si la photo l'est
+  // Titre facultatif posé sur la photo (poster d'UNE photo ; le pêle-mêle a son propre titre, écran de composition).
+  const [title, setTitle] = useState({ text: "", font: "moderne", pos: "bas", color: "blanc" });
+  const hasTitle = title.text.trim().length > 0;
+  const landscape = !collage && posterIsLandscape(photo); // poster horizontal si la photo l'est (jamais pour un pêle-mêle)
 
   // Taille de l'aperçu : le plus grand poster qui tient (largeur de l'écran, ~40 % de sa hauteur).
   const maxH = Math.min(360, SH * 0.4);
   const previewW = landscape ? Math.min(SW - 64, maxH * POSTER_RATIO) : Math.min(SW - 64, maxH / POSTER_RATIO);
+  const collageW = Math.min(SW - 64, maxH / COLLAGE_RATIO);
 
   const patchCrop = (patch) => setCrop((c) => ({ ...c, ...patch }));
   const zoomBy = (d) => setCrop((c) => {
@@ -56,11 +78,11 @@ export function PosterFormatScreen({ navigation, route }) {
   });
   const moved = crop.scale !== 1 || crop.x !== 0 || crop.y !== 0;
 
-  const q = photo ? posterQuality(photo, fmt, crop.scale) : null;
+  const q = qualityOf(fmt, crop.scale);
   const lvl = posterQualityLevel(q?.dpi ?? null);
   const tone = TONES[lvl.tone];
   const hint = lvl.key === "tight" ? "Un peu juste : vu de près, l'image sera moins nette."
-    : lvl.key === "low" ? "Trop petite pour ce format : choisis un format plus petit ou dézoome."
+    : lvl.key === "low" ? (collage ? "Une photo est trop petite pour ce format : choisis un format plus petit." : "Trop petite pour ce format : choisis un format plus petit ou dézoome.")
     : "";
 
   const roundBtn = (label, onPress, disabled) => (
@@ -73,31 +95,71 @@ export function PosterFormatScreen({ navigation, route }) {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 150 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <BackButton onPress={() => navigation.goBack()} />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 18, fontWeight: "700", color: C.text }}>Cadre ton poster</Text>
+            <Text style={{ fontSize: 18, fontWeight: "700", color: C.text }}>{collage ? "Format du poster" : "Cadre ton poster"}</Text>
             <Text style={{ fontSize: 12, color: C.textMuted }}>
-              {photo?.width ? `Photo de ${photo.width} × ${photo.height} px` : "Taille de la photo inconnue"}
+              {collage ? `Pêle-mêle · ${cPhotos.length} photos`
+                : photo?.width ? `Photo de ${photo.width} × ${photo.height} px` : "Taille de la photo inconnue"}
             </Text>
           </View>
         </View>
 
-        {/* Aperçu : glisser pour déplacer, pincer pour zoomer */}
-        <View style={{ alignItems: "center", marginTop: 16, paddingVertical: 18, borderRadius: 20, backgroundColor: C.bgMuted }}>
-          <PosterFrame uri={photo?.url} width={previewW} border={4} landscape={landscape} crop={crop} editable onCropChange={patchCrop} />
-          <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 12 }}>Glisse pour déplacer · pince pour zoomer</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 }}>
-            {roundBtn("−", () => zoomBy(-ZOOM_STEP), crop.scale <= 1)}
-            <Text style={{ fontSize: 13, fontWeight: "700", color: C.text, minWidth: 40, textAlign: "center" }}>{`${Math.round(crop.scale * 100)} %`}</Text>
-            {roundBtn("＋", () => zoomBy(ZOOM_STEP), crop.scale >= MAX_ZOOM)}
-            <TouchableOpacity onPress={() => setCrop(DEFAULT_CROP)} disabled={!moved} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={{ marginLeft: 6, opacity: moved ? 1 : 0.4 }}>
-              <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.album }}>⌖ Recentrer</Text>
-            </TouchableOpacity>
+        {/* Aperçu : glisser pour déplacer, pincer pour zoomer (une photo) · composition en lecture seule (pêle-mêle) */}
+        {collage ? (
+          <View style={{ alignItems: "center", marginTop: 16, paddingVertical: 18, borderRadius: 20, backgroundColor: C.bgMuted }}>
+            <CollagePoster width={collageW} photos={cPhotos} cells={cCells} order={cOrder} crops={collage.crops} bg={collage.bg} title={collage.title} titleFont={collage.titleFont} />
+            <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 12 }}>La qualité est celle de ta photo la plus petite</Text>
           </View>
-        </View>
+        ) : (
+          <View style={{ alignItems: "center", marginTop: 16, paddingVertical: 18, borderRadius: 20, backgroundColor: C.bgMuted }}>
+            <PosterFrame uri={photo?.url} width={previewW} border={4} landscape={landscape} crop={crop} editable onCropChange={patchCrop} title={title} />
+            <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 12 }}>Glisse pour déplacer · pince pour zoomer</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 }}>
+              {roundBtn("−", () => zoomBy(-ZOOM_STEP), crop.scale <= 1)}
+              <Text style={{ fontSize: 13, fontWeight: "700", color: C.text, minWidth: 40, textAlign: "center" }}>{`${Math.round(crop.scale * 100)} %`}</Text>
+              {roundBtn("＋", () => zoomBy(ZOOM_STEP), crop.scale >= MAX_ZOOM)}
+              <TouchableOpacity onPress={() => setCrop(DEFAULT_CROP)} disabled={!moved} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{ marginLeft: 6, opacity: moved ? 1 : 0.4 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.album }}>⌖ Recentrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+        )}
+
+        {/* Titre facultatif sur le poster (une photo) : texte, puis police / position / couleur dès qu'il y a un texte */}
+        {!collage && (
+          <>
+            <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.8, color: C.textMuted, marginTop: 20, marginBottom: 8 }}>TITRE (FACULTATIF)</Text>
+            <TextInput value={title.text} onChangeText={(text) => setTitle((t) => ({ ...t, text }))} maxLength={40}
+              placeholder="Été 2026" placeholderTextColor={C.textMuted}
+              style={[{ backgroundColor: C.bgCard, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontFamily: FONT, fontSize: 15, color: C.text }, SHADOW]} />
+            {hasTitle && (
+              <View style={[{ backgroundColor: C.bgCard, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 4, marginTop: 8 }, SHADOW]}>
+                {[
+                  ["Police", COVER_FONTS.map((k) => ({ key: k, label: COVER_STYLE.font[k].label, style: { fontFamily: COVER_STYLE.font[k].family, fontWeight: COVER_STYLE.font[k].weight } })), "font"],
+                  ["Position", ["haut", "milieu", "bas"].map((k) => ({ key: k, label: COVER_STYLE.pos[k].label })), "pos"],
+                  ["Couleur", [{ key: "blanc", label: "Blanc" }, { key: "noir", label: "Noir" }], "color"],
+                ].map(([label, options, field], i, all) => (
+                  <View key={field} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, borderBottomWidth: i < all.length - 1 ? 1 : 0, borderBottomColor: C.border }}>
+                    <Text style={{ width: 62, fontSize: 13, color: C.text, fontWeight: "500" }}>{label}</Text>
+                    <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: 5 }}>
+                      {options.map((o) => (
+                        <TouchableOpacity key={o.key} onPress={() => setTitle((t) => ({ ...t, [field]: o.key }))}
+                          style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: title[field] === o.key ? C.album : C.bgMuted }}>
+                          <Text style={[{ fontSize: 13, color: title[field] === o.key ? "#fff" : C.textMid }, o.style]}>{o.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
 
         {/* Format : 4 pastilles, chacune avec la qualité de cette photo */}
         <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.8, color: C.textMuted, marginTop: 20, marginBottom: 8 }}>FORMAT</Text>
@@ -105,7 +167,7 @@ export function PosterFormatScreen({ navigation, route }) {
           {POSTER_FORMAT_KEYS.map((k) => {
             const f = POSTER_FORMATS[k];
             const sel = k === fmt;
-            const pq = photo ? posterQuality(photo, k, crop.scale) : null;
+            const pq = qualityOf(k, crop.scale);
             const l = posterQualityLevel(pq?.dpi ?? null);
             const t = TONES[l.tone];
             return (
@@ -137,7 +199,7 @@ export function PosterFormatScreen({ navigation, route }) {
         <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginBottom: 8 }}>
           {POSTER_FORMATS[fmt].name} · {formatEuro(posterPriceCents(fmt))} TTC, livraison comprise
         </Text>
-        <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate("PosterRecap", { photoId, format: fmt, crop: { scale: crop.scale, x: crop.x, y: crop.y } })}
+        <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate("PosterRecap", collage ? { collage, format: fmt } : { photoId, format: fmt, crop: { scale: crop.scale, x: crop.x, y: crop.y }, title: hasTitle ? { ...title, text: title.text.trim() } : null })}
           style={[{ height: 50, borderRadius: 25, backgroundColor: C.album, alignItems: "center", justifyContent: "center" }, SHADOW]}>
           <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>Continuer</Text>
         </TouchableOpacity>

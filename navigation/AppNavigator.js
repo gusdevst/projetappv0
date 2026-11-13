@@ -40,6 +40,7 @@ import { BlurCalibrationScreen } from "../screens/BlurCalibrationScreen";
 import { BlurryPhotosScreen } from "../screens/BlurryPhotosScreen";
 import { PosterIntroScreen } from "../screens/PosterIntroScreen";
 import { PosterPickScreen } from "../screens/PosterPickScreen";
+import { PosterCollageScreen } from "../screens/PosterCollageScreen";
 import { PosterFormatScreen } from "../screens/PosterFormatScreen";
 import { PosterRecapScreen } from "../screens/PosterRecapScreen";
 import { usePhotoStore }         from "../store/usePhotoStore";
@@ -128,6 +129,7 @@ export function AppNavigator() {
       <Stack.Screen name="BlurryPhotos" component={BlurryPhotosScreen} />
       <Stack.Screen name="PosterIntro"  component={PosterIntroScreen} />
       <Stack.Screen name="PosterPick"   component={PosterPickScreen} />
+      <Stack.Screen name="PosterCollage" component={PosterCollageScreen} />
       <Stack.Screen name="PosterFormat" component={PosterFormatScreen} />
       <Stack.Screen name="PosterRecap"  component={PosterRecapScreen} />
       {__DEV__ && <Stack.Screen name="BlurCalibration" component={BlurCalibrationScreen} />}

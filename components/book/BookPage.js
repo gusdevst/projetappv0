@@ -125,15 +125,21 @@ function TitleTap({ onPress, selected, children }) {
 }
 
 // Titre de couverture en position MANUELLE : centre en (xy.x, xy.y) = parts de la couverture. Glissable si draggable.
-function ManualTitle({ xy, W, H, width, textStyle, shadow, title, selected, onPress, draggable, onMove, onMoveEnd, onDrag }) {
+function ManualTitle({ xy: rawXY, W, H, width, textStyle, shadow, title, selected, onPress, draggable, onMove, onMoveEnd, onDrag, safe }) {
   const [h, setH] = useState(textStyle.lineHeight ?? 24);
+  // Largeur estimée du texte (la boîte colle au texte) : sert à garder le titre ENTIER dans la zone de sécurité (5 mm du bord).
+  const tw = Math.min(width, Math.max((textStyle.fontSize ?? 20) * 2, title.length * (textStyle.fontSize ?? 20) * 0.6));
+  const sx = safe?.x ?? 0, sy = safe?.y ?? 0;
+  const clampX = (v) => { const half = tw / 2 / W; return Math.min(1 - sx - half, Math.max(sx + half, v)); };
+  const clampY = (v) => { const half = h / 2 / H; return Math.min(1 - sy - half, Math.max(sy + half, v)); };
+  const xy = { x: clampX(rawXY.x), y: clampY(rawXY.y) }; // une position enregistrée trop près du bord est ramenée dans la zone sûre
   const start = useRef(xy);
   const last = useRef(xy);
-  const clamp = (v) => Math.min(0.95, Math.max(0.05, v));
+  const clamp = (v) => v;
   const pan = Gesture.Pan().runOnJS(true).enabled(!!draggable).minDistance(2)
     .onBegin(() => { start.current = xy; last.current = xy; onDrag?.(true); })
     .onUpdate((e) => {
-      last.current = { x: clamp(start.current.x + e.translationX / W), y: clamp(start.current.y + e.translationY / H) };
+      last.current = { x: clampX(start.current.x + e.translationX / W), y: clampY(start.current.y + e.translationY / H) };
       onMove?.(last.current);
     })
     .onEnd(() => { onMoveEnd?.(last.current); })
@@ -141,7 +147,7 @@ function ManualTitle({ xy, W, H, width, textStyle, shadow, title, selected, onPr
   return (
     <GestureDetector gesture={pan}>
       <View onLayout={(e) => setH(e.nativeEvent.layout.height)}
-        style={{ position: "absolute", left: xy.x * W - width / 2, top: xy.y * H - h / 2, width }}>
+        style={{ position: "absolute", left: xy.x * W - tw / 2, top: xy.y * H - h / 2, width: tw }}>
         <TitleTap onPress={onPress} selected={selected}>
           <Text numberOfLines={2} style={[textStyle, shadow && { textShadowColor: "rgba(0,0,0,0.22)", textShadowRadius: 8 }]}>{title}</Text>
         </TitleTap>
@@ -223,8 +229,9 @@ export function coverTitleColor(cover) {
 // Édition du TITRE (écran de couverture) : onTitlePress = toucher le titre · titleSelected = entouré en pointillés ·
 // titleDraggable + cover.titleXY = déplaçable au doigt (onTitleMove en direct, onTitleMoveEnd au lâcher, onTitleDrag(true / false) au début / à la fin).
 // photoSelected = la photo est entourée (onPress = toucher la photo).
+// safe = { x, y } : zone de sécurité en parts de la couverture (5 mm / largeur, 5 mm / hauteur) ; un titre en position manuelle n'en sort jamais.
 export function BookCover({ cover, size, ratio = 1, urlById, onPress, flat, onImageLoad, bleed, editable, onCropChange, cropPreview,
-  onTitlePress, titleSelected, titleDraggable, onTitleMove, onTitleMoveEnd, onTitleDrag, photoSelected }) {
+  onTitlePress, titleSelected, titleDraggable, onTitleMove, onTitleMoveEnd, onTitleDrag, photoSelected, safe }) {
   const url = cover.photoId ? urlById[cover.photoId] : null;
   const mini = size < 60;
   const style = cover.style ?? "pleine";
@@ -287,7 +294,7 @@ export function BookCover({ cover, size, ratio = 1, urlById, onPress, flat, onIm
         // Position MANUELLE : le titre est posé où l'utilisateur l'a glissé.
         <ManualTitle xy={cover.titleXY} W={W} H={H} width={cW * 0.84} textStyle={textStyle} shadow={onPhoto}
           title={cover.title} selected={titleSelected} onPress={onTitlePress} draggable={titleDraggable}
-          onMove={onTitleMove} onMoveEnd={onTitleMoveEnd} onDrag={onTitleDrag} />
+          onMove={onTitleMove} onMoveEnd={onTitleMoveEnd} onDrag={onTitleDrag} safe={safe} />
       ) : onPhoto ? (
         // Le titre est posé sur la photo : en haut, au milieu ou en bas selon le réglage « Position ».
         <View pointerEvents="box-none" style={{ position: "absolute", left: cx, top: cy, width: cW, height: cH,

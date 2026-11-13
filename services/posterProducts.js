@@ -9,7 +9,9 @@
 //   · papier pelliculé brillant 250 g, livré roulé et protégé, production 1 à 3 jours ouvrés (fiche produit) ;
 //   · l'API affiche « 20×30 / 30×40 / 42×59 / 59×84 cm » mais les tailles RÉELLES sont A4 / A3 / A2 / A1
 //     (210×297, 297×420, 420×594, 590×840 mm) : l'app affiche les vraies dimensions.
-// ⚠️ Pas publiés par imprimeur.fr : dpi minimum et fond perdu. On suppose 150 dpi et 0 mm, à valider par une commande TEST.
+// Tailles RÉELLES confirmées par l'API le 11 nov. (`width_mm` × `height_mm`) : 210×297, 297×420, 420×594, 590×840 mm.
+// Support imprimeur.fr (11 nov.), POUR LES ALBUMS : 150 dpi minimum, fichier au format fini exact, rien d'important dans les 5 mm du bord.
+// ⚠️ Pas confirmé POUR LES POSTERS : la même règle (150 dpi, fichier au format exact, 5 mm de sécurité) est supposée ; poster horizontal : l'API ne liste que des formats portrait.
 // ⚠️ Fichier à envoyer : UN JPG / PNG par exemplaire, via une URL publique (pas encore branché : commande en standby).
 //
 // Prix de vente = ceux proposés dans la maquette `maquette-poster.html` (TTC, livraison comprise) : à confirmer par Augustin.
@@ -54,10 +56,13 @@ export const DEFAULT_POSTER_FORMAT = "a3";
 export const POSTER_HIGHLIGHTS = [
   "Impression haute définition",
   "Papier photo pelliculé brillant, 250 g",
-  "Imprimé en France, prêt en 1 à 3 jours ouvrés",
-  "Livré roulé et protégé, chez toi en 2 à 4 jours",
+  "Imprimé en France 🇫🇷, prêt en 1 à 3 jours ouvrés",
+  "Livré roulé et protégé",
   "Satisfait ou refait", // ⚠️ à vérifier dans les CGV d'imprimeur.fr avant la mise en ligne
 ];
+// N'est PLUS affichée (retirée de l'image le 12 nov. à la demande d'Augustin) ; gardée pour plus tard. = fabrication 1 à 3 jours ouvrés + Colissimo 2 à 4 jours ouvrés (API imprimeur.fr) = 3 à 7 jours.
+// ⚠️ « x jours » : valeur choisie par Claude le 11 nov., à confirmer par Augustin.
+export const POSTER_DELIVERY_LABEL = "Livré sous 3 à 7 jours";
 
 const fmt = (key) => POSTER_FORMATS[key] ?? POSTER_FORMATS[DEFAULT_POSTER_FORMAT];
 
