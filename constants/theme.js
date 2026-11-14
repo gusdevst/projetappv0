@@ -81,6 +81,14 @@ export const DARKROOM = {
   todoGlow: "#ff9e8e",                      // liseré lumineux « à valider »
 };
 
+// Couleur de chaque FONCTION de l'app (badges, anneaux de l'écran Progression) :
+// Tri = vert de la palette, Album = terracotta, Labo = rouge de la chambre noire (version lisible sur fond clair).
+export const FN_COLORS = {
+  tri:   { name: "Tri",   main: C.accent,  soft: C.sage },
+  album: { name: "Album", main: C.album,   soft: C.albumSoft },
+  labo:  { name: "Labo",  main: "#a63a2d", soft: "#f7e3df" },
+};
+
 export const FONT = "Outfit";
 
 export const FILTERS = [

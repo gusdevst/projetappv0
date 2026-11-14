@@ -184,7 +184,10 @@ export function PosterCollageScreen({ navigation, route }) {
 
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: C.bg, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 26, borderTopWidth: 1, borderTopColor: C.border }}>
         <TouchableOpacity activeOpacity={0.85} disabled={n < COLLAGE_MIN}
-          onPress={() => navigation.navigate("PosterFormat", { collage: { photoIds: ids, style, bg, seed, title: title.trim(), titleFont, crops } })}
+          onPress={() => {
+            usePhotoStore.getState().notePosterCollage(ids.length); // badge « Pêle-mêle »
+            navigation.navigate("PosterFormat", { collage: { photoIds: ids, style, bg, seed, title: title.trim(), titleFont, crops } });
+          }}
           style={[{ height: 50, borderRadius: 25, backgroundColor: n >= COLLAGE_MIN ? C.album : C.border, alignItems: "center", justifyContent: "center" }, n >= COLLAGE_MIN && SHADOW]}>
           <Text style={{ color: n >= COLLAGE_MIN ? "#fff" : C.textMuted, fontSize: 15, fontWeight: "700" }}>Continuer</Text>
         </TouchableOpacity>

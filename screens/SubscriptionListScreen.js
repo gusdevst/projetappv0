@@ -76,7 +76,7 @@ export function SubscriptionListScreen({ navigation }) {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 14.5, fontWeight: "500", color: C.text }} numberOfLines={1}>{labelOf(x)}</Text>
-                    <Text style={{ fontSize: 11, color: C.textMuted }}>{x.count} {productOf(x).units} · {x.product === "magnets" ? "5 × 5 cm" : SUB_FORMAT_LABEL}</Text>
+                    <Text style={{ fontSize: 11, color: C.textMuted }}>{x.count} {productOf(x).units} · {SUB_FORMAT_LABEL}</Text>
                   </View>
                   <Pill text={paused ? "EN PAUSE" : "ACTIF"} on={!paused} />
                   <Text style={{ color: C.textMuted, fontSize: 18 }}>›</Text>

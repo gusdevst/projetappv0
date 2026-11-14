@@ -19,6 +19,7 @@ import BackButton from "../components/BackButton";
 import { RankCard } from "../components/RankCard";
 import { BadgesGrid } from "../components/BadgesGrid";
 import { buildContext } from "../services/achievements";
+import { useSubscriptionStore } from "../store/useSubscriptionStore";
 
 const CHART_H   = 150;        // hauteur max d'une barre
 const BAR_LIGHT = C.sage2;  // barres passées
@@ -215,6 +216,8 @@ export function ProgressScreen({ navigation, route }) {
   useFocusEffect(useCallback(() => { checkAchievements(); }, [checkAchievements]));
   // Mesures actuelles (photos triées, Go, coups de cœur…).
   // Calcul direct à chaque affichage (léger) : toujours à jour au retour sur l'écran.
+  // Abonnements et photos imprimées : lus ici pour que les badges du Labo se rafraîchissent quand ils changent.
+  useSubscriptionStore((s) => s.subs); useSubscriptionStore((s) => s.selections); useSubscriptionStore((s) => s.printedPhotos);
   const ctx = buildContext(usePhotoStore.getState());
   const max   = Math.max(1, ...bars.map((b) => b.sorted));
 

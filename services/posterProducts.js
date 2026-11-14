@@ -4,8 +4,9 @@
 //
 // ── Source des données (relevé du 10 nov. 2026, API imprimeur.fr via la fonction `imprimeur-catalogue`, clé TEST) ──
 //   · produit `poster`, finition unique `standard` (« Poster seul »), 1 exemplaire minimum, pas de maximum par ligne ;
-//   · prix unitaire HT : 3,22 € · 4,86 € · 10,98 € · 15,00 € ; port = forfait par commande (Colissimo 4,97 € HT,
-//     Chronopost 8,25 € HT), le MÊME pour les 4 formats et quelle que soit la quantité (testé avec 5 exemplaires) ;
+//   · prix unitaire HT : 3,22 € · 4,86 € · 10,98 € · 15,00 € ; port = forfait par commande (Colissimo 5,90 € HT
+//     depuis la mi-nov. 2026, 4,97 € avant ; Chronopost 10,50 €), le MÊME pour les 4 formats et quelle que soit la quantité (testé avec 5 exemplaires) ;
+//     marge à 1 exemplaire (prix TTC → HT, moins coût et port, avant frais de paiement) : A4 3,30 € · A3 4,16 € · A2 6,37 € · A1 8,18 € ;
 //   · papier pelliculé brillant 250 g, livré roulé et protégé, production 1 à 3 jours ouvrés (fiche produit) ;
 //   · l'API affiche « 20×30 / 30×40 / 42×59 / 59×84 cm » mais les tailles RÉELLES sont A4 / A3 / A2 / A1
 //     (210×297, 297×420, 420×594, 590×840 mm) : l'app affiche les vraies dimensions.

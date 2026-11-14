@@ -90,7 +90,7 @@ export async function submitSelection({ sub, month, photoIds, onProgress }) {
       photo_count: paths.length,
       photos: paths,
       photo_info: info,              // dimensions + forme de chaque photo (horizontales à tourner pour un tirage)
-      product: productOf(sub).key,   // "prints" | "magnets" : à quoi servent ces photos
+      product: productOf(sub).key,   // "prints" (seul produit depuis le 14 nov. 2026) : à quoi servent ces photos
       spec: productOf(sub).spec,     // taille finale (mm), recadrage… pour l'imprimeur, quel qu'il soit
     },
     { onConflict: "user_id,sub_id,month" }

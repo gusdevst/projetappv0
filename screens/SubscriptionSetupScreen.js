@@ -11,11 +11,10 @@ import Text from "../components/AppText";
 import BackButton from "../components/BackButton";
 import { Toggle } from "../components/Toggle";
 import AddressInput from "../components/AddressInput";
-import { MagnetTile, PrintTile, useKeptUrls } from "../components/ProductArt";
 import { SHADOW } from "../components/home/ui";
 import { C, FONT } from "../constants/theme";
 import {
-  SUB_PHOTOS, SUB_FORMAT_LABEL, SUB_SEND_DAY, SUB_VALIDATE_BY, SUB_PRODUCTS, SUB_PRICES, priceLabelFor,
+  SUB_PHOTOS, SUB_FORMAT_LABEL, SUB_SEND_DAY, SUB_VALIDATE_BY, SUB_PRODUCTS, priceLabelFor,
 } from "../constants/subscription";
 import SubDaysFields from "../components/SubDaysFields";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
@@ -73,46 +72,6 @@ function ValidateRow({ value, onToggle, sub }) {
   );
 }
 
-// Choix du type d'envoi : magnets (plus large, en vedette) ou tirages. Vignettes faites avec les vrais coups de cœur.
-function ProductPicker({ value, onChange }) {
-  const urls = useKeptUrls(3);
-  const art = (k) => k === "magnets" ? (
-    <View style={{ height: 78, borderRadius: 12, backgroundColor: C.bgMuted, overflow: "hidden" }}>
-      <MagnetTile uri={urls[0]} index={0} size={42} style={{ position: "absolute", left: 10, top: 22, transform: [{ rotate: "-9deg" }] }} />
-      <MagnetTile uri={urls[1]} index={1} size={46} style={{ position: "absolute", left: 44, top: 8, zIndex: 2, transform: [{ rotate: "5deg" }] }} />
-      <MagnetTile uri={urls[2]} index={2} size={40} style={{ position: "absolute", left: 78, top: 26, zIndex: 3, transform: [{ rotate: "-4deg" }] }} />
-    </View>
-  ) : (
-    <View style={{ height: 78, borderRadius: 12, backgroundColor: C.bgMuted, overflow: "hidden" }}>
-      <PrintTile uri={urls[0]} index={0} width={62} style={{ position: "absolute", left: 14, top: 12, transform: [{ rotate: "-6deg" }] }} />
-      <PrintTile uri={urls[1]} index={1} width={62} style={{ position: "absolute", left: 40, top: 20, zIndex: 2, transform: [{ rotate: "4deg" }] }} />
-    </View>
-  );
-  const priceText = (k) => `${Object.values(SUB_PRICES[k])[0]} / mois`;
-  return (
-    <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
-      {["magnets", "prints"].map((k) => {
-        const p = SUB_PRODUCTS[k];
-        const on = value === k;
-        return (
-          <TouchableOpacity key={k} onPress={() => onChange(k)} activeOpacity={0.85}
-            style={[{ flex: k === "magnets" ? 1.12 : 0.88, borderRadius: 18, padding: 10, backgroundColor: on ? C.albumSoft : C.bgCard, borderWidth: 2, borderColor: on ? C.album : "transparent" }, SHADOW]}>
-            {art(k)}
-            {k === "magnets" && (
-              <View style={{ position: "absolute", right: 8, top: 8, zIndex: 5, backgroundColor: C.album, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                <Text style={{ fontSize: 8.5, fontWeight: "700", color: "#fff" }}>NOUVEAU</Text>
-              </View>
-            )}
-            <Text style={{ fontSize: 14, fontWeight: "700", color: C.text, marginTop: 8 }}>{k === "magnets" ? "Magnets" : "Tirages"}</Text>
-            <Text style={{ fontSize: 11, color: C.textMid, marginTop: 1 }}>{k === "magnets" ? "9 aimants 5 × 5 cm" : "10 × 15 cm"}</Text>
-            <Text style={{ fontSize: 12, fontWeight: "700", color: k === "magnets" ? C.album : C.textMid, marginTop: 5 }}>{priceText(k)}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-}
-
 export function SubscriptionSetupScreen({ navigation, route }) {
   const [tab, setTab] = useState(route.params?.kind === "gift" ? "gift" : "self");
 
@@ -121,7 +80,7 @@ export function SubscriptionSetupScreen({ navigation, route }) {
   const session = useAuthStore((s) => s.session);
   const alreadySelf = subs.some((x) => x.kind === "self" && x.status !== "cancelled");
 
-  const [product, setProduct] = useState(route.params?.product === "prints" ? "prints" : "magnets"); // type d'envoi (magnets en vedette)
+  const product = "prints"; // un seul type d'envoi depuis le 14 nov. 2026 (magnets retirés : archive/magnets/)
   // « Pour moi »
   const [myRecipient, setMyRecipient]   = useState("");   // nom sur l'enveloppe
   const [myAddress, setMyAddress]       = useState("");   // choisie dans les suggestions, ou saisie à la main
@@ -204,12 +163,10 @@ export function SubscriptionSetupScreen({ navigation, route }) {
             ))}
           </View>
 
-          <ProductPicker value={product} onChange={setProduct} />
-
           {isSelf ? (
             <>
-              <Field label={product === "magnets" ? "Magnets par mois" : "Photos par mois"}><Value>{count} {prod.units}</Value></Field>
-              <Field label="Format"><Value>{product === "magnets" ? "5 × 5 cm, aimantés, carrés" : `${SUB_FORMAT_LABEL}, papier brillant`}</Value></Field>
+              <Field label="Photos par mois"><Value>{count} {prod.units}</Value></Field>
+              <Field label="Format"><Value>{`${SUB_FORMAT_LABEL}, papier brillant`}</Value></Field>
               <Field label="Nom sur l'enveloppe">
                 <Input value={myRecipient} onChangeText={setMyRecipient} editable={!alreadySelf} placeholder="Prénom Nom" autoCapitalize="words" />
               </Field>
@@ -240,18 +197,9 @@ export function SubscriptionSetupScreen({ navigation, route }) {
               <Field label="Complément d'adresse (facultatif)">
                 <Input value={giftComplement} onChangeText={setGiftComplement} placeholder="Bâtiment, étage, code porte…" />
               </Field>
-              {product === "magnets" ? (
-                <>
-                  <Field label="Magnets par mois"><Value>{count} {prod.units}</Value></Field>
-                  <Field label="Format"><Value>5 × 5 cm, aimantés, carrés</Value></Field>
-                </>
-              ) : (
-                <>
-                  <Field label="Tirages par mois"><Value>{count} {prod.units}</Value></Field>
-                  <Field label="Format"><Value>{SUB_FORMAT_LABEL}, papier brillant</Value></Field>
-                </>
-              )}
-              <Field label={product === "magnets" ? "Petit mot glissé dans l'envoi" : "Petit mot au dos de la 1re photo"}>
+              <Field label="Tirages par mois"><Value>{count} {prod.units}</Value></Field>
+              <Field label="Format"><Value>{SUB_FORMAT_LABEL}, papier brillant</Value></Field>
+              <Field label="Petit mot au dos de la 1re photo">
                 <Input value={giftMessage} onChangeText={setGiftMessage} multiline maxLength={120}
                   placeholder="« Avec tout mon amour »" style={{ fontStyle: "italic" }} />
               </Field>

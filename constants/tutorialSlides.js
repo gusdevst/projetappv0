@@ -44,7 +44,7 @@ export const TUTORIAL_SLIDES = [
     visual: "heart",
     title: "Le ❤️, pour tes plus belles photos",
     body: [
-      "Pendant le tri, touche le ❤️ sur celles que tu adores.\nElles vont dans ta Chambre noire, dans l'onglet Galerie : c'est là qu'elles deviennent des tirages, des magnets ou un livre photo.",
+      "Pendant le tri, touche le ❤️ sur celles que tu adores.\nElles vont dans ta Chambre noire, dans l'onglet Galerie : c'est là qu'elles deviennent des tirages ou un livre photo.",
     ],
   },
   {
@@ -54,7 +54,7 @@ export const TUTORIAL_SLIDES = [
     body: [
       "**Coups de cœur** : tes photos à imprimer. {{bientôt}}",
       "**Livres photo** : compose ton livre 21 × 28 cm. {{commande bientôt}}",
-      "**Abonnement** : chaque mois, Pellicule te propose une sélection de tes coups de cœur.\nTu la reçois chez toi en magnets ou en tirages.",
+      "**Abonnement Coups de cœur** : chaque mois, Pellicule te propose une sélection de tes coups de cœur.\nTu la reçois chez toi en tirages.",
     ],
   },
   {

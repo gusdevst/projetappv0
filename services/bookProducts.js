@@ -60,8 +60,12 @@ export const BOOK_PRODUCTS = {
 export const BOOK_PRODUCT_KEYS = ["a4", "paysage"];
 export const DEFAULT_BOOK_PRODUCT = "a4";
 
-// Port imprimeur.fr (Colissimo, en France, HT) : forfait par commande, le même pour tous les albums (relevé du 9 nov. 2026).
-export const SHIPPING_COST_CENTS = 497;
+// Port imprimeur.fr (Colissimo, en France, HT) : forfait par commande, le même pour tous les produits (albums, posters, tirages).
+// 5,90 € depuis la hausse annoncée par imprimeur.fr en nov. 2026 (avant : 4,97 €) ; l'API le quote déjà (`POST /shipping/rates`,
+// vérifié le 13 nov.). Ce forfait inclut aussi l'emballage et la préparation du colis. Chronopost : 10,50 € HT (avant 8,25 €).
+// Imprimeur.fr ne prévoit pas de nouvelle hausse de ses autres coûts en 2027. Pas d'option lettre avant début 2027 (au mieux, sans suivi),
+// livraison en point relais pas avant 2027 : à relire si l'une des deux arrive (le port baisserait).
+export const SHIPPING_COST_CENTS = 590;
 export const VAT_RATE = 0.2; // hypothèse : TVA 20 % sur un livre photo personnalisé (à confirmer avec ton comptable)
 
 // Règle d'un livre : ses dimensions, son nombre de pages, son fond perdu…

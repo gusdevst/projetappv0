@@ -2,6 +2,8 @@
 // Galons (grades selon les photos triées) + badges. Calculs purs, pas d'UI.
 //
 import { computeStreak, STREAK_MIN, fmtDuration } from "./progressStats";
+import { printedMapOf, nextMonthKey } from "./printSelection";
+import { useSubscriptionStore } from "../store/useSubscriptionStore";
 
 // Un galon / badge débloqué est mémorisé dans le store (achievements = { id: timestamp })
 // → il reste acquis même si la donnée redescend (ex. coups de cœur retirés).
@@ -33,7 +35,10 @@ export function rankInfo(totalSorted) {
 }
 
 // ─── Badges ───────────────────────────────────────────────────────────────
-// value(ctx) = où en est l'user · goal = cible · fmt = affichage de l'avancement
+// value(ctx) = où en est l'user · goal = cible · fmt(v, goal, ctx) = affichage de l'avancement
+// fn = FONCTION de l'app : "tri" | "album" | "labo" ("all" = Légende, le sommet). Posé plus bas pour les 24 anciens badges.
+// Badges du Labo : step = marche (decouvrir → commander → fidelite) · tag = produit · cta = bouton qui ouvre le produit
+// (to : prints | book | poster | abo | labo ; l'écran fait la navigation, pas ce fichier).
 const GO = 1024; // Mo
 const fmtGo = (mo) => `${(mo / GO).toFixed(1).replace(".", ",")}`;
 // Avancement des badges sprint : record actuel (rempli par buildContext).
@@ -78,17 +83,101 @@ export const BADGES = [
   { id: "weekend", emoji: "🛋️", name: "Week-end studieux", desc: "Samedi et dimanche validés le même week-end", goal: 1, value: (c) => (c.hadStudiousWeekend ? 1 : 0), fmt: () => "sam. + dim." },
   // Aléatoire
   { id: "shuffle-10", emoji: "🎲", name: "Joueur", desc: "10 tris aléatoires lancés", goal: 10, value: (c) => c.shuffleLaunches, fmt: (v, g) => `${v} / ${g}` },
-  // Le dernier : tous les autres
-  { id: "legend", emoji: "🏆", name: "Légende", desc: "Tous les autres badges obtenus", goal: 23, value: (c) => c.badgesWon, fmt: (v, g) => `${v} / ${g}` },
+
+  // ── Badges du LABO (14 nov. 2026) : accompagnent l'user jusqu'à la commande ──
+  // DÉCOUVRIR : l'envie, sans payer
+  { id: "lab-ready",  fn: "labo", step: "decouvrir", tag: "TIRAGES", emoji: "🎞️", name: "Prêt à développer", desc: "20 coups de cœur à imprimer (un lot complet de tirages)",
+    goal: 20, value: (c) => c.keptToPrint, fmt: (v, g) => `${Math.min(v, g)} / ${g}`, cta: { label: "Choisir mes 20 tirages", to: "prints" } },
+  { id: "lab-book-start", fn: "labo", step: "decouvrir", tag: "LIVRE", emoji: "✍️", name: "Page blanche", desc: "Commencer un livre photo",
+    goal: 1, value: (c) => c.booksStarted, fmt: (v, g) => `${Math.min(v, g)} / ${g}`, cta: { label: "Créer un livre", to: "labo" } },
+  { id: "lab-book-full", fn: "labo", step: "decouvrir", tag: "LIVRE", emoji: "📖", name: "Chef-d'œuvre", desc: "Remplir toutes les pages d'un livre",
+    goal: 1, value: (c) => (c.bookFill.total ? c.bookFill.filled / c.bookFill.total : 0), fmt: (v, g, c) => (c.bookFill.total ? `${c.bookFill.filled} / ${c.bookFill.total} p.` : "Pas encore de livre"), cta: { label: "Continuer mon livre", to: "labo" } },
+  { id: "lab-collage", fn: "labo", step: "decouvrir", tag: "POSTER", emoji: "🧩", name: "Pêle-mêle", desc: "Composer un poster de 6 photos ou plus",
+    goal: 6, value: (c) => c.collageMax, fmt: (v, g) => `${Math.min(v, g)} / ${g}`, cta: { label: "Composer un poster", to: "poster" } },
+  { id: "lab-ar", fn: "labo", step: "decouvrir", tag: "POSTER", emoji: "🛋️", name: "Œil de décorateur", desc: "Voir un poster chez toi en réalité augmentée",
+    goal: 1, value: (c) => (c.arTried ? 1 : 0), fmt: () => "à essayer", cta: { label: "Essayer avec un poster", to: "poster" } },
+  // COMMANDER : le premier passage à l'acte (orders = commandes réelles, 0 tant que le suivi des commandes n'est pas branché)
+  { id: "lab-first-print", fn: "labo", step: "commander", tag: "TIRAGES", emoji: "🖼️", name: "Première épreuve", desc: "Recevoir ton premier tirage",
+    goal: 1, value: (c) => (c.orders.prints > 0 ? 1 : 0), fmt: (v, g) => `${v} / ${g}`, cta: { label: "Choisir mes 20 tirages", to: "prints" } },
+  { id: "lab-sub", fn: "labo", step: "commander", tag: "ABONNEMENT", emoji: "📬", name: "Abonné", desc: "Démarrer l'abonnement Coups de cœur",
+    goal: 1, value: (c) => c.subCount, fmt: (v, g) => `${Math.min(v, g)} / ${g}`, cta: { label: "Découvrir l'abonnement", to: "abo" } },
+  { id: "lab-gift", fn: "labo", step: "commander", tag: "CADEAU", emoji: "💌", name: "Facteur de bonheur", desc: "Envoyer des tirages à un proche",
+    goal: 1, value: (c) => (c.hasGiftSub ? 1 : 0), fmt: (v, g) => `${v} / ${g}`, cta: { label: "Offrir un abonnement", to: "abo" } },
+  { id: "lab-book-order", fn: "labo", step: "commander", tag: "LIVRE", emoji: "📚", name: "Auteur", desc: "Commander ton premier livre photo",
+    goal: 1, value: (c) => (c.orders.book > 0 ? 1 : 0), fmt: (v, g) => `${v} / ${g}`, cta: { label: "Voir mes livres", to: "labo" } },
+  { id: "lab-poster-order", fn: "labo", step: "commander", tag: "POSTER", emoji: "🪟", name: "Mur habillé", desc: "Commander ton premier poster",
+    goal: 1, value: (c) => (c.orders.poster > 0 ? 1 : 0), fmt: (v, g) => `${v} / ${g}`, cta: { label: "Créer un poster", to: "poster" } },
+  // FIDÉLITÉ : on revient
+  { id: "lab-ritual-3",  fn: "labo", step: "fidelite", tag: "ABONNEMENT", emoji: "🗓️", name: "Rituel du mois",       desc: "3 mois d'envoi d'affilée",  goal: 3,  value: (c) => c.bestMonthRun, fmt: (v, g) => `${Math.min(v, g)} / ${g} mois`, cta: { label: "Voir mon abonnement", to: "abo" } },
+  { id: "lab-ritual-6",  fn: "labo", step: "fidelite", tag: "ABONNEMENT", emoji: "📆", name: "Habitude",             desc: "6 mois d'envoi d'affilée",  goal: 6,  value: (c) => c.bestMonthRun, fmt: (v, g) => `${Math.min(v, g)} / ${g} mois` },
+  { id: "lab-ritual-12", fn: "labo", step: "fidelite", tag: "ABONNEMENT", emoji: "🎉", name: "Un an de souvenirs",   desc: "12 mois d'envoi d'affilée", goal: 12, value: (c) => c.bestMonthRun, fmt: (v, g) => `${Math.min(v, g)} / ${g} mois` },
+  { id: "lab-hundred", fn: "labo", step: "fidelite", tag: "TIRAGES", emoji: "🎴", name: "Cent tirages", desc: "100 photos imprimées",
+    goal: 100, value: (c) => c.printedCount, fmt: (v, g) => `${Math.min(v, g)} / ${g}`, cta: { label: "Choisir mes tirages", to: "prints" } },
+  { id: "lab-all3", fn: "labo", step: "fidelite", tag: "3 PRODUITS", emoji: "🎨", name: "Touche-à-tout", desc: "Un tirage, un livre et un poster commandés",
+    goal: 3, value: (c) => c.productsOrdered, fmt: (v, g) => `${v} / ${g}` },
+  { id: "lab-master", fn: "labo", step: "fidelite", tag: "LABO", emoji: "🔴", name: "Maître du labo", desc: "Tous les autres badges du Labo",
+    goal: 17, value: (c) => c.laboWon, fmt: (v, g) => `${v} / ${g}` },
+
+  // Le dernier : tous les badges Tri + Album (les badges du Labo n'en font pas partie : il ne faut pas payer pour l'obtenir)
+  { id: "legend", fn: "all", emoji: "🏆", name: "Légende", desc: "Tous les badges Tri et Album obtenus", goal: 23, value: (c) => c.badgesWon, fmt: (v, g) => `${v} / ${g}` },
 ];
-// Objectif de « Légende » = nombre de badges hors lui-même.
-BADGES[BADGES.length - 1].goal = BADGES.length - 1;
+
+// Fonction des 24 badges d'avant le Labo. Cœur d'or et Grand romantique alimentent les tirages : ils passent dans le Labo.
+const ALBUM_IDS = new Set(["album", "albums-5", "archive"]);
+const HEARTS_IDS = new Set(["hearts", "hearts-200"]);
+BADGES.forEach((b) => {
+  if (b.fn) return;
+  b.fn = ALBUM_IDS.has(b.id) ? "album" : HEARTS_IDS.has(b.id) ? "labo" : "tri";
+  if (HEARTS_IDS.has(b.id)) { b.step = "decouvrir"; b.tag = "TIRAGES"; }
+});
+// Objectifs des deux badges « tous les autres » (hors eux-mêmes).
+const LABO_IDS = BADGES.filter((b) => b.fn === "labo");
+BADGES.find((b) => b.id === "lab-master").goal = LABO_IDS.length - 1;
+BADGES.find((b) => b.id === "legend").goal = BADGES.filter((b) => b.fn === "tri" || b.fn === "album").length;
+
+export const FUNCTIONS = ["tri", "album", "labo"];
+export const LABO_STEPS = [
+  { key: "decouvrir", label: "DÉCOUVRIR" },
+  { key: "commander", label: "COMMANDER" },
+  { key: "fidelite",  label: "FIDÉLITÉ" },
+];
+// Badges d'une fonction, dans l'ordre d'affichage (Labo : marche par marche).
+export function badgesOf(fn) {
+  const list = BADGES.filter((b) => b.fn === fn);
+  if (fn !== "labo") return list;
+  const rank = (b) => LABO_STEPS.findIndex((s) => s.key === b.step);
+  return [...list].sort((a, b) => rank(a) - rank(b)); // tri stable : l'ordre d'écriture est gardé dans une marche
+}
 
 // ─── Contexte : toutes les mesures utiles, lues depuis l'état du store ────
 const FLASH_MIN_SAMPLES = 20;   // au moins 20 décisions chronométrées dans la journée
 const FLASH_MAX_MS_PER_20 = 90 * 1000; // Éclair : 1 min 30 en moyenne sur la journée
 
-export function buildContext(state) {
+// Mois d'envoi validés d'affilée (le plus long enchaînement, tous abonnements confondus).
+function bestMonthRun(selections = {}) {
+  let best = 0;
+  Object.values(selections).forEach((byMonth) => {
+    const months = Object.entries(byMonth || {}).filter(([, sel]) => sel?.status === "validated").map(([k]) => k).sort();
+    let run = 0, prev = null;
+    months.forEach((k) => { run = prev && nextMonthKey(prev) === k ? run + 1 : 1; prev = k; best = Math.max(best, run); });
+  });
+  return best;
+}
+// Le livre le plus avancé : pages dont TOUS les cadres ont une photo (la moitié droite d'une double page ne compte pas).
+function bestBookFill(books = {}) {
+  let best = { filled: 0, total: 0 };
+  Object.values(books).forEach((b) => {
+    const own = (b?.pages || []).filter((p) => p?.double !== "right");
+    if (!own.length) return;
+    const filled = own.filter((p) => p.slots?.length && p.slots.every(Boolean)).length;
+    if (!best.total || filled / own.length > best.filled / best.total) best = { filled, total: own.length };
+  });
+  return best;
+}
+
+// `extra` = ce qui vient du store des abonnements (par défaut : son état actuel).
+// `extra.orders` = commandes réelles { prints, book, poster } : à brancher sur la table `orders` (pont imprimeur.fr) ; 0 d'ici là.
+export function buildContext(state, extra = useSubscriptionStore.getState()) {
   const log = state.dailyLog || {};
   const days = Object.values(log);
   const sumSorted = days.reduce((a, d) => a + (d.sorted || 0), 0);
@@ -121,15 +210,31 @@ export function buildContext(state) {
     return okDay(kSun);
   });
   const photosInAlbums = new Set((state.albums || []).flatMap((a) => a.photoIds)).size;
-  // Badges déjà obtenus, sans compter « Légende ».
+  // Badges déjà obtenus : « Légende » compte les badges Tri + Album, « Maître du labo » ceux du Labo (chacun hors lui-même).
   const have = state.achievements || {};
-  const badgesWon = BADGES.filter((b) => b.id !== "legend" && have[b.id]).length;
+  const badgesWon = BADGES.filter((b) => (b.fn === "tri" || b.fn === "album") && have[b.id]).length;
+  const laboWon = BADGES.filter((b) => b.fn === "labo" && b.id !== "lab-master" && have[b.id]).length;
+
+  // Labo : ce qui est déjà parti à l'impression, les abonnements, les livres.
+  const subs = extra?.subs || [];
+  const printedMap = printedMapOf(extra?.printedPhotos, extra?.selections);
+  const orders = { prints: 0, book: 0, poster: 0, ...(extra?.orders || {}) };
 
   lastBest20 = state.best20Ms || null;
 
   return {
     best20Ms: state.best20Ms || null,
-    bestDay, hadTurboDay, hadStudiousWeekend, photosInAlbums, badgesWon,
+    bestDay, hadTurboDay, hadStudiousWeekend, photosInAlbums, badgesWon, laboWon, orders,
+    printedCount:   Object.keys(printedMap).length,
+    keptToPrint:    (state.kept || []).filter((p) => !printedMap[p.id]).length,
+    booksStarted:   Object.keys(state.books || {}).length,
+    bookFill:       bestBookFill(state.books),
+    collageMax:     state.posterCollageMax || 0,
+    arTried:        !!state.posterArTried,
+    subCount:       subs.length,
+    hasGiftSub:     subs.some((x) => x.kind === "gift"),
+    bestMonthRun:   bestMonthRun(extra?.selections),
+    productsOrdered: ["prints", "book", "poster"].filter((k) => orders[k] > 0).length,
     purgedCount:     state.purgedCount || 0,
     shuffleLaunches: state.shuffleLaunchCount || 0,
     totalSorted: state.lifetimeSorted ?? sumSorted,

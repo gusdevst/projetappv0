@@ -16,7 +16,7 @@ import Icon from "../components/Icons";
 import BackButton from "../components/BackButton";
 import { ListRow, SHADOW } from "../components/home/ui";
 import { C } from "../constants/theme";
-import { subDays, productOf } from "../constants/subscription";
+import { subDays } from "../constants/subscription";
 import { monthKey, monthName, pickRandom, reconcile, replaceAt } from "../services/printSelection";
 import { usePrintedPhotos } from "../hooks/usePrintedPhotos";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
@@ -196,7 +196,7 @@ export function SubscriptionMonthScreen({ navigation, route }) {
         <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 19, fontWeight: "600", color: C.text }}>Sélection de {monthName(month)}</Text>
-          <Text style={{ fontSize: 11.5, color: C.textMuted }}>{who} · {sub.count} {sub.product === "magnets" ? productOf(sub).units : `photo${sub.count > 1 ? "s" : ""}`}</Text>
+          <Text style={{ fontSize: 11.5, color: C.textMuted }}>{who} · {sub.count} photo{sub.count > 1 ? "s" : ""}</Text>
         </View>
         {/* Gérer cet abonnement : historique, dates, pause, résiliation */}
         <TouchableOpacity onPress={() => navigation.navigate("SubscriptionManage", { subId: sub.id })} activeOpacity={0.8}
@@ -275,12 +275,6 @@ export function SubscriptionMonthScreen({ navigation, route }) {
               ))}
             </View>
 
-            {sub.product === "magnets" && (
-              <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginTop: 10, lineHeight: 16 }}>
-                Tes magnets sont carrés (5 × 5 cm) : chaque photo est recadrée au centre, comme ci-dessus.
-              </Text>
-            )}
-
             {!validated && (
               <View style={{ alignItems: "center", marginTop: 14 }}>
                 <TouchableOpacity onPress={redrawAll} activeOpacity={0.8}
@@ -318,13 +312,12 @@ export function SubscriptionMonthScreen({ navigation, route }) {
 
       {/* ── Photo en grand : retour à la grille, ou changer la photo (feuille « Remplacer cette photo ») ── */}
       {viewIdx !== null && !!photoIds[viewIdx] && (() => {
-        const magnets = sub.product === "magnets";
         const W = SW - 32;
         return (
           <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 50, backgroundColor: "rgba(20,22,18,0.95)", paddingTop: insets.top + 10, paddingBottom: Math.max(insets.bottom, 18) + 6, paddingHorizontal: 16 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>
-                {magnets ? "Magnet" : "Photo"} {viewIdx + 1} sur {photoIds.length}
+                Photo {viewIdx + 1} sur {photoIds.length}
               </Text>
               <TouchableOpacity onPress={() => setViewIdx(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" }}>
@@ -333,19 +326,7 @@ export function SubscriptionMonthScreen({ navigation, route }) {
             </View>
 
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              {magnets ? (
-                // Magnet carré : on montre exactement ce qui sera imprimé (recadré au centre)
-                <View style={{ width: W, height: W, borderRadius: W * 0.06, overflow: "hidden", backgroundColor: C.bgMuted }}>
-                  <Image source={{ uri: alive.get(photoIds[viewIdx]) }} contentFit="cover" style={{ width: W, height: W }} />
-                </View>
-              ) : (
-                <Image source={{ uri: alive.get(photoIds[viewIdx]) }} contentFit="contain" style={{ width: W, height: "80%", borderRadius: 6 }} />
-              )}
-              {magnets && (
-                <Text style={{ fontSize: 11.5, color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 12 }}>
-                  Aperçu du magnet 5 × 5 cm, recadré au centre
-                </Text>
-              )}
+              <Image source={{ uri: alive.get(photoIds[viewIdx]) }} contentFit="contain" style={{ width: W, height: "80%", borderRadius: 6 }} />
             </View>
 
             {!validated && (

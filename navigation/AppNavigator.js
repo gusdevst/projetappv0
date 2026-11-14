@@ -30,13 +30,14 @@ import { BookCheckScreen }        from "../screens/BookCheckScreen";
 import { PrintNewScreen } from "../screens/PrintNewScreen";
 import { SubscriptionIntroScreen } from "../screens/SubscriptionIntroScreen";
 import { SubscriptionSetupScreen } from "../screens/SubscriptionSetupScreen";
-import { SubscriptionMagnetsScreen } from "../screens/SubscriptionMagnetsScreen";
 import { SubscriptionMonthScreen } from "../screens/SubscriptionMonthScreen";
 import { SubscriptionListScreen } from "../screens/SubscriptionListScreen";
 import { SubscriptionManageScreen } from "../screens/SubscriptionManageScreen";
 import { SubscriptionTrackingScreen } from "../screens/SubscriptionTrackingScreen";
 import { SubscriptionHistoryScreen } from "../screens/SubscriptionHistoryScreen";
 import { BlurCalibrationScreen } from "../screens/BlurCalibrationScreen";
+import { ArSpikeEntry } from "../screens/ArSpikeEntry";
+import { PosterAREntry } from "../screens/PosterAREntry";
 import { BlurryPhotosScreen } from "../screens/BlurryPhotosScreen";
 import { PosterIntroScreen } from "../screens/PosterIntroScreen";
 import { PosterPickScreen } from "../screens/PosterPickScreen";
@@ -118,7 +119,6 @@ export function AppNavigator() {
       <Stack.Screen name="BookCheck"   component={BookCheckScreen} />
       <Stack.Screen name="PrintNew" component={PrintNewScreen} />
       <Stack.Screen name="SubscriptionIntro" component={SubscriptionIntroScreen} />
-      <Stack.Screen name="SubscriptionMagnets" component={SubscriptionMagnetsScreen} />
       <Stack.Screen name="SubscriptionSetup" component={SubscriptionSetupScreen} />
       <Stack.Screen name="SubscriptionMonth" component={SubscriptionMonthScreen} />
       <Stack.Screen name="SubscriptionList" component={SubscriptionListScreen} />
@@ -132,7 +132,9 @@ export function AppNavigator() {
       <Stack.Screen name="PosterCollage" component={PosterCollageScreen} />
       <Stack.Screen name="PosterFormat" component={PosterFormatScreen} />
       <Stack.Screen name="PosterRecap"  component={PosterRecapScreen} />
+      <Stack.Screen name="PosterAR"     component={PosterAREntry} />
       {__DEV__ && <Stack.Screen name="BlurCalibration" component={BlurCalibrationScreen} />}
+      {__DEV__ && <Stack.Screen name="ArSpike" component={ArSpikeEntry} options={{ headerShown: false }} />}
     </Stack.Navigator>
   );
 }

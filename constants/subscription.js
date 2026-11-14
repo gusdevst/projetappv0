@@ -2,13 +2,12 @@
 // Réglages de l'abonnement mensuel « Coups de cœur » (valeurs décidées avec Augustin, 6 nov. 2026).
 // Modifier ici = modifier partout dans l'app.
 
-// ── Deux types d'envoi (au choix à l'abonnement) ─────────────────────────────
-//   prints  = tirages photo 10 × 15 cm (5 / 10 / 15 / 20 au choix pour un proche)
-//   magnets = 9 magnets (aimants) carrés de 5 × 5 cm — 5 × 5 pour tenir 20 magnets sur une A4 en fabrication
-//             manuelle (hypothèse d'Augustin, 7 nov. 2026 : à challenger tant que le partenaire d'impression
-//             n'est pas choisi). Prix posé le 7 nov. : 9,90 € / mois, livraison comprise.
-// `spec` = ce que doit recevoir l'imprimeur (taille finale en mm, recadrage). Un seul endroit à changer
-// quand le partenaire sera connu (Augustin, Gelato, Prodigi…) ; il est aussi écrit dans chaque commande.
+// ── Type d'envoi ─────────────────────────────────────────────────────────────
+//   prints = tirages photo 10 × 15 cm (le seul proposé depuis le 14 nov. 2026)
+//   Les MAGNETS (9 aimants 5 × 5 cm, 9,90 € / mois) ont été retirés de l'app le 14 nov. 2026 :
+//   tout est gardé dans `archive/magnets/` (README = specs et marche à suivre pour les remettre).
+// `spec` = ce que doit recevoir l'imprimeur (taille finale en mm, recadrage). Un seul endroit à changer ;
+// il est aussi écrit dans chaque commande.
 export const SUB_PRODUCTS = {
   prints: {
     key: "prints", label: "Tirages photo", unit: "tirage", units: "tirages",
@@ -17,27 +16,20 @@ export const SUB_PRODUCTS = {
     // car la fiche dit seulement « si le ratio ne correspond pas, l'image est centrée » (à confirmer : marges blanches ou rognage ?).
     spec: { widthMm: 100, heightMm: 150, crop: "cover", finish: "gloss", minDpi: 150 },
   },
-  magnets: {
-    key: "magnets", label: "Magnets", unit: "magnet", units: "magnets",
-    tagline: "9 aimants carrés de 5 × 5 cm", fixedCount: 9,
-    spec: { widthMm: 50, heightMm: 50, crop: "center", finish: "gloss", layout: "3x3" },
-  },
 };
-export const productOf = (sub) => SUB_PRODUCTS[sub?.product] ?? SUB_PRODUCTS.prints; // anciens abonnements = tirages
+export const productOf = (sub) => SUB_PRODUCTS[sub?.product] ?? SUB_PRODUCTS.prints; // anciens abonnements (et d'éventuels « magnets » restés sur un téléphone) = tirages
 
 // Tirages : UNE seule offre depuis le 9 nov. 2026 = 20 tirages 10 × 15 cm (minimum par commande chez imprimeur.fr,
-// qui ne sait pas faire moins). Hypothèse d'Augustin (9 nov.) : 0,18 € HT par tirage → 3,60 € + 4,97 € de port Colissimo = 8,57 € HT.
-// Prix 12,90 € TTC (fixé par Augustin) = 10,75 € HT → ≈ +2,18 € par envoi, ≈ +1,74 € avec les frais de paiement (Stripe ≈ 1,5 % + 0,25 €).
+// qui ne sait pas faire moins). Coût CONFIRMÉ par imprimeur.fr (11-13 nov. 2026) : 0,20 € HT par tirage = 4,00 € + 5,90 € de port Colissimo
+// (hausse de la mi-nov., 4,97 € avant) = 9,90 € HT. Prix 12,90 € TTC (fixé par Augustin) = 10,75 € HT → ≈ +0,85 € par envoi,
+// ≈ +0,41 € avec les frais de paiement (Stripe ≈ 1,5 % + 0,25 €) : quasi à l'équilibre, prix à reconsidérer (décision d'Augustin).
 export const SUB_PRICE_LABEL  = "12,90 €";  // par mois et par abonnement, livraison incluse (20 tirages)
 export const SUB_PHOTOS       = 20;         // tirages par mois (abonnement « pour moi »)
-export const SUB_MAGNETS      = 9;          // magnets par mois (pour moi comme pour un proche)
-export const SUB_MAGNETS_PRICE_LABEL = "9,90 €";
 
 // Prix par type d'envoi et par nombre de photos (modifiables ici). Tirages : +3 € par tranche de 5 dès 10.
 // Absent = prix pas fixé (le bouton d'abonnement reste grisé).
 export const SUB_PRICES = {
-  prints:  { [SUB_PHOTOS]: SUB_PRICE_LABEL },
-  magnets: { [SUB_MAGNETS]: SUB_MAGNETS_PRICE_LABEL },
+  prints: { [SUB_PHOTOS]: SUB_PRICE_LABEL },
 };
 // Une seule offre par produit : tout abonnement tirages = 20 tirages au prix SUB_PRICE_LABEL.
 export const priceLabelFor = (count, product = "prints") =>

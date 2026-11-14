@@ -103,6 +103,19 @@
             ]
           }
         }
+      ],
+      [
+        "@reactvision/react-viro",
+        {
+          "provider": "none",
+          "ios": {
+            "cameraUsagePermission": "Pellicule utilise la caméra pour te montrer ton poster sur ton mur.",
+            "microphoneUsagePermission": "Pellicule n'utilise pas le micro ; cette autorisation est demandée par le module de réalité augmentée."
+          },
+          "android": {
+            "xRMode": ["AR"]
+          }
+        }
       ]
     ],
     "extra": {

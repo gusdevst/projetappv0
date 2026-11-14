@@ -38,7 +38,7 @@ export function SubscriptionManageScreen({ navigation, route }) {
   const sel = selections[sub.id]?.[month];
   const st = subStatus(sub, sel);
   const paused = sub.status === "paused";
-  const label = `${sub.product === "magnets" ? "Magnets" : "Tirages"} · ${sub.kind === "self" ? "pour moi" : sub.name}`;
+  const label = `Tirages · ${sub.kind === "self" ? "pour moi" : sub.name}`;
   const { selectionDay, sendDay } = subDays(sub);
   const sentCount = Object.values(selections[sub.id] ?? {}).filter((x) => x.status === "validated").length;
 

@@ -146,6 +146,12 @@ function AnalysisDiagnostic() {
       >
         <Text style={{ fontWeight: "700", color: C.accent }}>Ouvrir le calibrage des seuils ›</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => navigation.navigate("ArSpike")}
+        style={{ borderRadius: 12, paddingVertical: 11, alignItems: "center", backgroundColor: C.albumSoft, borderWidth: 1, borderColor: C.album, marginBottom: 12 }}
+      >
+        <Text style={{ fontWeight: "700", color: C.album }}>Tester la réalité augmentée (spike) ›</Text>
+      </TouchableOpacity>
 
       <Text style={{ fontSize: 14, fontWeight: "700", color: C.text }}>Analyse de fond</Text>
       <Text style={line}>{`${done} / ${total} photos (${pct} %) · ${statusLabel}`}</Text>

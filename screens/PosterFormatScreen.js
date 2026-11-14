@@ -6,7 +6,7 @@
 //   · le prix reste discret (une ligne au-dessus du bouton), il n'est plus sur chaque format.
 // Le recadrage choisi voyage jusqu'au récapitulatif (route.params.crop) : `{ scale, x, y }` en parts du cadre.
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { View, ScrollView, TouchableOpacity, TextInput, StatusBar, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Text from "../components/AppText";
@@ -14,6 +14,7 @@ import BackButton from "../components/BackButton";
 import { PosterFrame, POSTER_RATIO } from "../components/poster/PosterParts";
 import { COVER_STYLE } from "../components/book/BookPage";
 import CollagePoster from "../components/poster/CollagePoster";
+import ArCtaCard from "../components/poster/ArCtaCard";
 import { useBookFonts } from "../components/book/bookFonts";
 import { SHADOW } from "../components/home/ui";
 import { C, FONT } from "../constants/theme";
@@ -59,6 +60,11 @@ export function PosterFormatScreen({ navigation, route }) {
     : (photo ? posterQuality(photo, k, zoom) : null));
 
   const [fmt, setFmt] = useState(() => (collage ? bestCollageFormat(cPhotos, cCells, cOrder, collage.crops) : bestPosterFormat(photo)));
+  // Retour de « Voir ce poster chez toi » : le format choisi dans la réalité augmentée devient le format sélectionné ici.
+  useEffect(() => {
+    const picked = route.params?.pickedFormat;
+    if (picked && POSTER_FORMATS[picked]) setFmt(picked);
+  }, [route.params?.pickedAt]);
   const [crop, setCrop] = useState(DEFAULT_CROP);
   // Titre facultatif posé sur la photo (poster d'UNE photo ; le pêle-mêle a son propre titre, écran de composition).
   const [title, setTitle] = useState({ text: "", font: "moderne", pos: "bas", color: "blanc" });
@@ -77,6 +83,12 @@ export function PosterFormatScreen({ navigation, route }) {
     return d < 0 ? { ...c, scale, x: 0, y: 0 } : { ...c, scale };
   });
   const moved = crop.scale !== 1 || crop.x !== 0 || crop.y !== 0;
+
+  // Qualité (dpi) de CE poster dans chaque format, au cadrage actuel : transmise à l'écran de réalité augmentée.
+  const dpis = Object.fromEntries(POSTER_FORMAT_KEYS.map((k) => [k, qualityOf(k, crop.scale)?.dpi ?? null]));
+  const openAr = () => navigation.navigate("PosterAR", collage
+    ? { collage, format: fmt, dpis }
+    : { photoId, format: fmt, crop: { scale: crop.scale, x: crop.x, y: crop.y }, title: hasTitle ? { ...title, text: title.text.trim() } : null, dpis });
 
   const q = qualityOf(fmt, crop.scale);
   const lvl = posterQualityLevel(q?.dpi ?? null);
@@ -193,6 +205,10 @@ export function PosterFormatScreen({ navigation, route }) {
           </Text>
         </View>
         {!!hint && <Text style={{ fontSize: 11.5, lineHeight: 16, color: C.yellow, marginTop: 6 }}>{hint}</Text>}
+
+        {/* Voir ce poster chez soi, en réalité augmentée (maquette `maquette-poster-voir-chez-moi-v2.html`) */}
+        <ArCtaCard onPress={openAr}
+          subtitle={collage ? `Ton pêle-mêle de ${cPhotos.length} photos, posé sur ton mur à la vraie taille.` : undefined} />
       </ScrollView>
 
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: C.bg, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 26, borderTopWidth: 1, borderTopColor: C.border }}>

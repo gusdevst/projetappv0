@@ -78,9 +78,9 @@ export function GalleryHomeScreen({ navigation }) {
   const updateSub     = useSubscriptionStore((s) => s.updateSub);
   const liveSubs      = useMemo(() => subs.filter((x) => x.status !== "cancelled"), [subs]); // résiliés = hors de la liste
   const hasSub        = liveSubs.length > 0;
-  // Les abonnements TIRAGES vivent sous la guirlande. Les magnets et la gestion de tous les abonnements sont dans
+  // Les abonnements TIRAGES vivent sous la guirlande. La gestion de tous les abonnements est dans
   // Réglages (« Gérer mes abonnements »), plus de section « Abonnements » dans la Chambre noire (10 nov.).
-  const tirageSubs    = liveSubs.map((x, i) => ({ x, i })).filter(({ x }) => x.product !== "magnets");
+  const tirageSubs    = liveSubs.map((x, i) => ({ x, i }));
   const subUrls       = useKeptUrls(9);      // vignettes des abonnements : les vrais coups de cœur
   const books         = usePhotoStore((s) => s.books);
   const deleteBook    = usePhotoStore((s) => s.deleteBook);
@@ -145,7 +145,7 @@ export function GalleryHomeScreen({ navigation }) {
     else navigation.navigate("SubscriptionMonth", { subId: x.id });
   }
   function openSubMenu(x) {
-    const label = `${x.product === "magnets" ? "Magnets" : "Tirages"} · ${x.kind === "self" ? "pour moi" : x.name}`;
+    const label = `Tirages · ${x.kind === "self" ? "pour moi" : x.name}`;
     const st = subStatus(x, selections[x.id]?.[subMonth]);
     const paused = x.status === "paused";
     Alert.alert(label, undefined, [

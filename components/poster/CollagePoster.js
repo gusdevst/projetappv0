@@ -12,7 +12,8 @@ import { COVER_STYLE } from "../book/BookPage";
 import { DEFAULT_CROP } from "../../services/photoBook";
 import { COLLAGE_RATIO, TITLE_BAND, cellPhotoRect, collageBgColor, collageTitleColor } from "../../services/posterCollage";
 
-export default function CollagePoster({ width, photos, cells, order, crops = {}, bg, title = "", titleFont = "manuscrite", onCellPress, style }) {
+// `onImageLoad` (facultatif) : appelée à chaque photo chargée (rendu hors écran, voir PosterTexture).
+export default function CollagePoster({ width, photos, cells, order, crops = {}, bg, title = "", titleFont = "manuscrite", onCellPress, onImageLoad, style }) {
   const height = width * COLLAGE_RATIO;
   return (
     <View style={[{
@@ -26,7 +27,7 @@ export default function CollagePoster({ width, photos, cells, order, crops = {},
         const framed = !!cell.pad;
         const body = (
           <View style={{ position: "absolute", left: rect.x * width, top: rect.y * width, width: rect.w * width, height: rect.h * width, overflow: "hidden", backgroundColor: "#d9d3c6" }}>
-            <CroppedImage url={photo.url} crop={{ ...DEFAULT_CROP, ...crops[photo.id] }} editable={false} />
+            <CroppedImage url={photo.url} crop={{ ...DEFAULT_CROP, ...crops[photo.id] }} editable={false} onLoaded={onImageLoad} />
           </View>
         );
         const box = {

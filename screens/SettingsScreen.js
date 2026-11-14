@@ -193,7 +193,7 @@ export function SettingsScreen({ navigation, route }) {
         <AccountCard navigation={navigation} />
 
         {/* ── Abonnements, commandes (déplacés ici depuis la Galerie, 10 nov.) ── */}
-        <RowSetting emoji="📬" label="Gérer mes abonnements" desc="Tirages et magnets : dates, pause, résiliation"
+        <RowSetting emoji="📬" label="Gérer mes abonnements" desc="Coups de cœur : dates, pause, résiliation"
           onPress={() => navigation.navigate("SubscriptionList")}
           right={<Text style={{ color: C.textMuted }}>›</Text>} />
         <RowSetting emoji="🧾" label="Commandes et paiements" desc="Historique des envois · paiements bientôt"

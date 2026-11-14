@@ -21,7 +21,8 @@ export const POSTER_RATIO = 297 / 210;
 // Sans photo : aplat sauge. `crop` : recadrage choisi ({ scale, x, y }) ; `editable` + `onCropChange` : glisser / pincer pour le régler.
 // `title` (facultatif) : { text, font, pos, color } — titre posé sur la photo (font = clé de COVER_STYLE.font, pos = haut / milieu / bas,
 // color = "blanc" / "noir"). Marge de 8 % de la largeur : bien en dehors des 5 mm de sécurité d'impression.
-export function PosterFrame({ uri, width, tint = 0, border = 3, landscape = false, crop, editable = false, onCropChange, style, title }) {
+// `onLoaded` (facultatif) : appelée quand la photo est chargée (sert à « photographier » le poster hors écran, voir PosterTexture).
+export function PosterFrame({ uri, width, tint = 0, border = 3, landscape = false, crop, editable = false, onCropChange, onLoaded, style, title }) {
   const inner = width - border * 2;
   const font = COVER_STYLE.font[title?.font] ?? COVER_STYLE.font.moderne;
   const dark = title?.color === "noir";
@@ -32,8 +33,8 @@ export function PosterFrame({ uri, width, tint = 0, border = 3, landscape = fals
     }, style]}>
       <View style={{ flex: 1, backgroundColor: C.sage2, overflow: "hidden" }}>
         {!!uri && (crop || editable
-          ? <CroppedImage url={uri} crop={{ ...DEFAULT_CROP, ...crop }} editable={editable} onChange={onCropChange} />
-          : <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />)}
+          ? <CroppedImage url={uri} crop={{ ...DEFAULT_CROP, ...crop }} editable={editable} onChange={onCropChange} onLoaded={onLoaded} />
+          : <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" onLoad={onLoaded} />)}
         {!!title?.text?.trim() && (
           <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, padding: inner * 0.08,
             justifyContent: (COVER_STYLE.pos[title.pos] ?? COVER_STYLE.pos.bas).justify }}>

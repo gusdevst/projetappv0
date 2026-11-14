@@ -14,6 +14,7 @@ import Text from "./AppText";
 import { useIsFocused } from "@react-navigation/native";
 import { C } from "../constants/theme";
 import { usePhotoStore, dayKey } from "../store/usePhotoStore";
+import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import { RANKS, BADGES } from "../services/achievements";
 import { RankShield, METALS } from "./RankShield";
 
@@ -26,7 +27,12 @@ function useAchievementWatcher(active) {
   const keptCount   = usePhotoStore((s) => s.kept.length);
   const albumCount  = usePhotoStore((s) => s.albums.length);
   const check       = usePhotoStore((s) => s.checkAchievements);
-  useEffect(() => { if (active) check(); }, [active, sortedToday, freedMo, keptCount, albumCount]);
+  // Badges du Labo : livres, abonnements et photos imprimées.
+  const bookCount   = usePhotoStore((s) => Object.keys(s.books).length);
+  const subCount    = useSubscriptionStore((s) => s.subs.length);
+  const printedCount = useSubscriptionStore((s) => Object.keys(s.printedPhotos).length);
+  const selections  = useSubscriptionStore((s) => s.selections);
+  useEffect(() => { if (active) check(); }, [active, sortedToday, freedMo, keptCount, albumCount, bookCount, subCount, printedCount, selections]);
 }
 
 // ─── Bandeau badge ─────────────────────────────────────────────────────────

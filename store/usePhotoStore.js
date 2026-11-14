@@ -175,6 +175,15 @@ export const usePhotoStore = create(
       // Page de présentation des posters (Chambre noire) : montrée à la 1re création seulement.
       posterIntroSeen: false,
       setPosterIntroSeen: (v) => set({ posterIntroSeen: v }),
+      // Badges du Labo : plus grand pêle-mêle composé (nombre de photos) et réalité augmentée essayée.
+      posterCollageMax: 0,
+      posterArTried: false,
+      notePosterCollage: (n) => {
+        if (n > (get().posterCollageMax || 0)) { set({ posterCollageMax: n }); get().checkAchievements(); }
+      },
+      notePosterAr: () => {
+        if (!get().posterArTried) { set({ posterArTried: true }); get().checkAchievements(); }
+      },
 
       // ─── État de la photothèque (NON persisté — rechargé à chaque ouverture) ─
       permission:      "undetermined", // "undetermined" | "granted" | "denied"
@@ -696,6 +705,8 @@ export const usePhotoStore = create(
         swipeTutoSeen:           state.swipeTutoSeen,
         albumTutoSeen:           state.albumTutoSeen,
         posterIntroSeen:         state.posterIntroSeen,
+        posterCollageMax:        state.posterCollageMax,
+        posterArTried:           state.posterArTried,
         randomCount:            state.randomCount,
         shuffleOn:               state.shuffleOn,
         sortPriority:            state.sortPriority,

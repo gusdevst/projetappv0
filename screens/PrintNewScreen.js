@@ -10,10 +10,10 @@ import { Image } from "expo-image";
 import Text from "../components/AppText";
 import Icon from "../components/Icons";
 import BackButton from "../components/BackButton";
-import { useKeptUrls, MagnetGrid } from "../components/ProductArt";
+import { useKeptUrls } from "../components/ProductArt";
 import { SHADOW } from "../components/home/ui";
 import { C, S } from "../constants/theme";
-import { formatEuro, SUB_PRICE_LABEL, SUB_PHOTOS, SUB_MAGNETS, SUB_MAGNETS_PRICE_LABEL } from "../constants/subscription";
+import { formatEuro, SUB_PRICE_LABEL, SUB_PHOTOS } from "../constants/subscription";
 import { PRINT_PRODUCT, PRINT_HIGHLIGHTS, PRINT_STEPS, PRINT_GOOD_TO_KNOW } from "../services/printProducts";
 
 // Un tirage (cadre blanc, photo, marge basse façon polaroïd) incliné.
@@ -78,7 +78,6 @@ const Label = ({ children }) => (
 
 export function PrintNewScreen({ navigation }) {
   const urls = useKeptUrls(3);
-  const magnetUrls = useKeptUrls(9);
   const { baseCount, baseCents, extraCents } = PRINT_PRODUCT.oneShot;
 
   const soon = () => Alert.alert(
@@ -119,8 +118,8 @@ export function PrintNewScreen({ navigation }) {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <MiniPrints urls={urls} count={2} />
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ fontSize: 16, fontWeight: "700", color: C.text }}>Abonnement</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: 6, rowGap: 3 }}>
+                <Text style={{ fontSize: 16, fontWeight: "700", color: C.text }}>Abonnement Coups de cœur</Text>
                 <View style={{ backgroundColor: C.album, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
                   <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff" }}>LE + MALIN</Text>
                 </View>
@@ -135,7 +134,7 @@ export function PrintNewScreen({ navigation }) {
               <Text style={{ fontSize: 26, fontWeight: "800", color: C.text }}>{SUB_PRICE_LABEL} <Text style={{ fontSize: 13, fontWeight: "600", color: C.textMuted }}>/ mois</Text></Text>
               <Text style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 16 }}>{SUB_PHOTOS} tirages · TTC, livraison comprise{"\n"}Pause ou résiliation quand tu veux</Text>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate("SubscriptionIntro")} accessibilityLabel="S'abonner aux tirages"
+            <TouchableOpacity onPress={() => navigation.navigate("SubscriptionIntro")} accessibilityLabel="S'abonner aux Coups de cœur"
               style={{ height: 44, paddingHorizontal: 18, borderRadius: S.radiusFull, backgroundColor: C.album, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>S'abonner</Text>
             </TouchableOpacity>
@@ -159,36 +158,6 @@ export function PrintNewScreen({ navigation }) {
             <TouchableOpacity onPress={soon} accessibilityLabel="Choisir le tirage simple"
               style={{ height: 44, paddingHorizontal: 18, borderRadius: S.radiusFull, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ color: C.album, fontWeight: "700", fontSize: 14 }}>Choisir</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Magnets (abonnement) : la page de détail des magnets ouvre ensuite le réglage de l'abonnement */}
-        <View style={[{ backgroundColor: C.bgCard, borderRadius: 20, padding: 14, marginBottom: 12, borderWidth: 2, borderColor: "transparent" }, SHADOW]}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View style={{ width: 70, height: 70, borderRadius: 14, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center" }}>
-              <MagnetGrid width={52} gap={2} urls={magnetUrls} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ fontSize: 16, fontWeight: "700", color: C.text }}>Magnets</Text>
-                <View style={{ backgroundColor: C.album, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-                  <Text style={{ fontSize: 10, fontWeight: "800", color: "#fff" }}>NOUVEAU</Text>
-                </View>
-              </View>
-              <Text style={{ fontSize: 12.5, color: C.textMid, marginTop: 2, lineHeight: 17 }}>
-                {SUB_MAGNETS} magnets carrés 5 × 5 cm, chaque mois, pour ton frigo.
-              </Text>
-            </View>
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginTop: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 26, fontWeight: "800", color: C.text }}>{SUB_MAGNETS_PRICE_LABEL} <Text style={{ fontSize: 13, fontWeight: "600", color: C.textMuted }}>/ mois</Text></Text>
-              <Text style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 16 }}>TTC, livraison comprise{"\n"}Pause ou résiliation quand tu veux</Text>
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate("SubscriptionMagnets")} accessibilityLabel="Découvrir les magnets"
-              style={{ height: 44, paddingHorizontal: 18, borderRadius: S.radiusFull, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ color: C.album, fontWeight: "700", fontSize: 14 }}>Découvrir</Text>
             </TouchableOpacity>
           </View>
         </View>

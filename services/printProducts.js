@@ -6,8 +6,9 @@
 // Les coffrets (Box…) et ScrapBooking existent chez eux mais l'API les refuse (« non commandables ») : volontairement absents.
 //
 // ⚠️ PRIX DU TIRAGE SIMPLE = EXEMPLE (maquette du 10 nov.), à fixer par Augustin. Repère : abonnement 12,90 € TTC pour 20 ;
-// coût CONFIRMÉ par le support (11 nov.) = 0,20 € HT par tirage, sans dégressivité, + 4,97 € de port Colissimo par commande
-// → 20 tirages = 8,97 € HT. Un tirage en plus à 0,35 € TTC (0,29 € HT) ne laisse que 0,09 € : relever `extraCents` (≥ 45).
+// coût CONFIRMÉ par le support (11 nov.) = 0,20 € HT par tirage, sans dégressivité, + 5,90 € de port Colissimo par commande
+// (4,97 € jusqu'à la mi-nov. 2026) → 20 tirages = 9,90 € HT ; l'exemple à 14,90 € TTC (12,42 € HT) laisse ≈ 2,52 € avant frais de paiement.
+// Un tirage en plus à 0,35 € TTC (0,29 € HT) ne laisse que 0,09 € : relever `extraCents` (≥ 45).
 // Modifier ici = modifier partout.
 
 export const PRINT_PRODUCT = {
@@ -48,5 +49,4 @@ export const PRINT_STEPS = [
 export const PRINT_GOOD_TO_KNOW = [
   "Les photos choisies sont envoyées à Pellicule pour être imprimées, puis supprimées.",
   "Il faut un compte, pour suivre ta commande.",
-  "Les magnets se commandent par abonnement (« S'abonner » → tirages ou magnets).",
 ];
