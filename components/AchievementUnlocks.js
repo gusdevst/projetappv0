@@ -12,13 +12,17 @@ import { useEffect, useRef, useState } from "react";
 import { Animated, Modal, View, TouchableOpacity, Platform } from "react-native";
 import Text from "./AppText";
 import { useIsFocused } from "@react-navigation/native";
-import { C } from "../constants/theme";
+import { C, FN_COLORS } from "../constants/theme";
 import { usePhotoStore, dayKey } from "../store/usePhotoStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import { RANKS, BADGES } from "../services/achievements";
+import { useBadgeGo } from "../hooks/useBadgeGo";
 import { RankShield, METALS } from "./RankShield";
 
 const isRank = (id) => id.startsWith("rank-");
+// Badges du Labo qui ont une vraie fenêtre (texte `win` + bouton vers le produit) : pas de bandeau pour eux,
+// ils attendent un écran de fin de session (Bilan, accueil).
+const isLaboWindow = (id) => { const b = BADGES.find((x) => x.id === id); return !!(b && b.win && b.cta); };
 
 // Relance la vérification quand une mesure utile change (photos triées, Go, ❤️, albums).
 function useAchievementWatcher(active) {
@@ -44,7 +48,7 @@ export function BadgeUnlockBanner() {
   const [badge, setBadge] = useState(null);
   const anim = useRef(new Animated.Value(0)).current;
 
-  const nextId = focused && !badge ? pending.find((id) => !isRank(id)) : null;
+  const nextId = focused && !badge ? pending.find((id) => !isRank(id) && !isLaboWindow(id)) : null;
 
   useEffect(() => {
     if (!nextId) return;
@@ -84,12 +88,23 @@ export function BadgeUnlockBanner() {
 }
 
 // ─── Fenêtre nouveau galon ─────────────────────────────────────────────────
+// Sert aussi de fenêtre « Nouveau badge · Labo » (une seule fenêtre à la fois : le galon d'abord, puis le badge).
 export function RankUnlockModal() {
   const focused = useIsFocused();
   useAchievementWatcher(focused);
   const pending = usePhotoStore((s) => s.pendingUnlocks);
   const consume = usePhotoStore((s) => s.consumeUnlocks);
+  const goBadge = useBadgeGo();
   const [rank, setRank] = useState(null);
+  const [laboBadge, setLaboBadge] = useState(null);
+
+  // Badge du Labo : seulement quand aucun galon n'est affiché ni en attente.
+  const laboId = focused && !rank && !laboBadge && !pending.some(isRank) ? pending.find(isLaboWindow) : null;
+  useEffect(() => {
+    if (!laboId) return;
+    consume([laboId]);
+    setLaboBadge(BADGES.find((b) => b.id === laboId) ?? null);
+  }, [laboId]);
   const pop   = useRef(new Animated.Value(0)).current;
   const shine = useRef(new Animated.Value(0)).current;
 
@@ -109,6 +124,34 @@ export function RankUnlockModal() {
       Animated.timing(shine, { toValue: 0, duration: 800, useNativeDriver: true }),
     ])).start();
   }, [rankIds.join(",")]);
+
+  if (!rank && laboBadge) {
+    const col = FN_COLORS.labo;
+    const close = () => setLaboBadge(null);
+    return (
+      <Modal transparent animationType="fade" visible onRequestClose={close}>
+        <View style={{ flex: 1, backgroundColor: "rgba(35,39,31,0.55)", alignItems: "center", justifyContent: "center", padding: 28 }}>
+          <View style={{ backgroundColor: C.bgCard, borderRadius: 24, padding: 22, width: "100%", maxWidth: 320, alignItems: "center" }}>
+            <View style={{ width: 84, height: 84, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: col.soft, borderWidth: 2, borderColor: col.main }}>
+              <Text style={{ fontSize: 44 }}>{laboBadge.emoji}</Text>
+            </View>
+            <Text style={{ fontSize: 10.5, fontWeight: "800", color: col.main, letterSpacing: 1.3, marginTop: 14 }}>NOUVEAU BADGE · LABO</Text>
+            <Text style={{ fontSize: 21, fontWeight: "700", color: C.text, textAlign: "center", marginTop: 3 }}>{laboBadge.name}</Text>
+            <Text style={{ fontSize: 13, color: C.textMid, textAlign: "center", marginTop: 7, lineHeight: 19 }}>{laboBadge.win}</Text>
+            <TouchableOpacity
+              onPress={() => { const to = laboBadge.cta.to; close(); goBadge(to); }}
+              style={{ backgroundColor: col.main, borderRadius: 14, paddingVertical: 13, alignSelf: "stretch", alignItems: "center", marginTop: 18 }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>{laboBadge.cta.label}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={close} style={{ marginTop: 11, padding: 4 }}>
+              <Text style={{ fontSize: 12.5, color: C.textMuted }}>Plus tard</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   if (!rank) return null;
   const idx  = RANKS.findIndex((r) => r.id === rank.id);

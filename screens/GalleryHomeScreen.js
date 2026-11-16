@@ -26,7 +26,12 @@ import { usePhotoStore } from "../store/usePhotoStore";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import SubscriptionRow from "../components/SubscriptionRow";
 import { useKeptUrls } from "../components/ProductArt";
-import { monthKey, monthName, subStatus } from "../services/printSelection";
+import { monthKey, monthName, subStatus, shortDate } from "../services/printSelection";
+import EnRouteBlock from "../components/labo/EnRouteBlock";
+import { useEnRoute } from "../hooks/useEnRoute";
+import { useOrdersStore } from "../store/useOrdersStore";
+import { confirmAbandonOrder } from "../services/orderActions";
+import { syncOrderStatuses } from "../services/printOrders";
 import { usePrintedPhotos } from "../hooks/usePrintedPhotos";
 
 // Titre de section de la Chambre noire (maquette « titres », version D validée le 10 nov.) :
@@ -85,6 +90,8 @@ export function GalleryHomeScreen({ navigation }) {
   const books         = usePhotoStore((s) => s.books);
   const deleteBook    = usePhotoStore((s) => s.deleteBook);
   useBookFonts(); // titres des couvertures dans leur police
+  const enRoute = useEnRoute(); // bloc « En route » (tout en bas) : livres et envois d'abonnement partis à l'impression
+
 
   // Retrouver une photo (url) par son id : photothèque + photos rangées.
   const photoById = useMemo(() => {
@@ -171,6 +178,9 @@ export function GalleryHomeScreen({ navigation }) {
 
   const [bookPickerOpen, setBookPickerOpen] = useState(false);
 
+  // Relit les commandes (et leur avancement chez l'imprimeur) à chaque passage dans le Labo.
+  useFocusEffect(useCallback(() => { useOrdersStore.getState().load({ refresh: true }); syncOrderStatuses(); }, []));
+
   // La barre d'état passe en clair tant qu'on est sur cet onglet (fond sombre), puis revient en foncé en le quittant.
   useFocusEffect(useCallback(() => {
     StatusBar.setBarStyle("light-content");
@@ -213,6 +223,8 @@ export function GalleryHomeScreen({ navigation }) {
             {bookList.map(({ book, album }) => {
               const ids = album.photoIds.filter((id) => urlById[id]);
               const pct = Math.round(bookStats(book, ids).fillRatio * 100);
+              // Livre déjà commandé : « Modifié » si on l'a retouché depuis (le PDF envoyé reste celui de la commande).
+              const modified = !!book.lastOrder && (book.updatedAt ?? 0) > (book.lastOrder.bookUpdatedAt ?? 0);
               return (
                 <TouchableOpacity key={book.albumId} activeOpacity={0.85}
                   onPress={() => navigation.navigate("PhotoBook", { albumId: album.id })}
@@ -220,6 +232,11 @@ export function GalleryHomeScreen({ navigation }) {
                   style={{ width: CARD_W }}>
                   <View style={{ borderRadius: 8, backgroundColor: C.bgCard, ...SHADOW }}>
                     <BookCover cover={book.cover} size={CARD_W} ratio={pageRatio(book)} urlById={urlById} />
+                    {!!book.lastOrder && (
+                      <View pointerEvents="none" style={{ position: "absolute", left: 6, top: 6, borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: modified ? D.todoBg : "rgba(76,122,43,0.92)" }}>
+                        <Text style={{ fontSize: 9, fontWeight: "700", color: "#fff" }}>{modified ? "Modifié" : `✓ Commandé ${shortDate(book.lastOrder.at)}`}</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={{ flexDirection: "row", alignItems: "center", marginTop: 7 }}>
                     <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "600", color: D.paper }}>{book.cover.title || album.name}</Text>
@@ -227,7 +244,15 @@ export function GalleryHomeScreen({ navigation }) {
                       <Text style={{ fontSize: 15, color: D.halo, fontWeight: "700" }}>···</Text>
                     </TouchableOpacity>
                   </View>
-                  <Text style={{ fontSize: 11, color: D.halo }}>{book.format} pages · {pct} % rempli</Text>
+                  <Text style={{ fontSize: 11, color: modified ? D.todoGlow : D.halo, fontWeight: modified ? "600" : "400" }}>
+                    {modified ? "Modifié depuis la commande" : `${book.format} pages · ${pct} % rempli`}
+                  </Text>
+                  {modified && (
+                    <TouchableOpacity onPress={() => navigation.navigate("BookCheck", { albumId: album.id })}
+                      style={{ alignSelf: "flex-start", marginTop: 6, backgroundColor: D.todoBg, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4 }}>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: D.paper }}>Commander à nouveau</Text>
+                    </TouchableOpacity>
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -246,6 +271,17 @@ export function GalleryHomeScreen({ navigation }) {
           <TouchableOpacity activeOpacity={0.85} onPress={openPoster}>
             <PosterWall urls={posterUrls} width={HEART_W} />
           </TouchableOpacity>
+
+          {/* En route : tout ce qui est parti à l'impression, tout en bas (maquette `maquette-labo-en-route.html`). Absent s'il n'y a rien. */}
+          {enRoute.length > 0 && (
+            <>
+              <DarkLabel title="En route" right="Toutes ›" onRight={() => navigation.navigate("BookOrders")} />
+              <EnRouteBlock items={enRoute} books={books} urlById={urlById}
+                onOpen={(it) => navigation.navigate(it.nav.name, it.nav.params)}
+                onAll={() => navigation.navigate("BookOrders")}
+                onAbandon={(order) => confirmAbandonOrder(order)} />
+            </>
+          )}
 
         </View>
       </ScrollView>

@@ -4,11 +4,19 @@
 // L'ancienne règle Gelato (PRINT_SPEC) est archivée dans archive/gelato/.
 import { getCrop, getCoverCrop, isDoubleLeft, isDoubleRight } from "./photoBook";
 import { bookSpec } from "./bookProducts";
+import { PELE_LAYOUT, peleCells, peleWindow } from "./pageCollage";
 
 // Largeur du cadre en part de la page (voir ROWS dans components/book/BookPage.js).
 // Vertical : 1 et 2 photos = pleine largeur · 3 photos = 1 grand en haut + 2 petits · 4 photos = 4 petits.
 // Horizontal : 2 photos sont côte à côte (chacune une demi-largeur).
-function slotFraction(layout, slotIndex, landscape) {
+// Pêle-mêle : largeur de la fenêtre photo du tirage (le même calcul que BookPage, en part de la largeur de page :
+// zone = page moins 5 % de marge de chaque côté, 2 % entre les tirages ; le titre éventuel est ignoré = contrôle un peu plus strict).
+function peleFraction(count, slotIndex, ratio) {
+  const cells = peleCells(count, 0.9, ratio - 0.1, 0.02);
+  return peleWindow(cells[slotIndex] ?? cells[0]).w;
+}
+function slotFraction(layout, slotIndex, landscape, count, ratio) {
+  if (layout === PELE_LAYOUT) return peleFraction(count, slotIndex, ratio);
   if (layout === 1) return 0.9;
   if (layout === 2) return landscape ? 0.45 : 0.9;
   if (layout === 3) return slotIndex === 0 ? 0.9 : 0.45;
@@ -17,11 +25,11 @@ function slotFraction(layout, slotIndex, landscape) {
 
 // Nombre de pixels (petit côté de la photo) nécessaires pour bien remplir ce cadre.
 // Un recadrage zoomé demande davantage de pixels.
-function requiredPx(layout, slotIndex, scale, spec, double) {
+function requiredPx(layout, slotIndex, scale, spec, double, count) {
   const landscape = spec.orientation === "landscape";
   const pageWidthCm = spec.widthMm / 10; // largeur d'une page : 21 (A4 vertical, 21×15)
   // Double page : le cadre couvre les 2 pages moins la marge de 5 % aux deux bouts = 1,9 largeur de page.
-  const cm = (double ? 1.9 : slotFraction(layout, slotIndex, landscape)) * pageWidthCm;
+  const cm = (double ? 1.9 : slotFraction(layout, slotIndex, landscape, count, spec.heightMm / spec.widthMm)) * pageWidthCm;
   return Math.round((cm / 2.54) * spec.minDpi * (scale || 1));
 }
 
@@ -62,7 +70,7 @@ export function checkBook(book, albumIds, photoById) {
       const photo = photoById[id];
       if (!photo?.width || !photo?.height) return; // taille inconnue : on ne dit rien
       const have = Math.min(photo.width, photo.height);
-      const need = requiredPx(page.layout, slotIndex, getCrop(page, id).scale, spec, isDoubleLeft(page));
+      const need = requiredPx(page.layout, slotIndex, getCrop(page, id).scale, spec, isDoubleLeft(page), page.slots.length);
       if (have < need) lowQuality.push({ photoId: id, pageIndex, have, need });
     });
   });

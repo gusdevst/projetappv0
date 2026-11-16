@@ -13,9 +13,10 @@ import Icon from "../components/Icons";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
 import { BadgeUnlockBanner, RankUnlockModal } from "../components/AchievementUnlocks";
+import HeartsNudge from "../components/HeartsNudge";
 import { DeleteRatio } from "../components/DeleteRatio";
 import { deleteRatio } from "../services/progressStats";
-import { rankInfo } from "../services/achievements";
+import { rankInfo, buildContext } from "../services/achievements";
 import { RankShield } from "../components/RankShield";
 
 const { width: SW } = Dimensions.get("window");
@@ -260,6 +261,16 @@ export function SummaryScreen({ navigation, route }) {
             return <View key={s.label} style={{ width: (SW - 60) / 2 }}>{cardContent}</View>;
           })}
         </View>
+        )}
+
+        {/* ── Relance Labo : seulement si cette session a ajouté des coups de cœur ── */}
+        {sessionKept.length > 0 && (
+          <HeartsNudge
+            keptToPrint={buildContext(usePhotoStore.getState()).keptToPrint}
+            readyWon={!!usePhotoStore.getState().achievements?.["lab-ready"]}
+            onSeeHearts={() => navigation.navigate("Gallery", { section: "kept" })}
+            onPrint={() => navigation.navigate("PrintNew")}
+          />
         )}
 
         {/* ── Ratio de suppression de la session (mode ménage) ── */}

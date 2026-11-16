@@ -11,6 +11,7 @@ import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system/legacy";
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./supabase";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
+import { useOrdersStore } from "../store/useOrdersStore";
 import { productOf } from "../constants/subscription";
 
 const BUCKET = "print-photos";
@@ -86,6 +87,7 @@ export async function submitSelection({ sub, month, photoIds, onProgress }) {
       kind: sub.kind,
       recipient: sub.recipient || sub.name || "",
       address: sub.address,
+      address_data: sub.addressData ?? null, // adresse structurée (nom, rue, code postal, ville, téléphone) : pour le colis
       message: sub.message || null,
       photo_count: paths.length,
       photos: paths,
@@ -105,7 +107,11 @@ export async function submitSelection({ sub, month, photoIds, onProgress }) {
 export async function syncOrderStatuses() {
   try {
     const { data, error } = await supabase.from("print_orders").select("sub_id, month, status");
-    if (error || !data) return;
+    if (error || !data) { if (__DEV__) console.warn("[en route] lecture de print_orders impossible :", error?.message); return; }
+    // Quels envois existent vraiment côté serveur (pour le bloc « En route » du Labo) : seulement si on est connecté.
+    const { data: sess } = await supabase.auth.getSession();
+    if (__DEV__ && !sess?.session) console.warn("[en route] pas connecté : les envois d'abonnement ne sont pas affichés.");
+    useOrdersStore.setState({ printOrderKeys: sess?.session ? data.map((r) => `${r.sub_id}|${r.month}`) : null });
     const { setStage } = useSubscriptionStore.getState();
     data.forEach((r) => setStage(r.sub_id, r.month, r.status));
   } catch (e) { /* hors ligne */ }

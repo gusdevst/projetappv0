@@ -1,16 +1,16 @@
 // screens/SubscriptionSetupScreen.js
-// Réglage de l'abonnement mensuel « Coups de cœur » (maquette validée, écrans 3 et 4).
-// Deux onglets : « Pour moi » (20 tirages, un seul abonnement) · « Pour un proche »
-// (prénom, adresse, nombre de photos, petit mot ; autant d'abonnements qu'on veut).
-// Pour l'instant : enregistre l'abonnement sur le téléphone. Paiement et envoi = étapes suivantes.
+// Réglage de l'abonnement mensuel « Coups de cœur » — étape 1 : le TYPE d'abonnement (maquette validée, écrans 3 et 4, simplifiés le 16 nov. 2026).
+// Deux onglets : « Pour moi » (20 tirages, un seul abonnement) · « Pour un proche » (prénom, petit mot ; autant d'abonnements qu'on veut),
+// + dates d'envoi et « Je valide chaque envoi ». L'ADRESSE n'est plus saisie ici : « Continuer » ouvre l'écran d'adresse des commandes
+// (BookOrderAddress : adresse du compte déjà enregistrée, ou « offrir à quelqu'un d'autre »), puis SubscriptionRecap (récap, accord, « S'abonner »).
+// Même parcours que le livre, le poster et le tirage simple : adresse → récapitulatif → confirmation.
 
 import { useState } from "react";
-import { View, ScrollView, TouchableOpacity, TextInput, StatusBar, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { View, ScrollView, TouchableOpacity, TextInput, StatusBar, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Text from "../components/AppText";
 import BackButton from "../components/BackButton";
 import { Toggle } from "../components/Toggle";
-import AddressInput from "../components/AddressInput";
 import { SHADOW } from "../components/home/ui";
 import { C, FONT } from "../constants/theme";
 import {
@@ -18,11 +18,6 @@ import {
 } from "../constants/subscription";
 import SubDaysFields from "../components/SubDaysFields";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
-import { useAuthStore } from "../store/useAuthStore";
-import { requestPermission } from "../services/notificationService";
-import { refreshSubscriptionNotifications } from "../services/subscriptionNotifications";
-
-const MIN_ADDRESS = 12; // « 3 rue X, 75001 Paris » : en dessous, ce n'est pas une adresse
 
 // Case de formulaire : petit titre + contenu (texte fixe ou saisie).
 function Field({ label, children, right }) {
@@ -76,22 +71,14 @@ export function SubscriptionSetupScreen({ navigation, route }) {
   const [tab, setTab] = useState(route.params?.kind === "gift" ? "gift" : "self");
 
   const subs    = useSubscriptionStore((s) => s.subs);
-  const addSub  = useSubscriptionStore((s) => s.addSub);
-  const session = useAuthStore((s) => s.session);
   const alreadySelf = subs.some((x) => x.kind === "self" && x.status !== "cancelled");
 
   const product = "prints"; // un seul type d'envoi depuis le 14 nov. 2026 (magnets retirés : archive/magnets/)
   // « Pour moi »
-  const [myRecipient, setMyRecipient]   = useState("");   // nom sur l'enveloppe
-  const [myAddress, setMyAddress]       = useState("");   // choisie dans les suggestions, ou saisie à la main
-  const [myComplement, setMyComplement] = useState("");   // bâtiment, étage… (facultatif)
   const [myValidate, setMyValidate]     = useState(true);
   const [myDays, setMyDays]             = useState({ selectionDay: SUB_SEND_DAY, sendDay: SUB_VALIDATE_BY });
   // « Pour un proche »
   const [giftName, setGiftName]       = useState("");
-  const [giftRecipient, setGiftRecipient]   = useState(""); // facultatif : vide = le prénom
-  const [giftAddress, setGiftAddress]       = useState("");
-  const [giftComplement, setGiftComplement] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
   const [giftValidate, setGiftValidate] = useState(true);
   const [giftDays, setGiftDays]         = useState({ selectionDay: SUB_SEND_DAY, sendDay: SUB_VALIDATE_BY });
@@ -105,42 +92,18 @@ export function SubscriptionSetupScreen({ navigation, route }) {
   let blocked = null;
   if (isSelf) {
     if (alreadySelf) blocked = "Tu as déjà cet abonnement.";
-    else if (myRecipient.trim().length < 3) blocked = "Ajoute ton nom pour l'enveloppe.";
-    else if (myAddress.trim().length < MIN_ADDRESS) blocked = "Ajoute ton adresse de livraison.";
   } else {
     if (giftName.trim().length < 2) blocked = "Ajoute le prénom de ton proche.";
-    else if (giftAddress.trim().length < MIN_ADDRESS) blocked = "Ajoute son adresse de livraison.";
     else if (!price) blocked = "Le prix n'est pas encore fixé.";
   }
 
-  async function submit() {
-    if (!session) {
-      Alert.alert(
-        "Connecte-toi d'abord",
-        "L'abonnement est lié à ton compte Pellicule.",
-        [
-          { text: "Annuler", style: "cancel" },
-          { text: "Se connecter", onPress: () => navigation.navigate("Auth") },
-        ]
-      );
-      return;
-    }
-    // Adresse = ligne principale, + 2ᵉ ligne si complément (la 1re ligne sert d'aperçu dans l'app).
-    const full = (main, complement) => (complement.trim() ? `${main.trim()}\n${complement.trim()}` : main.trim());
-    addSub(isSelf
-      ? { kind: "self", userId: session.user.id, recipient: myRecipient.trim(), address: full(myAddress, myComplement), product, count, validateEach: myValidate, ...myDays }
-      : { kind: "gift", userId: session.user.id, name: giftName.trim(), recipient: giftRecipient.trim() || giftName.trim(), address: full(giftAddress, giftComplement), message: giftMessage.trim(), product, count, validateEach: giftValidate, ...giftDays }
-    );
-    // Pour prévenir le 1er du mois que la sélection est prête : on demande la permission ici,
-    // au bon moment, puis on programme la notification.
-    try {
-      if (await requestPermission()) await refreshSubscriptionNotifications();
-    } catch (e) { /* pas de notification : l'abonnement est enregistré quand même */ }
-    Alert.alert(
-      "Abonnement enregistré",
-      "Tes réglages sont sauvegardés. Le paiement et l'envoi des photos arrivent bientôt.",
-      [{ text: "OK", onPress: () => navigation.navigate("Main", { screen: "GalleryTab" }) }]
-    );
+  // Étape suivante : l'adresse (celle du compte, ou celle du proche), puis le récapitulatif. Si on n'est pas connecté,
+  // l'écran d'adresse propose de se connecter d'abord.
+  function next() {
+    const setup = isSelf
+      ? { kind: "self", product, count, validateEach: myValidate, ...myDays }
+      : { kind: "gift", name: giftName.trim(), message: giftMessage.trim(), product, count, validateEach: giftValidate, ...giftDays };
+    navigation.navigate("BookOrderAddress", { nextScreen: "SubscriptionRecap", what: "abonnement", startForm: !isSelf, nextParams: { setup } });
   }
 
   return (
@@ -167,35 +130,16 @@ export function SubscriptionSetupScreen({ navigation, route }) {
             <>
               <Field label="Photos par mois"><Value>{count} {prod.units}</Value></Field>
               <Field label="Format"><Value>{`${SUB_FORMAT_LABEL}, papier brillant`}</Value></Field>
-              <Field label="Nom sur l'enveloppe">
-                <Input value={myRecipient} onChangeText={setMyRecipient} editable={!alreadySelf} placeholder="Prénom Nom" autoCapitalize="words" />
-              </Field>
-              <Field label="Adresse de livraison">
-                <AddressInput value={myAddress} onChange={setMyAddress} editable={!alreadySelf}
-                  placeholder="Commence à taper ton adresse" />
-              </Field>
-              <Field label="Complément d'adresse (facultatif)">
-                <Input value={myComplement} onChangeText={setMyComplement} editable={!alreadySelf} placeholder="Bâtiment, étage, code porte…" />
-              </Field>
               <SubDaysFields {...myDays} onChange={setMyDays} />
               <ValidateRow value={myValidate} onToggle={() => setMyValidate((v) => !v)} sub="Sinon, la sélection part toute seule" />
-              <Banner icon="🔒" bg={C.albumSoft} color={C.album}>
-                Tes photos ne sont envoyées à l'imprimeur qu'après ta validation.
+              <Banner icon="📍" bg={C.albumSoft} color={C.album}>
+                Étape suivante : l'adresse de livraison (celle de ton compte). Tes photos ne partent qu'après ta validation chaque mois.
               </Banner>
             </>
           ) : (
             <>
               <Field label="Prénom du proche">
                 <Input value={giftName} onChangeText={setGiftName} placeholder="Mamie Odile" autoCapitalize="words" />
-              </Field>
-              <Field label="Nom sur l'enveloppe (facultatif)">
-                <Input value={giftRecipient} onChangeText={setGiftRecipient} placeholder={giftName.trim() || "Prénom Nom"} autoCapitalize="words" />
-              </Field>
-              <Field label="Adresse de livraison">
-                <AddressInput value={giftAddress} onChange={setGiftAddress} placeholder="Commence à taper son adresse" />
-              </Field>
-              <Field label="Complément d'adresse (facultatif)">
-                <Input value={giftComplement} onChangeText={setGiftComplement} placeholder="Bâtiment, étage, code porte…" />
               </Field>
               <Field label="Tirages par mois"><Value>{count} {prod.units}</Value></Field>
               <Field label="Format"><Value>{SUB_FORMAT_LABEL}, papier brillant</Value></Field>
@@ -208,19 +152,12 @@ export function SubscriptionSetupScreen({ navigation, route }) {
               </Banner>
               <SubDaysFields {...giftDays} onChange={setGiftDays} />
               <ValidateRow value={giftValidate} onToggle={() => setGiftValidate((v) => !v)} sub="Tu reçois la sélection avant elle" />
+              <Banner icon="📍" bg={C.albumSoft} color={C.album}>
+                Étape suivante : le nom et l'adresse de {giftName.trim() || "ton proche"}.
+              </Banner>
             </>
           )}
 
-          {/* Information sur les données personnelles (RGPD : à donner au moment où on les collecte) */}
-          <View style={{ marginTop: 16, paddingHorizontal: 4 }}>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: C.textMid }}>Tes données</Text>
-            <Text style={{ fontSize: 11, color: C.textMuted, lineHeight: 16, marginTop: 3 }}>
-              Pour imprimer et expédier tes {prod.units}, Pellicule envoie les photos de ta sélection, le nom et l'adresse de livraison
-              à son imprimeur. Ces données servent uniquement à préparer ta commande et sont supprimées après l'impression.
-              Tu peux demander leur suppression à tout moment.
-              {isSelf ? "" : ` En offrant cet abonnement, tu confirmes avoir l'accord de ${giftName.trim() || "ton proche"} pour donner son adresse.`}
-            </Text>
-          </View>
         </ScrollView>
 
         {/* Bouton fixe en bas (remonte avec le clavier) */}
@@ -228,11 +165,11 @@ export function SubscriptionSetupScreen({ navigation, route }) {
           <TouchableOpacity
             activeOpacity={0.85}
             disabled={!!blocked}
-            onPress={submit}
+            onPress={next}
             style={[{ height: 50, borderRadius: 25, backgroundColor: C.album, alignItems: "center", justifyContent: "center", opacity: blocked ? 0.4 : 1 }, !blocked && SHADOW]}
           >
             <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>
-              {isSelf ? "S'abonner" : "Offrir"}{price ? ` · ${price} / mois` : ""}
+              Continuer{price ? ` · ${price} / mois` : ""}
             </Text>
           </TouchableOpacity>
           {!!blocked && (

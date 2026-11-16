@@ -19,7 +19,7 @@ import { SHADOW } from "../components/home/ui";
 import { C, S, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import {
-  setLayout, setPageTitle, placePhoto, clearSlot, placedMap, getCrop, setCrop, resetCrop,
+  setLayout, setPeleCount, setPelePositions, PELE_LAYOUT, setPageTitle, placePhoto, clearSlot, placedMap, getCrop, setCrop, resetCrop,
   COVER_FONTS, PAGE_TITLE_POS, PAGE_TITLE_SIZES, pageRatio, isLandscape, layoutRows, doubleLeftIndex,
 } from "../services/photoBook";
 
@@ -75,13 +75,16 @@ export function BookPageEditorScreen({ navigation, route }) {
   const selId = selSlot != null ? page.slots[selSlot] : null;
 
   const crop  = selId ? getCrop(page, selId) : null;
-  const editing = tab === "photo" && !!selId; // une photo est en cours de recadrage
+  const isPele = page.layout === PELE_LAYOUT;
+  const tabE = tab === "placer" && !isPele ? "page" : tab;   // l'onglet « Placer » n'existe qu'en pêle-mêle
+  const moving = tabE === "placer";                           // les tirages se déplacent au doigt
+  const editing = tabE === "photo" && !!selId; // une photo est en cours de recadrage
   const saveCrop = (patch) => save(setCrop(book, pi, selId, patch));
 
   const goTo = (next) => { setPi(next); setSelSlot(null); setTab("page"); };
   // Glisser vers la gauche = page suivante, vers la droite = précédente.
   // Coupé pendant le recadrage d'une photo : le glissé sert alors à la déplacer.
-  const swipe = Gesture.Pan().runOnJS(true).enabled(!editing).activeOffsetX([-25, 25]).failOffsetY([-20, 20])
+  const swipe = Gesture.Pan().runOnJS(true).enabled(!editing && !moving).activeOffsetX([-25, 25]).failOffsetY([-20, 20])
     .onEnd((e) => {
       if (e.translationX < -50 && pi < book.format - 1) goTo(pi + 1);
       else if (e.translationX > 50 && pi > 0) goTo(pi - 1);
@@ -93,7 +96,7 @@ export function BookPageEditorScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView scrollEnabled={!editing} contentContainerStyle={{ padding: S.pad, paddingTop: 8, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+      <ScrollView scrollEnabled={!editing && !moving} contentContainerStyle={{ padding: S.pad, paddingTop: 8, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         {/* En-tête */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <BackButton accentColor={C.album} onPress={() => navigation.goBack()} />
@@ -113,30 +116,48 @@ export function BookPageEditorScreen({ navigation, route }) {
           shadowColor: "#3c3c28", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.16, shadowRadius: 14, elevation: 4 }}>
           <BookPage page={page} size={landscape ? width - S.pad * 2 : Math.min(width - S.pad * 2, 300)} ratio={pageRatio(book)}
             urlById={urlById} coverFont={book.cover.font}
-            onSlotPress={onSlotPress} selectedSlot={tab === "photo" ? selSlot : null}
+            onSlotPress={moving ? undefined : onSlotPress} selectedSlot={tabE === "photo" ? selSlot : null}
+            moveMode={moving} onPelePlace={(positions) => save(setPelePositions(book, pi, positions))}
             editableSlot={editing ? selSlot : null}
             onCropChange={(si, c) => save(setCrop(book, pi, page.slots[si], c))}
             cropPreview={editing && liveTilt != null ? { slot: selSlot, tilt: liveTilt } : null} />
         </View>
         </GestureDetector>
         <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginTop: 10 }}>
-          {editing ? "Pince pour zoomer · glisse pour déplacer" : "Touche une photo pour la modifier · glisse pour tourner la page"}
+          {editing ? "Pince pour zoomer · glisse pour déplacer" : moving ? "Glisse un tirage pour le déplacer" : "Touche une photo pour la modifier · glisse pour tourner la page"}
         </Text>
 
         {/* Onglets */}
         <View style={{ flexDirection: "row", backgroundColor: C.bgMuted, borderRadius: 14, padding: 4, marginTop: 14 }}>
-          {[["page", "Page"], ["photo", "Photo"]].map(([k, label]) => (
-            <TouchableOpacity key={k} onPress={() => setTab(k)}
-              style={{ flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 10, backgroundColor: tab === k ? C.bgCard : "transparent" }}>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: tab === k ? C.text : C.textMuted }}>{label}</Text>
+          {[["page", "Page"], ["photo", "Photo"], ...(isPele ? [["placer", "Placer"]] : [])].map(([k, label]) => (
+            <TouchableOpacity key={k} onPress={() => { setTab(k); if (k === "placer") setSelSlot(null); }}
+              style={{ flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 10, backgroundColor: tabE === k ? C.bgCard : "transparent" }}>
+              <Text style={{ fontSize: 13, fontWeight: "600", color: tabE === k ? C.text : C.textMuted }}>{label}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {tab === "page" ? (
+        {tabE === "placer" ? (
+          <>
+            <Text style={sectionStyle}>PLACER LES TIRAGES</Text>
+            <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 14, ...SHADOW }}>
+              <Text style={{ fontSize: 13.5, color: C.text, lineHeight: 20 }}>
+                Glisse un tirage où tu veux sur la page. Il ne peut jamais en recouvrir un autre : il les contourne.
+              </Text>
+              <Text style={{ fontSize: 12, color: C.textMuted, lineHeight: 17, marginTop: 8 }}>
+                Les tirages restent dans la marge de la page : rien n'est coupé à l'impression.
+              </Text>
+            </View>
+            <TouchableOpacity disabled={!page.pos} onPress={() => save(setPelePositions(book, pi, null))}
+              style={{ marginTop: 12, height: 46, borderRadius: S.radiusFull, borderWidth: 1.5, borderColor: C.border, alignItems: "center", justifyContent: "center", opacity: page.pos ? 1 : 0.4 }}>
+              <Text style={{ color: C.textMid, fontWeight: "700", fontSize: 14 }}>Remettre en ordre</Text>
+            </TouchableOpacity>
+          </>
+        ) : tabE === "page" ? (
           <>
             <Text style={sectionStyle}>MISE EN PAGE</Text>
-            <LayoutPicker value={page.layout} landscape={landscape} onChange={(n) => { save(setLayout(book, pi, n)); setSelSlot(null); }} />
+            <LayoutPicker value={page.layout} landscape={landscape} onChange={(n) => { save(setLayout(book, pi, n)); setSelSlot(null); }}
+              peleCount={page.slots.length} onPeleCount={(n) => { save(setPeleCount(book, pi, n)); setSelSlot(null); }} />
 
             <Text style={sectionStyle}>TITRE DE LA PAGE</Text>
             <View style={{ backgroundColor: C.bgCard, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 2, ...SHADOW }}>
@@ -198,6 +219,14 @@ export function BookPageEditorScreen({ navigation, route }) {
           </>
         )}
       </ScrollView>
+
+      {/* Bouton fixe en bas : les changements sont déjà enregistrés, « Valider » ferme juste la page */}
+      <View style={{ paddingHorizontal: S.pad, paddingTop: 10, paddingBottom: 12, backgroundColor: C.bg }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.85}
+          style={{ backgroundColor: C.album, borderRadius: 16, paddingVertical: 15, alignItems: "center" }}>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>Valider</Text>
+        </TouchableOpacity>
+      </View>
 
       <PhotoPickerSheet
         visible={picker != null}

@@ -5,6 +5,8 @@
 //   puis la grille (3 colonnes, une seule coche) et « Choisir cette photo » → écran du format.
 // La recherche « l'été 2026 à la plage » réutilise ContentSearchSheet (mode `pickMode` : un seul bouton).
 // Pas de photo en corbeille. La taille de chaque photo est affichée (la qualité dépend d'elle).
+// MODE TIRAGES (`route.params.mode === "prints"`, depuis « Tirage simple ») : même écran, mais on coche 20 photos MINIMUM (jusqu'à 1 000),
+// sans numéros, avec « Tout sélectionner », puis « Continuer » → adresse (BookOrderAddress) → PrintRecap.
 
 import { useState, useMemo, useCallback, memo } from "react";
 import { View, FlatList, ScrollView, TouchableOpacity, StatusBar, useWindowDimensions } from "react-native";
@@ -18,6 +20,7 @@ import { SHADOW } from "../components/home/ui";
 import { C } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { COLLAGE_MIN, COLLAGE_MAX } from "../services/posterCollage";
+import { PRINT_PRODUCT } from "../services/printProducts";
 
 const COLS = 3;
 const GAP = 4;
@@ -42,7 +45,10 @@ const Cell = ({ photo, size, selected, order, onPress }) => (
 );
 const MemoCell = memo(Cell);
 
-export function PosterPickScreen({ navigation }) {
+export function PosterPickScreen({ navigation, route }) {
+  const prints = route?.params?.mode === "prints";
+  const maxSel = prints ? PRINT_PRODUCT.maxCount : COLLAGE_MAX;
+  const minSel = prints ? PRINT_PRODUCT.minCount : 1;
   const { width: SW } = useWindowDimensions();
   const kept = usePhotoStore((s) => s.kept);
   const albums = usePhotoStore((s) => s.albums);
@@ -75,15 +81,25 @@ export function PosterPickScreen({ navigation }) {
 
   const photos = tab === "kept" ? keptPhotos : tab === "album" ? (currentAlbum?.photos ?? []) : libraryList;
   const cell = Math.floor((SW - GAP * (COLS + 1)) / COLS);
-  const ready = sel.length >= 1;
-  const isCollage = sel.length >= COLLAGE_MIN; // plusieurs photos cochées = pêle-mêle, sans interrupteur
+  const selSet = useMemo(() => new Set(sel), [sel]);
+  const ready = sel.length >= minSel;
+  const isCollage = !prints && sel.length >= COLLAGE_MIN; // plusieurs photos cochées = pêle-mêle, sans interrupteur
 
   function changeTab(t) { setTab(t); } // la sélection suit d'un onglet / d'un album à l'autre
   // Toucher une photo la coche (numérotée dans l'ordre), la retoucher la décoche. Jusqu'à COLLAGE_MAX photos.
   const toggleSelect = useCallback((id) => setSel((cur) => {
     if (cur.includes(id)) return cur.filter((x) => x !== id);
-    return cur.length >= COLLAGE_MAX ? cur : [...cur, id];
-  }), []);
+    return cur.length >= maxSel ? cur : [...cur, id];
+  }), [maxSel]);
+  // Tirages : coche (ou décoche) toutes les photos de la liste affichée.
+  const selectAllShown = () => setSel((cur) => {
+    const shown = photos.map((p) => p.id);
+    const allOn = shown.length > 0 && shown.every((id) => cur.includes(id));
+    if (allOn) return cur.filter((id) => !shown.includes(id));
+    const next = [...cur];
+    for (const id of shown) { if (next.length >= maxSel) break; if (!next.includes(id)) next.push(id); }
+    return next;
+  });
 
   function onApplySearch(r) {
     // Période et contenu se combinent par intersection (comme les filtres de l'accueil).
@@ -110,8 +126,8 @@ export function PosterPickScreen({ navigation }) {
       <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, flexDirection: "row", alignItems: "center", gap: 12 }}>
         <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 18, fontWeight: "700", color: C.text }}>Quelle photo en poster ?</Text>
-          <Text style={{ fontSize: 12, color: C.textMuted }}>{`Une photo pour un poster, plusieurs pour un pêle-mêle (jusqu'à ${COLLAGE_MAX}).`}</Text>
+          <Text style={{ fontSize: 18, fontWeight: "700", color: C.text }}>{prints ? "Quelles photos imprimer ?" : "Quelle photo en poster ?"}</Text>
+          <Text style={{ fontSize: 12, color: C.textMuted }}>{prints ? `${PRINT_PRODUCT.minCount} photos minimum, jusqu'à ${frNum(PRINT_PRODUCT.maxCount)}.` : `Une photo pour un poster, plusieurs pour un pêle-mêle (jusqu'à ${COLLAGE_MAX}).`}</Text>
         </View>
       </View>
 
@@ -165,9 +181,18 @@ export function PosterPickScreen({ navigation }) {
         </View>
       )}
 
-      <Text style={{ fontSize: 11.5, color: C.textMuted, marginHorizontal: 18, marginTop: 10, marginBottom: 6 }}>
-        {`${frNum(photos.length)} photo${photos.length > 1 ? "s" : ""}`}{sel.length > 0 ? ` · ${sel.length} sélectionnée${sel.length > 1 ? "s" : ""}` : ""}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", marginHorizontal: 18, marginTop: 10, marginBottom: 6 }}>
+        <Text style={{ flex: 1, fontSize: 11.5, color: C.textMuted }}>
+          {`${frNum(photos.length)} photo${photos.length > 1 ? "s" : ""}`}{sel.length > 0 ? ` · ${frNum(sel.length)} sélectionnée${sel.length > 1 ? "s" : ""}` : ""}
+        </Text>
+        {prints && photos.length > 0 && (
+          <TouchableOpacity onPress={selectAllShown} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: C.album }}>
+              {photos.every((p) => selSet.has(p.id)) ? "Tout désélectionner" : "Tout sélectionner"}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
       <FlatList
         data={photos}
         keyExtractor={(p) => p.id}
@@ -179,7 +204,7 @@ export function PosterPickScreen({ navigation }) {
         removeClippedSubviews
         extraData={sel}
         renderItem={({ item }) => (
-          <MemoCell photo={item} size={cell} selected={sel.includes(item.id)} order={isCollage ? sel.indexOf(item.id) + 1 : 0} onPress={toggleSelect} />
+          <MemoCell photo={item} size={cell} selected={selSet.has(item.id)} order={isCollage ? sel.indexOf(item.id) + 1 : 0} onPress={toggleSelect} />
         )}
         ListEmptyComponent={
           <Text style={{ textAlign: "center", color: C.textMuted, fontSize: 13, marginTop: 40 }}>
@@ -190,16 +215,23 @@ export function PosterPickScreen({ navigation }) {
 
       <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: C.bg, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 26, borderTopWidth: 1, borderTopColor: C.border }}>
         <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginBottom: 8 }}>
-          {sel.length === 0 ? "Touche une photo, ou plusieurs pour un pêle-mêle"
+          {prints
+            ? (sel.length >= maxSel ? `${frNum(maxSel)} photos : le maximum`
+              : ready ? "Touche une photo cochée pour la décocher"
+              : `Encore ${minSel - sel.length} photo${minSel - sel.length > 1 ? "s" : ""} pour atteindre le minimum de ${minSel}`)
+            : sel.length === 0 ? "Touche une photo, ou plusieurs pour un pêle-mêle"
             : sel.length === 1 ? "Touche d'autres photos pour faire un pêle-mêle"
             : sel.length >= COLLAGE_MAX ? `${COLLAGE_MAX} photos : le maximum · touche une photo cochée pour la décocher`
             : "Pêle-mêle · touche une photo cochée pour la décocher"}
         </Text>
         <TouchableOpacity activeOpacity={0.85} disabled={!ready}
-          onPress={() => (isCollage ? navigation.navigate("PosterCollage", { photoIds: sel }) : navigation.navigate("PosterFormat", { photoId: sel[0] }))}
+          onPress={() => (prints
+            ? navigation.navigate("BookOrderAddress", { nextScreen: "PrintRecap", what: "tirage", nextParams: { photoIds: sel } })
+            : isCollage ? navigation.navigate("PosterCollage", { photoIds: sel }) : navigation.navigate("PosterFormat", { photoId: sel[0] }))}
           style={[{ height: 50, borderRadius: 25, backgroundColor: ready ? C.album : C.border, alignItems: "center", justifyContent: "center" }, ready && SHADOW]}>
           <Text style={{ color: ready ? "#fff" : C.textMuted, fontSize: 15, fontWeight: "700" }}>
-            {!ready ? "Choisir" : isCollage ? `Composer · ${sel.length} photos` : "Choisir cette photo"}
+            {prints ? (ready ? `Continuer · ${frNum(sel.length)} tirages` : "Choisir")
+              : !ready ? "Choisir" : isCollage ? `Composer · ${sel.length} photos` : "Choisir cette photo"}
           </Text>
         </TouchableOpacity>
       </View>

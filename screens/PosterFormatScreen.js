@@ -215,7 +215,7 @@ export function PosterFormatScreen({ navigation, route }) {
         <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginBottom: 8 }}>
           {POSTER_FORMATS[fmt].name} · {formatEuro(posterPriceCents(fmt))} TTC, livraison comprise
         </Text>
-        <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate("PosterRecap", collage ? { collage, format: fmt } : { photoId, format: fmt, crop: { scale: crop.scale, x: crop.x, y: crop.y }, title: hasTitle ? { ...title, text: title.text.trim() } : null })}
+        <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate("BookOrderAddress", { nextScreen: "PosterRecap", what: "poster", nextParams: collage ? { collage, format: fmt } : { photoId, format: fmt, crop: { scale: crop.scale, x: crop.x, y: crop.y }, title: hasTitle ? { ...title, text: title.text.trim() } : null } })}
           style={[{ height: 50, borderRadius: 25, backgroundColor: C.album, alignItems: "center", justifyContent: "center" }, SHADOW]}>
           <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>Continuer</Text>
         </TouchableOpacity>

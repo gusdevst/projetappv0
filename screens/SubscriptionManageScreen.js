@@ -19,6 +19,7 @@ import { requestPermission } from "../services/notificationService";
 import { sendTestSubscriptionNotification } from "../services/subscriptionNotifications";
 import { syncOrderStatuses } from "../services/printOrders";
 import { useSubscriptionStore } from "../store/useSubscriptionStore";
+import { addressLine, addressSnapshot } from "../services/addresses";
 
 export function SubscriptionManageScreen({ navigation, route }) {
   const { subId, editDays } = route.params ?? {};
@@ -27,6 +28,18 @@ export function SubscriptionManageScreen({ navigation, route }) {
   const updateSub  = useSubscriptionStore((s) => s.updateSub);
   const urls       = useKeptUrls(3);
   const [daysOpen, setDaysOpen] = useState(!!editDays);
+
+  // Retour de l'écran d'adresse (« Modifier » dans la carte Livraison) : on met à jour l'abonnement avec l'adresse choisie.
+  const picked = route.params?.address;
+  const pickedAt = route.params?.pickedAt;
+  useEffect(() => {
+    if (!picked || !pickedAt) return;
+    updateSub(subId, {
+      recipient: picked.name,
+      address: picked.complement ? `${addressLine(picked)}\n${picked.complement}` : addressLine(picked),
+      addressData: addressSnapshot(picked),
+    });
+  }, [pickedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sub = subs.find((x) => x.id === subId);
   useEffect(() => { syncOrderStatuses(); }, []); // statuts d'impression à jour
@@ -103,12 +116,21 @@ export function SubscriptionManageScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Livraison : ce qu'on a enregistré (lecture seule) */}
+        {/* Livraison : l'adresse enregistrée, modifiable (même écran d'adresse que pour les commandes) */}
         <SectionTitle title="LIVRAISON" />
         <View style={[{ backgroundColor: C.bgCard, borderRadius: 16, padding: 14 }, SHADOW]}>
           <Text style={{ fontSize: 13.5, fontWeight: "600", color: C.text }}>{sub.recipient || sub.name}</Text>
           <Text style={{ fontSize: 12.5, color: C.textMid, lineHeight: 18, marginTop: 2 }}>{sub.address}</Text>
+          {!!sub.addressData?.phone && <Text style={{ fontSize: 12.5, color: C.textMid, marginTop: 2 }}>{sub.addressData.phone}</Text>}
           {!!sub.message && <Text style={{ fontSize: 12, color: C.textMuted, fontStyle: "italic", marginTop: 6 }}>« {sub.message} »</Text>}
+          {!sub.addressData && (
+            <Text style={{ fontSize: 11.5, color: "#c4621c", lineHeight: 16, marginTop: 8 }}>
+              Cette adresse date d'avant le carnet d'adresses : choisis-en une pour ajouter le téléphone du livreur.
+            </Text>
+          )}
+          <TouchableOpacity onPress={() => navigation.navigate("BookOrderAddress", { returnTo: "SubscriptionManage", what: "abonnement", nextParams: { subId: sub.id } })} style={{ marginTop: 8 }}>
+            <Text style={{ fontSize: 12.5, fontWeight: "700", color: C.album }}>Modifier l'adresse</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 

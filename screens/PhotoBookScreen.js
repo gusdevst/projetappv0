@@ -25,7 +25,7 @@ import { SHADOW } from "../components/home/ui";
 import { C, S, FONT } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import {
-  pagesRange, createBook, syncWithAlbum, setFormat, setProduct, setLayout, autofill, bookStats,
+  pagesRange, createBook, syncWithAlbum, setFormat, setProduct, setLayout, setPeleCount, autofill, bookStats,
   placedMap, placePhoto, clearSlot, setCover, COVER_FONTS, COVER_SIZES, COVER_COLORS, COVER_POS,
   COVER_STYLES, COVER_BGS, setCoverStyle, setCoverBg, coverBgHex, styleNeedsBg, autoTitleXY, completeBook, COMPLETE_ORDERS,
   getCrop, setCrop, resetCrop, isDoubleLeft, isDoublePage, canDouble, spreadLeftOf, setDouble, clearDouble,
@@ -632,6 +632,7 @@ export function PhotoBookScreen({ navigation, route }) {
             <Text style={sectionStyle}>{isDoublePage(book.pages[cur]) ? `MISE EN PAGE · PAGES ${spreadLeftOf(cur) + 1}–${spreadLeftOf(cur) + 2}` : `MISE EN PAGE · PAGE ${cur + 1}`}</Text>
             <LayoutPicker value={isDoublePage(book.pages[cur]) ? null : book.pages[cur].layout} landscape={landscape}
               onChange={(n) => save(setLayout(book, cur, n))}
+              peleCount={book.pages[cur].slots.length} onPeleCount={(n) => save(setPeleCount(book, cur, n))}
               onDouble={onDouble} doubleState={isDoublePage(book.pages[cur]) ? "on" : canDouble(book, cur) ? "off" : "disabled"} />
             <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 8 }}>Les photos en trop retournent dans l'album, rien n'est perdu.</Text>
           </>

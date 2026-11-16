@@ -1,10 +1,10 @@
 // screens/PrintNewScreen.js
 // « Nouveaux tirages » : page produit ouverte par « ＋ Nouveau » du bloc Tirages photos (Chambre noire).
 // Maquette validée le 10 nov. : `Claude outputs/maquette-tirages-nouveau.html`. Même construction que « Choisis ton format » du livre :
-// présentation du produit, puis le choix entre ABONNEMENT (→ présentation des abonnements) et TIRAGE SIMPLE (pas encore branché : « Bientôt »).
+// présentation du produit, puis le choix entre ABONNEMENT (→ présentation des abonnements) et TIRAGE SIMPLE (→ choix des photos → adresse → récap → envoi : voir PrintRecapScreen).
 // Données et textes : services/printProducts.js (prix du tirage simple = exemple à fixer).
 
-import { View, ScrollView, TouchableOpacity, StatusBar, Alert } from "react-native";
+import { View, ScrollView, TouchableOpacity, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import Text from "../components/AppText";
@@ -80,10 +80,7 @@ export function PrintNewScreen({ navigation }) {
   const urls = useKeptUrls(3);
   const { baseCount, baseCents, extraCents } = PRINT_PRODUCT.oneShot;
 
-  const soon = () => Alert.alert(
-    "Bientôt disponible",
-    `Le tirage simple arrive bientôt 🌸\nEn attendant, tu peux t'abonner : ${SUB_PHOTOS} tirages chaque mois.`
-  );
+  const startOneShot = () => navigation.navigate("PosterPick", { mode: "prints" }); // choix des photos → adresse → récap → envoi
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
@@ -155,7 +152,7 @@ export function PrintNewScreen({ navigation }) {
               <Text style={{ fontSize: 26, fontWeight: "800", color: C.text }}>{formatEuro(baseCents)} <Text style={{ fontSize: 13, fontWeight: "600", color: C.textMuted }}>pour {baseCount}</Text></Text>
               <Text style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 16 }}>TTC, livraison comprise{"\n"}+ {formatEuro(extraCents)} par tirage en plus</Text>
             </View>
-            <TouchableOpacity onPress={soon} accessibilityLabel="Choisir le tirage simple"
+            <TouchableOpacity onPress={startOneShot} accessibilityLabel="Choisir le tirage simple"
               style={{ height: 44, paddingHorizontal: 18, borderRadius: S.radiusFull, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ color: C.album, fontWeight: "700", fontSize: 14 }}>Choisir</Text>
             </TouchableOpacity>

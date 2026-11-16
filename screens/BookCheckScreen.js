@@ -1,7 +1,8 @@
 // screens/BookCheckScreen.js
 // « Vérifier ton livre » : contrôles avant impression (maquette : maquette-livre-verification.html).
 // Ouvert avec navigation.navigate("BookCheck", { albumId }).
-// 3 vues : "summary" (contrôles) · "lowQuality" (photos à vérifier) · "next" (après « Continuer »).
+// 3 vues : "summary" (contrôles) · "lowQuality" (photos à vérifier) · "next" (PDF d'essai, __DEV__ seulement).
+// « Continuer » ouvre la commande : BookOrderAddress → BookOrderRecap → BookOrderProgress (voir ces écrans).
 // Les règles sont dans services/bookCheck.js ; l'écran ne fait que les afficher.
 
 import { useMemo, useState } from "react";
@@ -84,7 +85,7 @@ export function BookCheckScreen({ navigation, route }) {
   const headSub = view === "summary" ? "Livre photo" : "Vérifier ton livre";
   const headTitle = view === "summary" ? "Vérifier ton livre"
     : view === "lowQuality" ? plural(res.lowQuality.length, "photo à vérifier", "photos à vérifier")
-    : "Et maintenant ?";
+    : "PDF d'essai";
 
   const Header = (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -149,11 +150,22 @@ export function BookCheckScreen({ navigation, route }) {
             </View>
 
             <TouchableOpacity
-              onPress={() => setView("next")}
-              style={{ height: 52, borderRadius: S.radiusFull, backgroundColor: C.album, alignItems: "center", justifyContent: "center", marginTop: 18, elevation: 3 }}
+              onPress={() => navigation.navigate("BookFlip", { albumId })}
+              style={{ height: 48, borderRadius: S.radiusFull, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center", marginTop: 18 }}
+            >
+              <Text style={{ color: C.album, fontWeight: "700", fontSize: 14.5 }}>📖 Feuilleter une dernière fois</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("BookOrderAddress", { albumId })}
+              style={{ height: 52, borderRadius: S.radiusFull, backgroundColor: C.album, alignItems: "center", justifyContent: "center", marginTop: 10, elevation: 3 }}
             >
               <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Continuer</Text>
             </TouchableOpacity>
+            {__DEV__ && (
+              <TouchableOpacity onPress={() => setView("next")} style={{ alignItems: "center", marginTop: 14 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.textMuted }}>🧪 PDF d'essai (mode développeur)</Text>
+              </TouchableOpacity>
+            )}
             {(res.emptyPages.length > 0 || res.lowQuality.length > 0 || !res.coverOk) && (
               <Text style={{ fontSize: 11.5, color: C.textMuted, textAlign: "center", marginTop: 10 }}>
                 Tu peux continuer malgré les alertes, ou les corriger d'abord.
@@ -190,7 +202,7 @@ export function BookCheckScreen({ navigation, route }) {
         )}
 
         {/* ── Vue 3 : après « Continuer » ──────────────────────────────── */}
-        {view === "next" && (
+        {view === "next" && __DEV__ && (
           <>
             {/* PDF d'essai : outil de développement (jamais visible dans une version publiée) */}
             {__DEV__ && (
@@ -227,7 +239,7 @@ export function BookCheckScreen({ navigation, route }) {
                       style={{ height: 46, borderRadius: S.radiusFull, backgroundColor: C.album, alignItems: "center", justifyContent: "center", elevation: 3 }}>
                       <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14.5 }}>Ouvrir / Partager</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => { pdf.reset(); pdf.start(); }}
+                    <TouchableOpacity onPress={() => { pdf.reset(); pdf.start().catch(() => {}); }}
                       style={{ height: 46, borderRadius: S.radiusFull, borderWidth: 1.5, borderColor: C.border, alignItems: "center", justifyContent: "center", marginTop: 8 }}>
                       <Text style={{ color: C.textMid, fontWeight: "700", fontSize: 14.5 }}>Le refaire</Text>
                     </TouchableOpacity>
@@ -247,7 +259,7 @@ export function BookCheckScreen({ navigation, route }) {
                     {pdf.state.phase === "cancelled" && (
                       <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 10 }}>Annulé.</Text>
                     )}
-                    <TouchableOpacity onPress={pdf.start}
+                    <TouchableOpacity onPress={() => pdf.start().catch(() => {})}
                       style={{ height: 46, borderRadius: S.radiusFull, backgroundColor: C.album, alignItems: "center", justifyContent: "center", elevation: 3 }}>
                       <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14.5 }}>Créer le PDF</Text>
                     </TouchableOpacity>
@@ -258,20 +270,6 @@ export function BookCheckScreen({ navigation, route }) {
                 )}
               </View>
             )}
-            <View style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 16, marginTop: 12, opacity: 0.75, ...SHADOW }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ fontSize: 15, fontWeight: "600", color: C.text }}>🛒 Commander ce livre</Text>
-                <Text style={{ fontSize: 10, fontWeight: "700", letterSpacing: 0.8, color: C.album }}>BIENTÔT</Text>
-              </View>
-              <Text style={{ fontSize: 12.5, color: C.textMid, lineHeight: 18, marginTop: 4 }}>
-                Impression et livraison chez un partenaire. Il faudra un compte et ton accord pour envoyer les photos.
-              </Text>
-              {price != null && (
-                <Text style={{ fontSize: 13, color: C.text, marginTop: 8 }}>
-                  Prix : <Text style={{ fontWeight: "700" }}>{formatEuro(price)}</Text> TTC, livraison comprise.
-                </Text>
-              )}
-            </View>
           </>
         )}
       </ScrollView>

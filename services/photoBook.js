@@ -13,11 +13,13 @@
 // l'ancien) → Zustand voit le changement et l'écran se redessine.
 
 import { BOOK_PRODUCTS, DEFAULT_BOOK_PRODUCT, bookSpec } from "./bookProducts";
+import { PELE_LAYOUT, PELE_DEFAULT, clampPele } from "./pageCollage";
 
 // Formats : voir services/bookProducts.js. Livres imprimeur.fr layflat (book.product = "a4" ou "paysage"), 24 → 120 pages, de 2 en 2.
 // (L'ancien format Gelato 21 × 28 est retiré de l'app : archive/gelato/README.md.)
 export const ORIENTATIONS = ["portrait", "landscape"];
-export const BOOK_LAYOUTS = [1, 2, 3, 4];
+export const BOOK_LAYOUTS = [1, 2, 3, 4]; // + le pêle-mêle (layout 5, 3 à 9 photos) : voir services/pageCollage.js
+export { PELE_LAYOUT };
 
 // Nombre de pages autorisé pour CE livre.
 export const pagesRange = (book) => bookSpec(book).pages;
@@ -36,7 +38,8 @@ export function clampPages(n, book) {
 // Nombre de lignes de photos d'une mise en page. « Milieu » (titre entre deux lignes) exige au moins 2 lignes.
 // Portrait : 1 → 1 ligne, 2 → 2 lignes (l'une au-dessus de l'autre), 3 et 4 → 2 lignes.
 // Paysage : 2 photos côte à côte → 1 seule ligne.
-export const layoutRows = (layout, landscape) => (layout === 1 || (landscape && layout === 2) ? 1 : 2);
+// Pêle-mêle : une seule « zone » de tirages (pas de ligne où glisser le titre au milieu).
+export const layoutRows = (layout, landscape) => (layout === 1 || layout === PELE_LAYOUT || (landscape && layout === 2) ? 1 : 2);
 export const DEFAULT_PER_PAGE = 2;
 
 // ─── Style de couverture + couleur de fond ──────────────────────────────────
@@ -244,9 +247,10 @@ export function upgradeLegacyBook(book) {
 export function setOrientation(book, orientation) {
   if (!ORIENTATIONS.includes(orientation) || book.orientation === orientation) return book;
   const landscape = orientation === "landscape";
-  const pages = book.pages.map((p) =>
-    p.title?.pos === "milieu" && layoutRows(p.layout, landscape) < 2 ? { ...p, title: { ...p.title, pos: "bas" } } : p
-  );
+  const pages = book.pages.map((p0) => {
+    const { pos, ...p } = p0; // pêle-mêle : la zone change de forme, les tirages repartent du rangement automatique
+    return p.title?.pos === "milieu" && layoutRows(p.layout, landscape) < 2 ? { ...p, title: { ...p.title, pos: "bas" } } : p;
+  });
   return touch({ ...book, orientation, pages });
 }
 
@@ -255,10 +259,35 @@ export function setLayout(book, pageIndex, layout) {
   if (isDoublePage(book.pages[pageIndex])) book = clearDouble(book, pageIndex); // 1 à 4 photos : on sort de la double page
   const pages = book.pages.map((p, pi) => {
     if (pi !== pageIndex) return p;
-    const kept = p.slots.filter(Boolean).slice(0, layout);
+    // Pêle-mêle : on garde le nombre de photos déjà choisi (6 la première fois), les autres mises en page = 1 à 4 cadres.
+    const count = layout === PELE_LAYOUT ? (p.layout === PELE_LAYOUT ? p.slots.length : PELE_DEFAULT) : layout;
+    const kept = p.slots.filter(Boolean).slice(0, count);
     // « Milieu » = entre deux lignes de photos → impossible avec 1 photo : le titre passe en bas.
     const title = layoutRows(layout, isLandscape(book)) < 2 && p.title?.pos === "milieu" ? { ...p.title, pos: "bas" } : p.title;
-    return pruneCrops({ ...p, layout, title, slots: Array.from({ length: layout }, (_, i) => kept[i] ?? null) });
+    const same = layout === PELE_LAYOUT && p.layout === PELE_LAYOUT && p.slots.length === count;
+    const { pos, ...rest } = p;
+    return pruneCrops({ ...(same ? p : rest), layout, title, slots: Array.from({ length: count }, (_, i) => kept[i] ?? null) });
+  });
+  return touch({ ...book, pages });
+}
+
+// Pêle-mêle : change le nombre de photos de la page (3 à 9). En réduisant, les dernières photos retournent dans l'album.
+export function setPeleCount(book, pageIndex, count) {
+  const n = clampPele(count);
+  const pages = book.pages.map((p, pi) => {
+    if (pi !== pageIndex || p.layout !== PELE_LAYOUT || p.slots.length === n) return p;
+    const { pos, ...rest } = p; // la taille des tirages change : retour au rangement automatique
+    return pruneCrops({ ...rest, slots: Array.from({ length: n }, (_, i) => p.slots[i] ?? null) });
+  });
+  return touch({ ...book, pages });
+}
+
+// Pêle-mêle : enregistre la position de chaque tirage (voir page.pos dans services/pageCollage.js), ou `null` = remettre en ordre.
+export function setPelePositions(book, pageIndex, positions) {
+  const pages = book.pages.map((p, pi) => {
+    if (pi !== pageIndex || p.layout !== PELE_LAYOUT) return p;
+    if (!positions) { const { pos, ...rest } = p; return rest; }
+    return { ...p, pos: positions };
   });
   return touch({ ...book, pages });
 }

@@ -10,6 +10,7 @@ import Icon from "./Icons";
 import { C, DARKROOM } from "../constants/theme";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useSubscriptionTodo } from "../hooks/useSubscriptionTodo";
+import { useOrdersBootstrap, useOrdersTodo } from "../hooks/useEnRoute";
 
 // nom de l'onglet → icône + libellé
 const TABS = {
@@ -24,7 +25,9 @@ export function TabBar({ state, navigation }) {
   const homeMode = usePhotoStore((s) => s.homeMode);
   const toggleHomeMode = usePhotoStore((s) => s.toggleHomeMode);
   const modeColor = homeMode === "album" ? C.album : C.accent;
-  const subTodo = useSubscriptionTodo(); // sélections d'abonnement à valider → point sur « Galerie »
+  useOrdersBootstrap(); // charge les commandes (bloc « En route » du Labo) dès qu'on est connecté
+  // Pastille de l'onglet Labo : sélections d'abonnement à valider + commandes de livre à reprendre (pas les simples changements de statut).
+  const subTodo = useSubscriptionTodo() + useOrdersTodo();
 
   const go = (route, focused) => {
     const ev = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });

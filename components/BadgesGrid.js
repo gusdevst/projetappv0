@@ -7,25 +7,14 @@
 import { useMemo, useState } from "react";
 import { View, TouchableOpacity, Modal, Pressable } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { useNavigation } from "@react-navigation/native";
 import Text from "./AppText";
 import { C, FN_COLORS } from "../constants/theme";
 import { BADGES, FUNCTIONS, badgesOf } from "../services/achievements";
+import { useBadgeGo } from "../hooks/useBadgeGo";
 
 const fmtDate = (ts) => new Date(ts).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 const pctOf = (b, ctx) => Math.max(0, Math.min(1, b.value(ctx) / b.goal));
 const NEXT_COUNT = 4;
-
-// Où mène le bouton d'un badge du Labo (la navigation est faite ici, pas dans services/achievements.js).
-function useGo() {
-  const navigation = useNavigation();
-  return (to) => {
-    if (to === "prints") navigation.navigate("PrintNew");
-    else if (to === "poster") navigation.navigate("PosterIntro");
-    else if (to === "abo") navigation.navigate("SubscriptionIntro");
-    else navigation.navigate("Main", { screen: "GalleryTab" }); // « labo » : livres et tirages se créent dans le Labo
-  };
-}
 
 const Label = ({ children, style }) => (
   <Text style={[{ fontSize: 11, fontWeight: "700", color: C.textMuted, letterSpacing: 1.2, marginTop: 6, marginBottom: 9, marginLeft: 2 }, style]}>{children}</Text>
@@ -120,7 +109,7 @@ function pickNext(ctx, achievements, filter) {
 
 // ── Écran ──────────────────────────────────────────────────────────────────
 export function BadgesGrid({ ctx, achievements }) {
-  const go = useGo();
+  const go = useBadgeGo();
   const [filter, setFilter] = useState(null);   // null | "tri" | "album" | "labo"
   const [detail, setDetail] = useState(null);   // badge ouvert dans la fenêtre d'explication
 
@@ -169,13 +158,22 @@ export function BadgesGrid({ ctx, achievements }) {
               <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
                 {badgesOf(fn).map((b, i) => {
                   const at = achievements?.[b.id];
+                  const pct = pctOf(b, ctx);
+                  const pctTxt = Math.min(99, Math.floor(pct * 100)); // jamais « 100 % » tant que le badge n'est pas gagné
                   return (
                     <TouchableOpacity key={b.id} activeOpacity={0.8} onPress={() => setDetail(b)} style={{
                       width: "18.2%", aspectRatio: 1, marginRight: i % 5 === 4 ? 0 : "2.25%", marginBottom: 7, borderRadius: 12,
-                      alignItems: "center", justifyContent: "center",
+                      alignItems: "center", justifyContent: "center", paddingBottom: 6,
                       backgroundColor: at ? col.soft : C.bg, borderWidth: at ? 1.5 : 1, borderColor: at ? col.main : C.border,
                     }}>
                       <Text style={{ fontSize: 20, opacity: at ? 1 : 0.28 }}>{b.emoji}</Text>
+                      {/* Où j'en suis : ✓ si gagné, sinon le pourcentage + une fine barre */}
+                      <Text style={{ fontSize: 9.5, fontWeight: "700", color: at ? col.main : C.textMuted, marginTop: 1 }}>{at ? "✓" : `${pctTxt} %`}</Text>
+                      {!at && (
+                        <View style={{ position: "absolute", left: 7, right: 7, bottom: 5, height: 3, borderRadius: 2, backgroundColor: C.border, overflow: "hidden" }}>
+                          <View style={{ height: 3, width: `${Math.round(pct * 100)}%`, backgroundColor: col.main }} />
+                        </View>
+                      )}
                     </TouchableOpacity>
                   );
                 })}
@@ -183,7 +181,6 @@ export function BadgesGrid({ ctx, achievements }) {
             </View>
           );
         })}
-        <Text style={{ fontSize: 11, color: C.textMuted, textAlign: "center", marginTop: 2 }}>Toucher une médaille = son explication</Text>
       </View>
 
       {/* 4. Légende : le sommet */}

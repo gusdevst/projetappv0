@@ -87,14 +87,19 @@ export const BADGES = [
   // ── Badges du LABO (14 nov. 2026) : accompagnent l'user jusqu'à la commande ──
   // DÉCOUVRIR : l'envie, sans payer
   { id: "lab-ready",  fn: "labo", step: "decouvrir", tag: "TIRAGES", emoji: "🎞️", name: "Prêt à développer", desc: "20 coups de cœur à imprimer (un lot complet de tirages)",
+    win: "Tu as 20 coups de cœur : de quoi remplir un lot de tirages. Choisis-les, on te les envoie.",
     goal: 20, value: (c) => c.keptToPrint, fmt: (v, g) => `${Math.min(v, g)} / ${g}`, cta: { label: "Choisir mes 20 tirages", to: "prints" } },
   { id: "lab-book-start", fn: "labo", step: "decouvrir", tag: "LIVRE", emoji: "✍️", name: "Page blanche", desc: "Commencer un livre photo",
+    win: "Ton livre est lancé. Place tes photos page après page, il prendra vite forme.",
     goal: 1, value: (c) => c.booksStarted, fmt: (v, g) => `${Math.min(v, g)} / ${g}`, cta: { label: "Créer un livre", to: "labo" } },
   { id: "lab-book-full", fn: "labo", step: "decouvrir", tag: "LIVRE", emoji: "📖", name: "Chef-d'œuvre", desc: "Remplir toutes les pages d'un livre",
+    win: "Ton livre est rempli ! Il ne reste qu'à le vérifier, puis à le commander.",
     goal: 1, value: (c) => (c.bookFill.total ? c.bookFill.filled / c.bookFill.total : 0), fmt: (v, g, c) => (c.bookFill.total ? `${c.bookFill.filled} / ${c.bookFill.total} p.` : "Pas encore de livre"), cta: { label: "Continuer mon livre", to: "labo" } },
   { id: "lab-collage", fn: "labo", step: "decouvrir", tag: "POSTER", emoji: "🧩", name: "Pêle-mêle", desc: "Composer un poster de 6 photos ou plus",
+    win: "Un beau pêle-mêle. Choisis le format : il peut être sur ton mur dans quelques jours.",
     goal: 6, value: (c) => c.collageMax, fmt: (v, g) => `${Math.min(v, g)} / ${g}`, cta: { label: "Composer un poster", to: "poster" } },
   { id: "lab-ar", fn: "labo", step: "decouvrir", tag: "POSTER", emoji: "🛋️", name: "Œil de décorateur", desc: "Voir un poster chez toi en réalité augmentée",
+    win: "Tu as vu ton poster chez toi. Prêt à le recevoir pour de vrai ?",
     goal: 1, value: (c) => (c.arTried ? 1 : 0), fmt: () => "à essayer", cta: { label: "Essayer avec un poster", to: "poster" } },
   // COMMANDER : le premier passage à l'acte (orders = commandes réelles, 0 tant que le suivi des commandes n'est pas branché)
   { id: "lab-first-print", fn: "labo", step: "commander", tag: "TIRAGES", emoji: "🖼️", name: "Première épreuve", desc: "Recevoir ton premier tirage",

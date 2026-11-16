@@ -14,11 +14,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { C, S, FONT } from "../constants/theme";
 import BackButton from "../components/BackButton";
 import { signIn, signUp, resendConfirmation, PASSWORD_MIN } from "../services/auth";
+import { cleanPhone } from "../services/addresses";
 
 export function AuthScreen({ navigation }) {
   const [mode, setMode]         = useState("signin"); // "signin" | "signup" | "verify"
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone]       = useState("");
   const [showPwd, setShowPwd]   = useState(false);
   const [busy, setBusy]         = useState(false);
   const [error, setError]       = useState("");
@@ -36,6 +38,7 @@ export function AuthScreen({ navigation }) {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return "Cet e-mail n'a pas l'air valide.";
     if (isSignup && password.length < PASSWORD_MIN) return `Le mot de passe doit faire ${PASSWORD_MIN} caractères minimum.`;
     if (!password) return "Entre ton mot de passe.";
+    if (isSignup && phone.trim() && !cleanPhone(phone)) return "Ce numéro n'a pas l'air valide (10 chiffres, ex. 06 12 34 56 78).";
     return "";
   };
 
@@ -46,7 +49,7 @@ export function AuthScreen({ navigation }) {
     setBusy(true); setError(""); setInfo("");
 
     if (isSignup) {
-      const res = await signUp(email, password);
+      const res = await signUp(email, password, phone.trim() ? cleanPhone(phone) : null);
       setBusy(false);
       if (!res.ok) { setError(res.message); return; }
       if (res.needsConfirm) { setMode("verify"); return; }
@@ -202,9 +205,25 @@ export function AuthScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
 
+              {isSignup && (
+                <View style={fieldBox}>
+                  <TextInput
+                    style={inputStyle}
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="Téléphone (facultatif)"
+                    placeholderTextColor={C.textMuted}
+                    keyboardType="phone-pad"
+                    maxLength={20}
+                    autoComplete="tel"
+                    textContentType="telephoneNumber"
+                  />
+                </View>
+              )}
+
               {isSignup && !error && (
-                <Text style={{ fontSize: 12, color: C.textMid, marginLeft: 2, marginBottom: 6 }}>
-                  {PASSWORD_MIN} caractères minimum.
+                <Text style={{ fontSize: 12, color: C.textMid, marginLeft: 2, marginBottom: 6, lineHeight: 17 }}>
+                  {PASSWORD_MIN} caractères minimum. Le téléphone sert seulement au livreur, pour tes commandes.
                 </Text>
               )}
               {!!error && <Text style={{ color: C.red, fontSize: 13, marginLeft: 2, marginBottom: 8 }}>{error}</Text>}

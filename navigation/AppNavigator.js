@@ -27,6 +27,13 @@ import { PhotoBookScreen }        from "../screens/PhotoBookScreen";
 import { BookPageEditorScreen }   from "../screens/BookPageEditorScreen";
 import { AuthScreen }             from "../screens/AuthScreen";
 import { BookCheckScreen }        from "../screens/BookCheckScreen";
+import { BookFlipScreen }         from "../screens/BookFlipScreen";
+import { BookOrderAddressScreen } from "../screens/BookOrderAddressScreen";
+import { BookOrderRecapScreen }   from "../screens/BookOrderRecapScreen";
+import { BookOrderProgressScreen } from "../screens/BookOrderProgressScreen";
+import { BookOrdersScreen }       from "../screens/BookOrdersScreen";
+import { OrderTrackingScreen }    from "../screens/OrderTrackingScreen";
+import { AddressesScreen }        from "../screens/AddressesScreen";
 import { PrintNewScreen } from "../screens/PrintNewScreen";
 import { SubscriptionIntroScreen } from "../screens/SubscriptionIntroScreen";
 import { SubscriptionSetupScreen } from "../screens/SubscriptionSetupScreen";
@@ -44,6 +51,10 @@ import { PosterPickScreen } from "../screens/PosterPickScreen";
 import { PosterCollageScreen } from "../screens/PosterCollageScreen";
 import { PosterFormatScreen } from "../screens/PosterFormatScreen";
 import { PosterRecapScreen } from "../screens/PosterRecapScreen";
+import { PosterOrderProgressScreen } from "../screens/PosterOrderProgressScreen";
+import { PrintRecapScreen } from "../screens/PrintRecapScreen";
+import { SubscriptionRecapScreen } from "../screens/SubscriptionRecapScreen";
+import { PrintOrderProgressScreen } from "../screens/PrintOrderProgressScreen";
 import { usePhotoStore }         from "../store/usePhotoStore";
 
 const Stack = createStackNavigator();
@@ -117,6 +128,14 @@ export function AppNavigator() {
       <Stack.Screen name="PhotoBook"   component={PhotoBookScreen} />
       <Stack.Screen name="BookPageEditor" component={BookPageEditorScreen} />
       <Stack.Screen name="BookCheck"   component={BookCheckScreen} />
+      <Stack.Screen name="BookFlip"    component={BookFlipScreen} />
+      <Stack.Screen name="BookOrderAddress"  component={BookOrderAddressScreen} />
+      <Stack.Screen name="BookOrderRecap"    component={BookOrderRecapScreen} />
+      {/* Fabrication + envoi : on ne quitte pas l'écran en glissant (le retour est bloqué dans l'écran lui-même) */}
+      <Stack.Screen name="BookOrderProgress" component={BookOrderProgressScreen} options={{ gestureEnabled: false }} />
+      <Stack.Screen name="BookOrders"  component={BookOrdersScreen} />
+      <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
+      <Stack.Screen name="Addresses"   component={AddressesScreen} />
       <Stack.Screen name="PrintNew" component={PrintNewScreen} />
       <Stack.Screen name="SubscriptionIntro" component={SubscriptionIntroScreen} />
       <Stack.Screen name="SubscriptionSetup" component={SubscriptionSetupScreen} />
@@ -132,6 +151,10 @@ export function AppNavigator() {
       <Stack.Screen name="PosterCollage" component={PosterCollageScreen} />
       <Stack.Screen name="PosterFormat" component={PosterFormatScreen} />
       <Stack.Screen name="PosterRecap"  component={PosterRecapScreen} />
+      <Stack.Screen name="PosterOrderProgress" component={PosterOrderProgressScreen} options={{ gestureEnabled: false }} />
+      <Stack.Screen name="PrintRecap" component={PrintRecapScreen} />
+      <Stack.Screen name="SubscriptionRecap" component={SubscriptionRecapScreen} />
+      <Stack.Screen name="PrintOrderProgress" component={PrintOrderProgressScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="PosterAR"     component={PosterAREntry} />
       {__DEV__ && <Stack.Screen name="BlurCalibration" component={BlurCalibrationScreen} />}
       {__DEV__ && <Stack.Screen name="ArSpike" component={ArSpikeEntry} options={{ headerShown: false }} />}

@@ -28,6 +28,7 @@ export function toRow(sub, userId) {
     name: sub.name ?? null,
     recipient: sub.recipient ?? null,
     address: sub.address,
+    address_data: sub.addressData ?? null, // adresse structurée du carnet d'adresses (supabase/sql/orders_tirages_abonnement.sql)
     message: sub.message ?? null,
     validate_each: sub.validateEach !== false,
     selection_day: sub.selectionDay ?? 1,
@@ -48,6 +49,7 @@ export function fromRow(r) {
     name: r.name ?? undefined,
     recipient: r.recipient ?? undefined,
     address: r.address,
+    addressData: r.address_data ?? undefined,
     message: r.message ?? "",
     validateEach: r.validate_each,
     selectionDay: r.selection_day,

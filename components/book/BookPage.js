@@ -4,6 +4,7 @@
 //
 // La mise en page = des LIGNES de cadres. Ex. 3 photos : 1 grand en haut, 2 en bas.
 // Les nombres dans ROWS sont les numéros de cadre (0, 1, 2…).
+// Mise en page 5 = « Pêle-mêle » (3 à 9 tirages en lignes / colonnes) : voir services/pageCollage.js.
 
 import { useRef, useState } from "react";
 import { View, TouchableOpacity } from "react-native";
@@ -13,6 +14,7 @@ import Text from "../AppText";
 import { C, FONT } from "../../constants/theme";
 import { CroppedImage } from "./CroppedImage";
 import { getCrop, getCoverCrop, coverBgHex, isLightHex } from "../../services/photoBook";
+import { PELE_LAYOUT, peleCells, peleWindow, resolvePele, placePrint, cellsToPos } from "../../services/pageCollage";
 
 const ROWS = {
   1: [[0]],
@@ -34,57 +36,115 @@ export const PAGE_TITLE_SIZE = { S: 0.045, M: 0.06, L: 0.08 };
 // onSlotPress(slotIndex) optionnel (éditeur) · selectedSlot : cadre entouré.
 // editableSlot : cadre recadrable au doigt · onCropChange(slot, crop) · cropPreview : { slot, ...réglages } en direct.
 // flat : pas de coins arrondis (rendu pour l'impression) · onImageLoad : appelée à chaque photo chargée.
-export function BookPage({ page, size, ratio = 1, urlById, selected, onPress, onSlotPress, selectedSlot, coverFont, editableSlot, onCropChange, cropPreview, flat, onImageLoad }) {
+// Pêle-mêle seulement : moveMode = les tirages se déplacent au doigt (jamais l'un sur l'autre) · onPelePlace(positions) au lâcher
+// (positions = page.pos complet, voir services/pageCollage.js).
+export function BookPage({ page, size, ratio = 1, urlById, selected, onPress, onSlotPress, selectedSlot, coverFont, editableSlot, onCropChange, cropPreview, flat, onImageLoad, moveMode, onPelePlace }) {
+  const [drag, setDrag] = useState(null);   // tirage en cours de déplacement : { slot, x, y } (px)
+  const dragStart = useRef({ x: 0, y: 0 });
   const mini = size < 60;
   const pad = mini ? 1.5 : size * 0.05;
   const gap = mini ? 1 : Math.max(3, size * 0.02);
   const layoutRows = ratio < 1 ? ROWS_LANDSCAPE : ROWS;
+  const isPele = page.layout === PELE_LAYOUT;
 
-  // Lignes de photos…
-  const rows = layoutRows[page.layout].map((row, ri) => (
-    <View key={`r${ri}`} style={{ flex: ROW_FLEX[page.layout]?.[ri] ?? 1, flexDirection: "row", gap }}>
-      {row.map((si) => {
-        const id = page.slots[si];
-        const url = id ? urlById[id] : null;
-        const editable = editableSlot === si && !!url;
-        const crop = { ...(id ? getCrop(page, id) : {}), ...(cropPreview?.slot === si ? cropPreview : {}) };
-        // Cadre recadrable : pas de « bouton » autour, sinon il volerait les gestes.
-        const Frame = onSlotPress && !editable ? TouchableOpacity : View;
-        return (
-          <Frame
-            key={si}
-            activeOpacity={0.8}
-            onPress={onSlotPress ? () => onSlotPress(si) : undefined}
-            style={{
-              flex: 1, borderRadius: mini ? 1 : 3, overflow: "hidden",
-              backgroundColor: url ? C.bgMuted : mini ? C.border : C.bgCard,
-              borderWidth: url || mini ? 0 : 1.5, borderStyle: "dashed", borderColor: "#cfcdc4",
-              alignItems: "center", justifyContent: "center",
-            }}
-          >
-            {url
-              ? <CroppedImage url={url} crop={crop} editable={editable} onChange={(c) => onCropChange?.(si, c)} onLoaded={onImageLoad} />
-              : !mini && <Text style={{ color: "#b5b3a9", fontSize: Math.max(14, size * 0.06) }}>+</Text>}
-            {selectedSlot === si && (
-              <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderWidth: 3, borderColor: C.album, borderRadius: 3 }} />
-            )}
-          </Frame>
-        );
-      })}
-    </View>
-  ));
+  // Un cadre photo (avec son recadrage). boxStyle = sa place : « flex: 1 » dans une ligne, ou un rectangle posé (pêle-mêle).
+  const renderSlot = (si, boxStyle) => {
+    const id = page.slots[si];
+    const url = id ? urlById[id] : null;
+    const editable = editableSlot === si && !!url;
+    const crop = { ...(id ? getCrop(page, id) : {}), ...(cropPreview?.slot === si ? cropPreview : {}) };
+    // Cadre recadrable : pas de « bouton » autour, sinon il volerait les gestes.
+    const Frame = onSlotPress && !editable ? TouchableOpacity : View;
+    return (
+      <Frame
+        key={si}
+        activeOpacity={0.8}
+        onPress={onSlotPress ? () => onSlotPress(si) : undefined}
+        style={{
+          ...boxStyle, borderRadius: mini ? 1 : 3, overflow: "hidden",
+          backgroundColor: url ? C.bgMuted : mini ? C.border : C.bgCard,
+          borderWidth: url || mini ? 0 : 1.5, borderStyle: "dashed", borderColor: "#cfcdc4",
+          alignItems: "center", justifyContent: "center",
+        }}
+      >
+        {url
+          ? <CroppedImage url={url} crop={crop} editable={editable} onChange={(c) => onCropChange?.(si, c)} onLoaded={onImageLoad} />
+          : !mini && <Text style={{ color: "#b5b3a9", fontSize: Math.max(14, size * 0.06) }}>+</Text>}
+        {selectedSlot === si && (
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderWidth: 3, borderColor: C.album, borderRadius: 3 }} />
+        )}
+      </Frame>
+    );
+  };
 
-  // …et le titre de page, inséré en haut, au milieu (entre deux lignes) ou en bas.
+  // Titre de page (null s'il n'y en a pas). Pêle-mêle : une seule ligne, pour que la place réservée soit exacte.
   const t = page.title;
+  let titleEl = null, titleH = 0;
   if (t?.text) {
     const font = COVER_STYLE.font[t.font ?? coverFont] ?? COVER_STYLE.font.moderne;
     const fontSize = Math.round(size * (PAGE_TITLE_SIZE[t.size] ?? PAGE_TITLE_SIZE.M));
-    const el = mini
+    titleH = mini ? 2 : Math.round(fontSize * 1.2);
+    titleEl = mini
       ? <View key="title" style={{ height: 2, marginHorizontal: "25%", backgroundColor: C.textMuted, borderRadius: 1 }} />
-      : <Text key="title" numberOfLines={2} style={{ textAlign: "center", color: C.text, fontFamily: font.family, fontWeight: font.weight, fontSize, lineHeight: Math.round(fontSize * 1.2) }}>{t.text}</Text>;
-    if (t.pos === "haut") rows.unshift(el);
-    else if (t.pos === "milieu" && rows.length > 1) rows.splice(Math.ceil(rows.length / 2), 0, el);
-    else rows.push(el);
+      : <Text key="title" numberOfLines={isPele ? 1 : 2} style={{ textAlign: "center", color: C.text, fontFamily: font.family, fontWeight: font.weight, fontSize, lineHeight: Math.round(fontSize * 1.2) }}>{t.text}</Text>;
+  }
+
+  let content;
+  if (isPele) {
+    // PÊLE-MÊLE : des tirages (cadre blanc) rangés en lignes et en colonnes, jamais l'un sur l'autre (services/pageCollage.js).
+    // Chaque photo se règle ensuite dans SON cadre (zoom, déplacement, rotation), comme sur les autres mises en page.
+    const innerW = size - 2 * pad;
+    const innerH = Math.round(size * ratio) - 2 * pad;
+    const bandH = titleEl ? titleH + gap : 0;
+    const areaH = Math.max(1, innerH - bandH);
+    const baseCells = resolvePele(peleCells(page.slots.length, innerW, areaH, gap), page.pos, innerW, areaH);
+    const cells = drag ? baseCells.map((c, i) => (i === drag.slot ? { ...c, x: drag.x, y: drag.y } : c)) : baseCells;
+    const area = (
+      <View key="area" style={{ width: innerW, height: areaH }}>
+        {cells.map((c, si) => {
+          const win = peleWindow(c, mini);
+          const dragging = drag?.slot === si;
+          const print = (
+            <View key={si} style={{ position: "absolute", left: c.x, top: c.y, width: c.w, height: c.h, backgroundColor: "#ffffff",
+              borderWidth: mini ? 0 : 1, borderColor: moveMode ? C.album : "rgba(60,60,40,0.14)", borderRadius: mini ? 0 : 2,
+              zIndex: dragging ? 10 : 0, ...(dragging ? { shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 8 } : {}) }}>
+              <View pointerEvents={moveMode ? "none" : "auto"} style={{ flex: 1 }}>
+                {renderSlot(si, { position: "absolute", left: win.x, top: win.y, width: win.w, height: win.h })}
+              </View>
+            </View>
+          );
+          if (!moveMode) return print;
+          // Déplacer : le tirage suit le doigt, mais glisse le long des autres au lieu de les recouvrir (placePrint).
+          const pan = Gesture.Pan().runOnJS(true).minDistance(2)
+            .onBegin(() => { dragStart.current = { x: baseCells[si].x, y: baseCells[si].y }; })
+            .onUpdate((e) => {
+              const p = placePrint(baseCells, si, dragStart.current.x + e.translationX, dragStart.current.y + e.translationY, innerW, areaH, gap);
+              setDrag({ slot: si, x: p.x, y: p.y });
+            })
+            .onEnd((e) => {
+              const p = placePrint(baseCells, si, dragStart.current.x + e.translationX, dragStart.current.y + e.translationY, innerW, areaH, gap);
+              onPelePlace?.(cellsToPos(baseCells.map((b, i) => (i === si ? { ...b, ...p } : b)), innerW));
+            })
+            .onFinalize(() => setDrag(null));
+          return <GestureDetector key={si} gesture={pan}>{print}</GestureDetector>;
+        })}
+      </View>
+    );
+    content = <View style={{ flex: 1, gap }}>{t?.pos === "haut" ? [titleEl, area] : [area, titleEl]}</View>;
+  } else {
+    // Lignes de photos…
+    const rows = layoutRows[page.layout].map((row, ri) => (
+      <View key={`r${ri}`} style={{ flex: ROW_FLEX[page.layout]?.[ri] ?? 1, flexDirection: "row", gap }}>
+        {row.map((si) => renderSlot(si, { flex: 1 }))}
+      </View>
+    ));
+    // …et le titre de page, inséré en haut, au milieu (entre deux lignes) ou en bas.
+    if (titleEl) {
+      if (t.pos === "haut") rows.unshift(titleEl);
+      else if (t.pos === "milieu" && rows.length > 1) rows.splice(Math.ceil(rows.length / 2), 0, titleEl);
+      else rows.push(titleEl);
+    }
+    content = <View style={{ flex: 1, gap }}>{rows}</View>;
   }
 
   return (
@@ -98,7 +158,7 @@ export function BookPage({ page, size, ratio = 1, urlById, selected, onPress, on
         borderWidth: selected ? (mini ? 1.5 : 2.5) : 0, borderColor: C.album,
       }}
     >
-      <View style={{ flex: 1, gap }}>{rows}</View>
+      {content}
     </TouchableOpacity>
   );
 }

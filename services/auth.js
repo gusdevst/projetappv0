@@ -27,14 +27,30 @@ export async function signIn(email, password) {
 }
 
 // Crée le compte. Si Supabase demande de confirmer l'e-mail : needsConfirm = true.
-export async function signUp(email, password) {
-  const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
+// `phone` (facultatif, déjà nettoyé : 10 chiffres) est gardé dans le compte (user_metadata.contact_phone) : il sert
+// à pré-remplir l'adresse de livraison. Ce n'est PAS le champ « téléphone » de connexion de Supabase (pas de SMS, pas de vérification).
+export async function signUp(email, password, phone) {
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(), password,
+    options: phone ? { data: { contact_phone: phone } } : undefined,
+  });
   if (error) return { ok: false, message: frenchError(error) };
   // Supabase ne renvoie pas d'erreur si l'e-mail existe déjà (anti-fuite) : identities est vide.
   if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
     return { ok: false, message: "Un compte existe déjà avec cet e-mail. Connecte-toi plutôt." };
   }
   return { ok: true, needsConfirm: !data.session };
+}
+
+// Téléphone enregistré dans le compte (ou null). `session` = celle du store d'authentification.
+export const accountPhone = (session) => session?.user?.user_metadata?.contact_phone ?? null;
+
+// Mémorise le téléphone dans le compte (silencieux en cas d'échec : ce n'est qu'un confort de pré-remplissage).
+export async function rememberAccountPhone(phone) {
+  try {
+    const { error } = await supabase.auth.updateUser({ data: { contact_phone: phone } });
+    return !error;
+  } catch (e) { return false; }
 }
 
 export async function resendConfirmation(email) {
