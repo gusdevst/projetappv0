@@ -10,9 +10,8 @@
 // donne au pire un DOUBLON à la prochaine ouverture, jamais une photo perdue.
 
 import * as FileSystem from "expo-file-system/legacy";
-import * as MediaLibrary from "expo-media-library";
 import { supabase } from "./supabase";
-import { addPhotoToPelliculeAlbum } from "./photoLibrary";
+import { savePhotoFileToPelliculeAlbum } from "./photoLibrary";
 import { usePhotoStore } from "../store/usePhotoStore";
 
 const BUCKET = "shared-photos";
@@ -67,19 +66,22 @@ export async function fetchMailboxPhotos(albumId, senderId, senderName) {
       .order("created_at", { ascending: true }).limit(2000);
     if (senderId) q = q.eq("sender_id", senderId);
     const { data, error } = await q;
-    if (error) return { ok: false, message: isNetworkError(error) ? "Pas de connexion internet. Réessaie." : "Impossible de lire la boîte aux lettres." };
+    if (error) return { ok: false, message: isNetworkError(error) ? "Pas de connexion internet. Réessaie." : `Impossible de lire la boîte aux lettres (${error.message}).` };
 
     const { data: members } = await supabase.from("shared_album_members").select("user_id, display_name").eq("album_id", albumId);
     const names = new Map((members ?? []).map((m) => [m.user_id, m.display_name]));
 
     const photos = [];
+    const failures = [];
     for (let i = 0; i < data.length; i += 100) { // adresses temporaires par paquets de 100
       const chunk = data.slice(i, i + 100);
       const { data: signed, error: e2 } = await supabase.storage.from(BUCKET).createSignedUrls(chunk.map((r) => r.path), 3600);
-      if (e2) return { ok: false, message: isNetworkError(e2) ? "Pas de connexion internet. Réessaie." : "Impossible d'ouvrir les photos." };
+      if (e2) return { ok: false, message: isNetworkError(e2) ? "Pas de connexion internet. Réessaie." : `Impossible d'ouvrir les photos (${e2.message}).` };
       chunk.forEach((r, k) => {
-        const url = signed?.[k]?.signedUrl;
-        if (!url) return;
+        // createSignedUrls répond dans le même ordre ; on retrouve la photo par son chemin au cas où.
+        const item = signed?.find?.((x) => x.path === r.path) ?? signed?.[k];
+        const url = item?.signedUrl;
+        if (!url) { failures.push(item?.error || "adresse non créée"); return; }
         const t = r.taken_at ? new Date(r.taken_at).getTime() : null;
         photos.push({
           id: r.id, url, path: r.path, albumId: r.album_id, senderId: r.sender_id,
@@ -91,7 +93,11 @@ export async function fetchMailboxPhotos(albumId, senderId, senderName) {
         });
       });
     }
-    return { ok: true, photos };
+    if (data.length > 0 && photos.length === 0) {
+      console.warn("[boîte aux lettres] adresses refusées :", failures[0]);
+      return { ok: false, message: `Les photos sont arrivées mais je n'arrive pas à les ouvrir (${failures[0] ?? "raison inconnue"}).` };
+    }
+    return { ok: true, photos, skipped: failures.length };
   } catch (e) { return { ok: false, message: isNetworkError(e) ? "Pas de connexion internet. Réessaie." : "Impossible de lire la boîte aux lettres." }; }
 }
 
@@ -103,12 +109,10 @@ export async function keepMailboxPhoto(photo, { localAlbumId, albumName }) {
   const tmp = `${FileSystem.cacheDirectory}shared-${photo.id}.${extOf(photo.path)}`;
   const dl = await FileSystem.downloadAsync(photo.url, tmp);
   if (dl.status < 200 || dl.status >= 300) throw new Error(`Téléchargement refusé (${dl.status})`);
-  // 2. photothèque du téléphone
+  // 2. photothèque du téléphone : directement dans le dossier « Pellicule/<album> » (aucune autorisation par photo)
   let assetId;
   try {
-    const asset = await MediaLibrary.createAssetAsync(dl.uri);
-    assetId = asset.id;
-    await addPhotoToPelliculeAlbum(assetId, albumName); // dossier « Pellicule/<album> » (même règle que les autres albums)
+    assetId = await savePhotoFileToPelliculeAlbum(dl.uri, albumName);
   } finally {
     FileSystem.deleteAsync(tmp, { idempotent: true }).catch(() => {});
   }

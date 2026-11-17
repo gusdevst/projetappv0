@@ -450,8 +450,7 @@ export function HomeScreen({ navigation, route }) {
 
   // Tri pour un album partagé avec moi : l'album devient la cible de l'accueil (bannière), puis le swipe « à envoyer » démarre.
   // On ne reproposera jamais une photo déjà envoyée à cet album, ni déjà choisie et en attente d'envoi.
-  async function launchSharedSort(album, q) {
-    setLaunchSheetOpen(false);
+  async function startSharedSort(album, q) {
     const target = { id: album.id, name: album.name, ownerName: album.ownerName };
     setSharedTarget(target);
     const sent = new Set(await fetchSentIds(album.id));
@@ -463,6 +462,50 @@ export function HomeScreen({ navigation, route }) {
       return;
     }
     navigation.navigate("Swipe", { queue: pool, mode: "album", sharedAlbum: target });
+  }
+
+  // Reprendre le swipe là où je me suis arrêté (file mémorisée dans useSharedStore.sorts ; photos disparues, envoyées ou déjà choisies ignorées).
+  async function resumeSharedSort(album) {
+    setLaunchSheetOpen(false);
+    const target = { id: album.id, name: album.name, ownerName: album.ownerName };
+    setSharedTarget(target);
+    const st = useSharedStore.getState();
+    const sort = st.sorts[album.id];
+    if (!sort) { launchSharedSort(album, launchQueue.length ? launchQueue : queue); return; }
+    const sent = new Set(await fetchSentIds(album.id));
+    const taken = new Set([...(st.selections[album.id]?.ids ?? []), ...(st.outbox[album.id]?.ids ?? [])]);
+    const byId = new Map(libraryPhotos.map((p) => [p.id, p]));
+    const trashed = new Set(deleted.map((p) => p.id));
+    const rest = sort.photoIds.slice(sort.idx)
+      .filter((id) => !sent.has(id) && !taken.has(id) && !trashed.has(id))
+      .map((id) => byId.get(id)).filter(Boolean);
+    if (rest.length === 0) {
+      useSharedStore.getState().clearSharedSort(album.id);
+      if ((st.selections[album.id]?.ids.length ?? 0) > 0) navigation.navigate("SharedSend", { sharedAlbum: target });
+      else Alert.alert("Tri terminé", "Il n'y a plus de photo à passer en revue pour cet album.");
+      return;
+    }
+    navigation.navigate("Swipe", { queue: rest, mode: "album", sharedAlbum: target });
+  }
+
+  // Point d'entrée : si un tri est en cours pour cet album, on propose de le reprendre ou d'en refaire un nouveau.
+  function launchSharedSort(album, q) {
+    setLaunchSheetOpen(false);
+    const sort = useSharedStore.getState().sorts[album.id];
+    const left = sort ? Math.max(0, sort.photoIds.length - sort.idx) : 0;
+    if (left > 0) {
+      Alert.alert(
+        `Tri en cours pour ${album.ownerName}`,
+        `Tu as déjà passé en revue ${sort.idx} photo${sort.idx > 1 ? "s" : ""} sur ${sort.photoIds.length}. Tes choix sont gardés.`,
+        [
+          { text: "Reprendre", onPress: () => resumeSharedSort(album) },
+          { text: "Nouveau tri", onPress: () => startSharedSort(album, q) },
+          { text: "Annuler", style: "cancel" },
+        ]
+      );
+      return;
+    }
+    startSharedSort(album, q);
   }
 
   // Lance le tri Album sur la sélection actuelle, dans l'album choisi (ou créé à l'instant).
@@ -682,7 +725,7 @@ export function HomeScreen({ navigation, route }) {
           const totalMo = queue.reduce((t, p) => t + (p.size || 0), 0);
           return (
             <View>
-              <SharedPendingRows onOpen={(a) => navigation.navigate("SharedSend", { sharedAlbum: a })} />
+              <SharedPendingRows onOpen={(a) => navigation.navigate("SharedSend", { sharedAlbum: a })} onResume={resumeSharedSort} />
               {sharedTarget && <SharedTargetBanner album={sharedTarget} onClear={() => setSharedTarget(null)} />}
               <AlbumHero
                 launchLabel={sharedTarget ? "Choisir mes photos" : undefined}

@@ -42,18 +42,19 @@ export function MailboxSwipeScreen({ navigation, route }) {
     return () => { alive = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Les photos gardées doivent apparaître dans la photothèque de l'appli : on la relit quand tout est enregistré.
+  // Les photos gardées doivent apparaître dans la photothèque de l'appli : on la relit dès que toutes les décisions
+  // sont enregistrées (même si on a quitté l'écran entre-temps : le compteur est dans des refs, pas dans l'état).
   const doneAll = photos && idx >= photos.length;
-  useEffect(() => {
-    if (doneAll && inflight === 0 && kept > 0) usePhotoStore.getState().loadLibrary();
-  }, [doneAll, inflight, kept]);
+  const pending = useRef(0);
+  const keptRef = useRef(0);
 
   const decide = (photo, keep) => {
+    pending.current++;
     setInflight((n) => n + 1);
     chain.current = chain.current.then(async () => {
       for (let t = 1; t <= 3; t++) {
         try {
-          if (keep) { await keepMailboxPhoto(photo, { localAlbumId, albumName }); setKept((n) => n + 1); }
+          if (keep) { await keepMailboxPhoto(photo, { localAlbumId, albumName }); keptRef.current++; setKept((n) => n + 1); }
           else { await refuseMailboxPhoto(photo); setRefused((n) => n + 1); }
           break;
         } catch (e) {
@@ -61,6 +62,11 @@ export function MailboxSwipeScreen({ navigation, route }) {
         }
       }
       setInflight((n) => n - 1);
+      pending.current--;
+      if (pending.current === 0 && keptRef.current > 0) {
+        keptRef.current = 0;
+        usePhotoStore.getState().loadLibrary();
+      }
     });
   };
 

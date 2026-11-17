@@ -157,6 +157,43 @@ export async function addPhotosToPelliculeAlbum(assetIds, subName) {
   }
 }
 
+// Mémorise l'id du dossier natif par nom : évite de le rechercher à chaque photo.
+const albumIdCache = new Map();
+
+/**
+ * Enregistre un FICHIER directement dans le dossier Pellicule/<sous-dossier> de la photothèque, SANS demande
+ * d'autorisation par photo. Pourquoi : créer une photo directement DANS un dossier est autorisé tout seul,
+ * alors que « créer puis déplacer dans un dossier » (addAssetsToAlbumAsync) fait apparaître la fenêtre
+ * « Autoriser Pellicule à modifier cette photo ? » à CHAQUE photo. Seule la toute première photo d'un dossier
+ * qui n'existe pas encore demande l'accord (création du dossier).
+ * @returns {Promise<string>} l'id de la photo créée
+ */
+export async function savePhotoFileToPelliculeAlbum(fileUri, subName) {
+  const albumName = buildAlbumName(subName);
+  let albumId = albumIdCache.get(albumName);
+  if (!albumId) {
+    try { albumId = (await MediaLibrary.getAlbumAsync(albumName))?.id; } catch (e) { albumId = null; }
+    if (albumId) albumIdCache.set(albumName, albumId);
+  }
+  if (albumId) {
+    try {
+      const asset = await MediaLibrary.createAssetAsync(fileUri, albumId);
+      return asset.id;
+    } catch (err) {
+      albumIdCache.delete(albumName); // dossier supprimé entre-temps : on le recrée ci-dessous
+      console.warn("[Pellicule] savePhotoFileToPelliculeAlbum (dossier connu):", err.message);
+    }
+  }
+  const asset = await MediaLibrary.createAssetAsync(fileUri);
+  try {
+    const created = await MediaLibrary.createAlbumAsync(albumName, asset.id, false);
+    if (created?.id) albumIdCache.set(albumName, created.id);
+  } catch (err) {
+    console.warn("[Pellicule] savePhotoFileToPelliculeAlbum (création du dossier):", err.message);
+  }
+  return asset.id;
+}
+
 /**
  * Retourne la liste des albums photo du téléphone triés par nombre de photos.
  * Ex : "Camera Roll", "WhatsApp", "Screenshots", etc.

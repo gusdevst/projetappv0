@@ -176,6 +176,14 @@ export function SwipeScreen({ navigation, route }) {
   // Sprint de 20 : repart de zéro à l'entrée et à la sortie du tri.
   useEffect(() => { resetSprint(); return resetSprint; }, []);
 
+  // ── Tri pour un album partagé : on note la file et la position (reprise depuis l'accueil / « Dans quel album ? ») ──
+  useEffect(() => {
+    if (isShared) useSharedStore.getState().startSharedSort(sharedAlbum, queue.map((p) => p.id));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (isShared) useSharedStore.getState().setSharedSortIdx(sharedAlbum.id, idx);
+  }, [idx]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Tri Album sauvegardé ─────────────────────────────────────────────────
   // À l'entrée : on note la file et la position. Ensuite la position suit chaque photo.
   // Si l'user quitte en cours de route (← Retour, appli fermée), l'accueil Album
@@ -222,6 +230,7 @@ export function SwipeScreen({ navigation, route }) {
   // ── Fin de tri anticipée ─────────────────────────────────────────────────
   // Album partagé : fin du tri → écran « Envoyer N photos à <prénom> » (ou retour si rien n'a été choisi).
   const finishShared = () => {
+    useSharedStore.getState().clearSharedSort(sharedAlbum.id); // tri terminé : plus rien à reprendre
     if ((useSharedStore.getState().selections[sharedAlbum.id]?.ids.length ?? 0) === 0) {
       navigation.goBack();
       return;

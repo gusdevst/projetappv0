@@ -260,8 +260,7 @@ create policy "shared-photos: déposer" on storage.objects
   for insert to authenticated
   with check (bucket_id = 'shared-photos'
               and (storage.foldername(name))[2] = auth.uid()::text
-              and exists (select 1 from public.shared_album_members m
-                           where m.album_id::text = (storage.foldername(name))[1] and m.user_id = auth.uid()));
+              and public.is_shared_album_member(((storage.foldername(name))[1])::uuid));
 
 drop policy if exists "shared-photos: remplacer" on storage.objects;
 create policy "shared-photos: remplacer" on storage.objects
@@ -273,16 +272,14 @@ create policy "shared-photos: lire" on storage.objects
   for select to authenticated
   using (bucket_id = 'shared-photos'
          and ((storage.foldername(name))[2] = auth.uid()::text
-              or exists (select 1 from public.shared_albums a
-                          where a.id::text = (storage.foldername(name))[1] and a.owner_id = auth.uid())));
+              or public.is_shared_album_owner(((storage.foldername(name))[1])::uuid)));
 
 drop policy if exists "shared-photos: effacer" on storage.objects;
 create policy "shared-photos: effacer" on storage.objects
   for delete to authenticated
   using (bucket_id = 'shared-photos'
          and ((storage.foldername(name))[2] = auth.uid()::text
-              or exists (select 1 from public.shared_albums a
-                          where a.id::text = (storage.foldername(name))[1] and a.owner_id = auth.uid())));
+              or public.is_shared_album_owner(((storage.foldername(name))[1])::uuid)));
 
 -- PAS ENCORE : effacement automatique des photos non triées après 30 jours (une fonction serveur planifiée ;
 -- le SQL seul ne retire pas les fichiers du stockage).

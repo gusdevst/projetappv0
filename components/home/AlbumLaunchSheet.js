@@ -12,6 +12,7 @@ import { Image } from "expo-image";
 import Text from "../AppText";
 import Icon from "../Icons";
 import { C, FONT } from "../../constants/theme";
+import { useSharedStore } from "../../store/useSharedStore";
 
 const frNum = (n) => n.toLocaleString("fr-FR");
 
@@ -20,6 +21,8 @@ const frNum = (n) => n.toLocaleString("fr-FR");
 export default function AlbumLaunchSheet({ visible, onClose, count, albums, libraryPhotos, onCreate, onPick, sharedAlbums = [], onPickShared, onJoin }) {
   const { height } = useWindowDimensions();
   const [name, setName] = useState("");
+  const selections = useSharedStore((st) => st.selections);
+  const sorts = useSharedStore((st) => st.sorts);
   const [kb, setKb] = useState(0); // hauteur du clavier : la feuille monte au-dessus (comme ContentSearchSheet)
 
   useEffect(() => { if (visible) setName(""); }, [visible]);
@@ -71,7 +74,14 @@ export default function AlbumLaunchSheet({ visible, onClose, count, albums, libr
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: C.text }}>{a.name}</Text>
-                    <Text numberOfLines={1} style={{ fontSize: 12, color: C.textMuted }}>{`Album de ${a.ownerName} · tu envoies tes photos`}</Text>
+                    <Text numberOfLines={1} style={{ fontSize: 12, color: C.textMuted }}>{(() => {
+                      const picked = selections[a.id]?.ids?.length ?? 0;
+                      const srt = sorts[a.id];
+                      const left = srt ? Math.max(0, srt.photoIds.length - srt.idx) : 0;
+                      if (left > 0) return `Tri en cours · ${srt.idx} / ${srt.photoIds.length} · ${picked} choisie${picked > 1 ? "s" : ""}`;
+                      if (picked > 0) return `${picked} photo${picked > 1 ? "s" : ""} prête${picked > 1 ? "s" : ""} à envoyer`;
+                      return `Album de ${a.ownerName} · tu envoies tes photos`;
+                    })()}</Text>
                   </View>
                   <Icon name="chevronRight" size={16} color={C.textMuted} />
                 </TouchableOpacity>

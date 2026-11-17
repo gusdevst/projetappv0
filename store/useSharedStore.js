@@ -6,6 +6,7 @@
 //     ou en le choisissant dans « Dans quel album ? »). En mémoire seulement : { id, name, ownerName }.
 //   · selections : les photos que j'ai swipées « à envoyer » pour un album partagé, PAS encore envoyées
 //     (« Plus tard » = elles restent ici). { [albumId]: { name, ownerName, ids: [idPhoto…] } }  (persisté)
+//   · sorts : le tri en cours (file + position) : on le reprend là où on s'est arrêté. (persisté)
 //   · outbox : l'envoi accepté (case cochée) mais pas fini : reprend tout seul au prochain lancement.
 //     { [albumId]: { name, ownerName, batchId, ids: [idPhoto restantes…], total } }  (persisté)
 //   · sentIds : les photos de CE téléphone déjà envoyées à cet album (jamais proposées ni renvoyées). { [albumId]: [idPhoto…] }  (persisté)
@@ -44,6 +45,20 @@ export const useSharedStore = create(
         return { selections: next };
       }),
 
+      // ── Tri en cours pour un album partagé (reprise de là où on s'est arrêté) ──
+      // { [albumId]: { name, ownerName, photoIds: [file en cours], idx } } — effacé à la fin du tri.
+      sorts: {},
+      startSharedSort: (album, photoIds) => set((s) => ({
+        sorts: { ...s.sorts, [album.id]: { name: album.name, ownerName: album.ownerName, photoIds, idx: 0 } },
+      })),
+      setSharedSortIdx: (albumId, idx) => set((s) => (s.sorts[albumId] ? { sorts: { ...s.sorts, [albumId]: { ...s.sorts[albumId], idx } } } : s)),
+      clearSharedSort: (albumId) => set((s) => {
+        if (!s.sorts[albumId]) return s;
+        const next = { ...s.sorts };
+        delete next[albumId];
+        return { sorts: next };
+      }),
+
       // ── Envoi en cours (reprise) ──
       outbox: {},
       setOutbox: (albumId, entry) => set((s) => {
@@ -72,7 +87,7 @@ export const useSharedStore = create(
     {
       name: "pellicule.shared.v1",
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (s) => ({ pendingCode: s.pendingCode, selections: s.selections, outbox: s.outbox, sentIds: s.sentIds }),
+      partialize: (s) => ({ pendingCode: s.pendingCode, selections: s.selections, sorts: s.sorts, outbox: s.outbox, sentIds: s.sentIds }),
     }
   )
 );
