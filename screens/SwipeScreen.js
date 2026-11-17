@@ -24,6 +24,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { C, S, FONT } from "../constants/theme";
 import Icon from "../components/Icons";
 import { usePhotoStore, resetSprint } from "../store/usePhotoStore";
+import { useSharedStore } from "../store/useSharedStore";
 import { ZoomableImage } from "../components/ZoomableImage";
 import { SessionTutoOverlay } from "../components/SessionTutoOverlay";
 import { SwipeEdgeHints } from "../components/SwipeEdgeHints";
@@ -76,6 +77,13 @@ export function SwipeScreen({ navigation, route }) {
   const isMenage = mode === "menage";
   const isAlbum  = mode === "album";
 
+  // Album PARTAGÉ avec moi (route.params.sharedAlbum = { id, name, ownerName }) : le swipe « album » = « à envoyer à <prénom> ».
+  // Rien n'est supprimé, rien n'est compté dans la progression ; les choix attendent dans useSharedStore.selections
+  // et partent à la fin du tri (écran SharedSend, avec l'accord de l'utilisateur).
+  const sharedAlbum = route.params?.sharedAlbum ?? null;
+  const isShared = !!sharedAlbum;
+  const sharedCount = useSharedStore((st) => (sharedAlbum ? (st.selections[sharedAlbum.id]?.ids.length ?? 0) : 0));
+
   // startIdx : reprise d'un tri Album mis de côté (voir la carte « Reprendre » de l'accueil).
   const startIdx = route.params?.startIdx ?? 0;
   const [idx, setIdx] = useState(startIdx);
@@ -100,7 +108,15 @@ export function SwipeScreen({ navigation, route }) {
   };
 
   // Bon mapping selon le mode
-  const swipeMappings = isAlbum ? swipeMappingsAlbum : swipeMappingsMenage;
+  const baseMappings = isAlbum ? swipeMappingsAlbum : swipeMappingsMenage;
+  // Album partagé : seules les actions « à envoyer » (album) et « partager » restent ; tout le reste = « passer » (aucun effet).
+  const swipeMappings = (() => {
+    if (!isShared) return baseMappings;
+    const m = {};
+    ["up", "down", "left", "right"].forEach((d) => { m[d] = ["album", "share"].includes(baseMappings?.[d]) ? baseMappings[d] : "skip"; });
+    if (!Object.values(m).includes("album")) m.up = "album";
+    return m;
+  })();
 
   // Retrouve la direction de swipe configurée par l'user pour une action donnée.
   // Les flèches affichées au-dessus des boutons suivent ainsi le paramétrage.
@@ -204,7 +220,17 @@ export function SwipeScreen({ navigation, route }) {
   };
 
   // ── Fin de tri anticipée ─────────────────────────────────────────────────
+  // Album partagé : fin du tri → écran « Envoyer N photos à <prénom> » (ou retour si rien n'a été choisi).
+  const finishShared = () => {
+    if ((useSharedStore.getState().selections[sharedAlbum.id]?.ids.length ?? 0) === 0) {
+      navigation.goBack();
+      return;
+    }
+    navigation.replace("SharedSend", { sharedAlbum });
+  };
+
   const handleFinDeTri = () => {
+    if (isShared) { finishShared(); return; }
     // Mode ménage sans aucun swipe → rien à montrer, on retourne directement à l'accueil
     const totalSession =
       sessionKept.length + sessionDeleted.length +
@@ -230,6 +256,19 @@ export function SwipeScreen({ navigation, route }) {
   const performAction = (actionKey, animDir) => {
     if (!photo) return;
     if (actionKey === "none") return;
+
+    // Album partagé : seulement « à envoyer » ou « passer » ; la progression et les stocks de tri ne bougent pas.
+    if (isShared) {
+      const send = actionKey === "album";
+      setHistory((h) => [...h, { sharedPhotoId: photo.id, sent: send }]);
+      if (send) {
+        flashFeedback(HALO.album, animDir);
+        useSharedStore.getState().addToSelection(sharedAlbum, photo.id);
+      }
+      if (idx >= queue.length - 1) finishShared();
+      else setIdx((i) => i + 1);
+      return;
+    }
 
     const stateNow = usePhotoStore.getState();
     setHistory((h) => [
@@ -302,7 +341,7 @@ export function SwipeScreen({ navigation, route }) {
   };
   // Appui long sur le bord "album" = choisir l'album (comme l'appui long sur 📕).
   const handleEdgeLongPress = (dir) => {
-    if (isAlbum && swipeMappings?.[dir] === "album") setShowAlbumPicker(true);
+    if (isAlbum && !isShared && swipeMappings?.[dir] === "album") setShowAlbumPicker(true);
   };
   // Cœur = coup de cœur (favoris) + on conserve la photo et on passe à la suivante.
   // performAction("favorite") gère l'ajout aux favoris, l'historique (undo) et l'avance.
@@ -319,6 +358,12 @@ export function SwipeScreen({ navigation, route }) {
   const undo = () => {
     if (!history.length) return;
     const last = history[history.length - 1];
+    if (last.sharedPhotoId) {
+      if (last.sent) useSharedStore.getState().removeFromSelection(sharedAlbum.id, last.sharedPhotoId);
+      setHistory((h) => h.slice(0, -1));
+      setIdx((i) => Math.max(0, i - 1));
+      return;
+    }
     undoLast(last.keptSnap, last.deletedSnap, last.printedSnap, last.skippedSnap, last.hesitatedSnap);
     setHistory((h) => h.slice(0, -1));
     setIdx((i) => Math.max(0, i - 1));
@@ -395,11 +440,24 @@ export function SwipeScreen({ navigation, route }) {
           <View style={{ alignItems: "center" }}>
             <Text style={{ color: "#fff", fontWeight: "600", fontSize: 13, textShadowColor: "rgba(0,0,0,0.4)", textShadowRadius: 4 }}>{photo.location}</Text>
             <Text style={{ color: "rgba(255,255,255,.7)", fontSize: 11, textShadowColor: "rgba(0,0,0,0.4)", textShadowRadius: 4 }}>{photoDateLabel(photo)}</Text>
+            {isShared && (
+              <Text numberOfLines={1} style={{ color: C.albumSoft, fontSize: 11, fontWeight: "600", marginTop: 2, maxWidth: SW * 0.4, textShadowColor: "rgba(0,0,0,0.5)", textShadowRadius: 4 }}>
+                {`Pour ${sharedAlbum.ownerName} · ${sharedAlbum.name}`}
+              </Text>
+            )}
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             {/* Compteur (ménage) ou badge album cliquable (album) */}
-            {isAlbum ? (
+            {isShared ? (
+              <View style={{
+                flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 7,
+                backgroundColor: rgba(C.album, 0.55), borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", borderRadius: S.radiusFull,
+              }}>
+                <Icon name="mail" size={13} color="#fff" strokeWidth={2.2} />
+                <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>{sharedCount}</Text>
+              </View>
+            ) : isAlbum ? (
               <TouchableOpacity
                 onPress={() => setShowAlbumPreview(true)}
                 style={{
@@ -451,6 +509,7 @@ export function SwipeScreen({ navigation, route }) {
       <SwipeEdgeHints
         mappings={swipeMappings}
         isMenage={isMenage}
+        albumLabel={isShared ? "ENVOYER" : undefined}
         onPress={handleEdgePress}
         onLongPress={handleEdgeLongPress}
       />
@@ -514,7 +573,7 @@ export function SwipeScreen({ navigation, route }) {
           <View style={{ alignItems: "center", gap: 5 }}>
             <TouchableOpacity
               onPress={handleAlbumPress}
-              onLongPress={() => setShowAlbumPicker(true)}
+              onLongPress={isShared ? undefined : () => setShowAlbumPicker(true)}
               delayLongPress={350}
               style={{
                 backgroundColor: rgba(C.album, 0.3), borderWidth: 2, borderColor: rgba(C.albumSoft, 0.7),
@@ -522,7 +581,7 @@ export function SwipeScreen({ navigation, route }) {
                 alignItems: "center", justifyContent: "center",
               }}
             >
-              <Icon name="album" size={25} color="#fff" strokeWidth={2} />
+              <Icon name={isShared ? "mail" : "album"} size={25} color="#fff" strokeWidth={2} />
             </TouchableOpacity>
           </View>
         )}

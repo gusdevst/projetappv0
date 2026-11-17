@@ -3,7 +3,7 @@
 // - Corbeille : restauration individuelle ou vidage
 // - Album souvenirs : liste des albums → tap → grille de l'album → tap → plein écran swipeable
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   ScrollView,
@@ -35,6 +35,10 @@ import { usePrintedPhotos } from "../hooks/usePrintedPhotos";
 import { shortDate } from "../services/printSelection";
 import { photoDateLabel } from "../services/photoDate";
 import { addPhotosToPelliculeAlbum } from "../services/photoLibrary";
+import { useAuthStore } from "../store/useAuthStore";
+import { fetchSharedSummary } from "../services/sharedAlbums";
+import InviteSheet from "../components/shared/InviteSheet";
+import { useMailbox } from "../hooks/useMailbox";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 
@@ -108,6 +112,20 @@ export function GalleryScreen({ navigation, route }) {
   const activeAlbumPhotos = activeAlbum
     ? photos.filter((p) => activeAlbum.photoIds.includes(p.id))
     : [];
+
+  // Photos reçues de proches dans cet album partagé (null = rien) : action « Trier les photos reçues » en haut.
+  const mailbox = useMailbox();
+  const received = activeAlbum ? (mailbox.get(String(activeAlbum.id)) ?? null) : null;
+
+  // Album partagé : « Inviter des proches » (feuille) + état du partage de l'album ouvert (null = pas partagé).
+  const session = useAuthStore((s) => s.session);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [sharedInfo, setSharedInfo] = useState(null); // { album, members }
+  const refreshShared = useCallback(async () => {
+    if (!activeAlbum || !session) { setSharedInfo(null); return; }
+    setSharedInfo(await fetchSharedSummary(activeAlbum.id, session.user.id));
+  }, [activeAlbum?.id, session?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { refreshShared(); }, [refreshShared]);
 
   // Plein écran
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -358,6 +376,28 @@ export function GalleryScreen({ navigation, route }) {
         )}
       </View>
 
+      {/* ── Album ouvert : des proches ont envoyé des photos → « Trier les photos reçues » (swipe de réception) ── */}
+      {activeAlbum && received && (
+        <TouchableOpacity
+          onPress={() => navigation.navigate("MailboxSwipe", { albumId: received.albumId, albumName: received.albumName, localAlbumId: received.localAlbumId })}
+          activeOpacity={0.85}
+          style={{ flexDirection: "row", alignItems: "center", gap: 12, marginHorizontal: S.pad, marginBottom: 12, padding: 12, borderRadius: 16, backgroundColor: C.album }}
+        >
+          <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" }}>
+            <Icon name="mail" size={18} color="#fff" strokeWidth={2.2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>
+              {`Trier les photos reçues (${received.total})`}
+            </Text>
+            <Text numberOfLines={1} style={{ fontSize: 11.5, color: "rgba(255,255,255,0.85)", marginTop: 1 }}>
+              {`De ${received.senders.map((x) => x.name).join(", ")}`}
+            </Text>
+          </View>
+          <Icon name="chevronRight" size={16} color="#fff" />
+        </TouchableOpacity>
+      )}
+
       {/* ── Album ouvert : Livre photo + Exporter, sous le titre ── */}
       {activeAlbum && activeAlbumPhotos.length > 0 && (
         <View style={{ flexDirection: "row", gap: 8, marginHorizontal: S.pad, marginBottom: 12 }}>
@@ -379,6 +419,44 @@ export function GalleryScreen({ navigation, route }) {
             <Text style={{ fontSize: 13, color: C.album, fontWeight: "600" }}>Exporter</Text>
           </TouchableOpacity>
         </View>
+      )}
+
+      {/* ── Album ouvert : « Inviter des proches » (pointillés tant que l'album n'est pas partagé) ── */}
+      {activeAlbum && (
+        <>
+          <TouchableOpacity
+            onPress={() => setInviteOpen(true)}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 12, marginHorizontal: S.pad, marginBottom: 12, padding: 11, borderRadius: 16,
+              backgroundColor: sharedInfo ? C.albumSoft : "transparent",
+              borderWidth: sharedInfo ? 0 : 1.5, borderStyle: "dashed", borderColor: C.album + "66",
+            }}
+          >
+            <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: sharedInfo ? C.album : C.albumSoft, alignItems: "center", justifyContent: "center" }}>
+              <Icon name="user" size={18} color={sharedInfo ? "#fff" : C.album} strokeWidth={2} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13.5, fontWeight: "600", color: C.text }}>
+                {sharedInfo ? "Album partagé" : "Inviter des proches"}
+              </Text>
+              <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 1 }}>
+                {sharedInfo
+                  ? (sharedInfo.members > 0 ? `${sharedInfo.members} proche${sharedInfo.members > 1 ? "s" : ""} dans l'album · code ${sharedInfo.album.code}` : `Personne n'a encore rejoint · code ${sharedInfo.album.code}`)
+                  : "Ils t'envoient leurs photos"}
+              </Text>
+            </View>
+            <Icon name="chevronRight" size={16} color={C.textMuted} />
+          </TouchableOpacity>
+          <InviteSheet
+            visible={inviteOpen}
+            onClose={() => { setInviteOpen(false); refreshShared(); }}
+            album={activeAlbum}
+            session={session}
+            onSignIn={() => { setInviteOpen(false); navigation.navigate("Auth"); }}
+            onChanged={refreshShared}
+          />
+        </>
       )}
 
       {/* ── Bannière "vider la corbeille" en haut (section deleted) ── */}

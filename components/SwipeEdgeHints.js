@@ -7,12 +7,12 @@ import { View, TouchableOpacity } from "react-native";
 import Text from "./AppText";
 
 // action → libellé affiché sur le bord
-export function labelFor(action, isMenage) {
+export function labelFor(action, isMenage, albumLabel) {
   switch (action) {
     case "skip":     return isMenage ? "GARDER" : "PASSER";
     case "delete":   return "SUPPRIMER";
     case "hesitate": return "J'HÉSITE";
-    case "album":    return "ALBUM";
+    case "album":    return albumLabel ?? "ALBUM";
     case "favorite": return "COUP DE CŒUR";
     case "share":    return "PARTAGER";
     default:         return null; // "none" ou inconnu → rien sur ce bord
@@ -32,11 +32,11 @@ const labelStyle = {
 
 // downBottom : hauteur du libellé du bas (par défaut 118, au-dessus des boutons de SwipeScreen).
 // Un écran avec une barre basse plus haute (ex. Même instant) passe une valeur plus grande.
-export function SwipeEdgeHints({ mappings, isMenage, onPress, onLongPress, downBottom = 118 }) {
-  const up    = labelFor(mappings?.up, isMenage);
-  const down  = labelFor(mappings?.down, isMenage);
-  const left  = labelFor(mappings?.left, isMenage);
-  const right = labelFor(mappings?.right, isMenage);
+export function SwipeEdgeHints({ mappings, isMenage, onPress, onLongPress, downBottom = 118, albumLabel }) {
+  const up    = labelFor(mappings?.up, isMenage, albumLabel);
+  const down  = labelFor(mappings?.down, isMenage, albumLabel);
+  const left  = labelFor(mappings?.left, isMenage, albumLabel);
+  const right = labelFor(mappings?.right, isMenage, albumLabel);
 
   const tapProps = (dir) => ({
     onPress: () => onPress?.(dir),

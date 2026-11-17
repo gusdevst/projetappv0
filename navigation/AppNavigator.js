@@ -34,6 +34,9 @@ import { BookOrderProgressScreen } from "../screens/BookOrderProgressScreen";
 import { BookOrdersScreen }       from "../screens/BookOrdersScreen";
 import { OrderTrackingScreen }    from "../screens/OrderTrackingScreen";
 import { AddressesScreen }        from "../screens/AddressesScreen";
+import { SharedSendScreen } from "../screens/SharedSendScreen";
+import { MailboxSwipeScreen } from "../screens/MailboxSwipeScreen";
+import { JoinAlbumScreen }        from "../screens/JoinAlbumScreen";
 import { PrintNewScreen } from "../screens/PrintNewScreen";
 import { SubscriptionIntroScreen } from "../screens/SubscriptionIntroScreen";
 import { SubscriptionSetupScreen } from "../screens/SubscriptionSetupScreen";
@@ -136,6 +139,9 @@ export function AppNavigator() {
       <Stack.Screen name="BookOrders"  component={BookOrdersScreen} />
       <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
       <Stack.Screen name="Addresses"   component={AddressesScreen} />
+      <Stack.Screen name="JoinAlbum"   component={JoinAlbumScreen} />
+      <Stack.Screen name="SharedSend"  component={SharedSendScreen} />
+      <Stack.Screen name="MailboxSwipe" component={MailboxSwipeScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="PrintNew" component={PrintNewScreen} />
       <Stack.Screen name="SubscriptionIntro" component={SubscriptionIntroScreen} />
       <Stack.Screen name="SubscriptionSetup" component={SubscriptionSetupScreen} />

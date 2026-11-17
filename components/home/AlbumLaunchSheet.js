@@ -15,7 +15,9 @@ import { C, FONT } from "../../constants/theme";
 
 const frNum = (n) => n.toLocaleString("fr-FR");
 
-export default function AlbumLaunchSheet({ visible, onClose, count, albums, libraryPhotos, onCreate, onPick }) {
+// sharedAlbums : albums que d'autres m'ont invité à rejoindre [{ id, name, ownerName }] → section « PARTAGÉS AVEC TOI » en tête
+// (on envoie ses photos au propriétaire, on n'en voit pas le contenu) ; onPickShared(album) lance le tri pour cet album.
+export default function AlbumLaunchSheet({ visible, onClose, count, albums, libraryPhotos, onCreate, onPick, sharedAlbums = [], onPickShared, onJoin }) {
   const { height } = useWindowDimensions();
   const [name, setName] = useState("");
   const [kb, setKb] = useState(0); // hauteur du clavier : la feuille monte au-dessus (comme ContentSearchSheet)
@@ -56,6 +58,26 @@ export default function AlbumLaunchSheet({ visible, onClose, count, albums, libr
               {`${frNum(count)} photo${count > 1 ? "s" : ""} à passer en revue.`}
             </Text>
           </View>
+
+          {/* Albums partagés avec moi : j'envoie mes photos au propriétaire */}
+          {sharedAlbums.length > 0 && (
+            <View style={{ marginBottom: 14 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.8, color: C.textMuted, marginHorizontal: 22, marginBottom: 4 }}>PARTAGÉS AVEC TOI</Text>
+              {sharedAlbums.map((a) => (
+                <TouchableOpacity key={a.id} onPress={() => onPickShared?.(a)} activeOpacity={0.8}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 12, marginHorizontal: 20, paddingHorizontal: 10, paddingVertical: 9, backgroundColor: C.albumSoft, borderRadius: 14, marginBottom: 6 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.album, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>{(a.ownerName || "?")[0].toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: C.text }}>{a.name}</Text>
+                    <Text numberOfLines={1} style={{ fontSize: 12, color: C.textMuted }}>{`Album de ${a.ownerName} · tu envoies tes photos`}</Text>
+                  </View>
+                  <Icon name="chevronRight" size={16} color={C.textMuted} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           {/* Nouvel album : le nom, puis « Commencer » */}
           <View style={{ marginHorizontal: 20, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: C.albumSoft, borderRadius: 16, padding: 8, paddingLeft: 12 }}>
@@ -105,6 +127,21 @@ export default function AlbumLaunchSheet({ visible, onClose, count, albums, libr
                 </TouchableOpacity>
               ))}
             </ScrollView>
+          )}
+
+          {/* Rejoindre l'album d'un proche (code à 6 caractères) : toujours visible, sous la liste */}
+          {onJoin && (
+            <TouchableOpacity onPress={onJoin} activeOpacity={0.8}
+              style={{ flexDirection: "row", alignItems: "center", gap: 12, marginHorizontal: 20, marginTop: 10, paddingHorizontal: 12, paddingVertical: 11, borderRadius: 14, borderWidth: 1.5, borderStyle: "dashed", borderColor: C.album }}>
+              <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: C.albumSoft, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 16 }}>🤝</Text>
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: C.album }}>Rejoindre un album</Text>
+                <Text numberOfLines={1} style={{ fontSize: 12, color: C.textMuted }}>Un proche t'a invité : tape son code</Text>
+              </View>
+              <Icon name="chevronRight" size={16} color={C.album} />
+            </TouchableOpacity>
           )}
         </View>
       </View>

@@ -19,6 +19,12 @@ import FolderSheet from "../components/home/FolderSheet";
 import ContentSearchSheet from "../components/home/ContentSearchSheet";
 import AlbumLaunchSheet from "../components/home/AlbumLaunchSheet";
 import MyAlbums from "../components/home/MyAlbums";
+import SharedTargetBanner from "../components/shared/SharedTargetBanner";
+import { useAuthStore } from "../store/useAuthStore";
+import { useSharedStore } from "../store/useSharedStore";
+import { fetchJoinedAlbums } from "../services/sharedAlbums";
+import { fetchSentIds } from "../services/sharedUpload";
+import SharedPendingRows from "../components/shared/SharedPendingRows";
 import Icon from "../components/Icons";
 import { SectionTitle, ListRow, SHADOW } from "../components/home/ui";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -313,6 +319,17 @@ export function HomeScreen({ navigation, route }) {
   const [selectedAlbum,   setSelectedAlbum]   = useState(null);
   const [launchSheetOpen, setLaunchSheetOpen] = useState(false); // feuille « Dans quel album ? »
   const [launchQueue, setLaunchQueue] = useState([]);              // photos qu'elle va faire passer en revue
+  // Albums partagés avec moi (je leur envoie mes photos) : lus sur le serveur à l'ouverture de la feuille.
+  const session = useAuthStore((s) => s.session);
+  const sharedTarget = useSharedStore((s) => s.target);             // album partagé présélectionné (null = tri normal)
+  const setSharedTarget = useSharedStore((s) => s.setTarget);
+  const [joinedAlbums, setJoinedAlbums] = useState([]);
+  useEffect(() => {
+    if (!launchSheetOpen || !session) { if (!session) setJoinedAlbums([]); return; }
+    let live = true;
+    fetchJoinedAlbums(session.user.id).then((l) => { if (live) setJoinedAlbums(l); });
+    return () => { live = false; };
+  }, [launchSheetOpen, session?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [albumPhotoIds,   setAlbumPhotoIds]   = useState(null);
   const [showAlbumModal,  setShowAlbumModal]  = useState(false);
   const [availableAlbums, setAvailableAlbums] = useState([]);
@@ -423,10 +440,29 @@ export function HomeScreen({ navigation, route }) {
       if (shuffleOn) usePhotoStore.getState().bumpShuffleLaunch(); // badge « Joueur »
       navigation.navigate("Swipe", { queue: q, mode: "menage" });
     } else {
+      // Album partagé présélectionné : pas de question, on trie pour lui.
+      if (sharedTarget) { launchSharedSort(sharedTarget, queue); return; }
       // Mode Album : feuille « Dans quel album ? » (nouvel album ou album existant), puis le tri démarre directement.
       setLaunchQueue(queue);
       setLaunchSheetOpen(true);
     }
+  }
+
+  // Tri pour un album partagé avec moi : l'album devient la cible de l'accueil (bannière), puis le swipe « à envoyer » démarre.
+  // On ne reproposera jamais une photo déjà envoyée à cet album, ni déjà choisie et en attente d'envoi.
+  async function launchSharedSort(album, q) {
+    setLaunchSheetOpen(false);
+    const target = { id: album.id, name: album.name, ownerName: album.ownerName };
+    setSharedTarget(target);
+    const sent = new Set(await fetchSentIds(album.id));
+    const st = useSharedStore.getState();
+    const waiting = new Set([...(st.selections[album.id]?.ids ?? []), ...(st.outbox[album.id]?.ids ?? [])]);
+    const pool = q.filter((p) => !sent.has(p.id) && !waiting.has(p.id));
+    if (pool.length === 0) {
+      Alert.alert("Aucune photo à proposer", "Toutes les photos de cette sélection ont déjà été envoyées ou choisies pour cet album.");
+      return;
+    }
+    navigation.navigate("Swipe", { queue: pool, mode: "album", sharedAlbum: target });
   }
 
   // Lance le tri Album sur la sélection actuelle, dans l'album choisi (ou créé à l'instant).
@@ -646,7 +682,11 @@ export function HomeScreen({ navigation, route }) {
           const totalMo = queue.reduce((t, p) => t + (p.size || 0), 0);
           return (
             <View>
+              <SharedPendingRows onOpen={(a) => navigation.navigate("SharedSend", { sharedAlbum: a })} />
+              {sharedTarget && <SharedTargetBanner album={sharedTarget} onClear={() => setSharedTarget(null)} />}
               <AlbumHero
+                launchLabel={sharedTarget ? "Choisir mes photos" : undefined}
+                launchSub={sharedTarget ? `pour « ${sharedTarget.name} » de ${sharedTarget.ownerName}` : undefined}
                 count={queue.length}
                 totalLibrary={Math.max(libraryPhotos.length - albumExcludedIds.size, queue.length)}
                 infoLine={queue.length > 0 ? `${formatSize(totalMo)} · ${periodLabel(queue)}` : null}
@@ -836,6 +876,9 @@ export function HomeScreen({ navigation, route }) {
         libraryPhotos={libraryPhotos}
         onCreate={handleCreateAlbumAndSort}
         onPick={(a) => launchAlbumSort(a.id, a.name)}
+        sharedAlbums={joinedAlbums}
+        onPickShared={(a) => launchSharedSort(a, launchQueue)}
+        onJoin={() => { setLaunchSheetOpen(false); navigation.navigate("JoinAlbum"); }}
       />
       <ContentSearchSheet
         visible={showSearch}

@@ -45,7 +45,8 @@ function OpenAlbum({ photoUrl }) {
 
 const frNum = (n) => n.toLocaleString("fr-FR");
 
-export default function AlbumHero({ count, totalLibrary, infoLine, photoUrl, busy, onLaunch }) {
+// launchLabel / launchSub : textes du bouton quand on trie pour un album partagé (« Choisir mes photos » / « pour … d'Augustin »).
+export default function AlbumHero({ count, totalLibrary, infoLine, photoUrl, busy, onLaunch, launchLabel, launchSub }) {
   const empty = count === 0;
   const pct = totalLibrary > 0 ? Math.min(100, Math.max(count > 0 ? 2 : 0, (count / totalLibrary) * 100)) : 0;
   return (
@@ -94,11 +95,11 @@ export default function AlbumHero({ count, totalLibrary, infoLine, photoUrl, bus
         }}
       >
         <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>
-          {busy ? "Chargement…" : empty ? "Ajuste tes filtres" : "Créer un album"}
+          {busy ? "Chargement…" : empty ? "Ajuste tes filtres" : (launchLabel ?? "Créer un album")}
         </Text>
         {!busy && !empty && (
           <Text style={{ fontSize: 12, fontWeight: "500", color: "rgba(255,255,255,0.85)", marginTop: 1 }}>
-            {frNum(count)} photo{count > 1 ? "s" : ""}
+            {launchSub ?? `${frNum(count)} photo${count > 1 ? "s" : ""}`}
           </Text>
         )}
       </TouchableOpacity>

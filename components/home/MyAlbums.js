@@ -13,6 +13,7 @@ import Icon from "../Icons";
 import { ListRow } from "./ui";
 import { C, FONT } from "../../constants/theme";
 import { usePhotoStore } from "../../store/usePhotoStore";
+import { useMailbox } from "../../hooks/useMailbox";
 
 // "il y a 3 j", "il y a 2 sem.", "il y a 4 mois"
 function timeAgo(ts) {
@@ -54,6 +55,7 @@ export default function MyAlbums({ navigation }) {
   const createAlbum   = usePhotoStore((s) => s.createAlbum);
   const renameAlbum   = usePhotoStore((s) => s.renameAlbum);
   const deleteAlbum   = usePhotoStore((s) => s.deleteAlbum);
+  const mailbox       = useMailbox(); // photos reçues par album partagé → petite enveloppe
 
   // Retrouver une photo (url) par son id : photothèque + photos rangées.
   const photoById = useMemo(() => {
@@ -126,9 +128,20 @@ export default function MyAlbums({ navigation }) {
             title={a.name}
             sub={`${a.photoIds.length} photo${a.photoIds.length > 1 ? "s" : ""}${a.updatedAt ? ` · ${timeAgo(a.updatedAt)}` : ""}`}
             right={
-              <TouchableOpacity onPress={() => openAlbumMenu(a)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 6 }}>
-                <Text style={{ fontSize: 17, fontWeight: "600", color: C.textMuted, letterSpacing: 1 }}>···</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                {mailbox.get(String(a.id)) && (
+                  // Enveloppe : des proches ont envoyé des photos à trier (on les trie en ouvrant l'album)
+                  <View>
+                    <Icon name="mail" size={22} color={C.album} strokeWidth={2} />
+                    <View style={{ position: "absolute", top: -6, right: -9, minWidth: 17, height: 17, borderRadius: 9, paddingHorizontal: 4, backgroundColor: C.album, alignItems: "center", justifyContent: "center" }}>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>{mailbox.get(String(a.id)).total > 99 ? "99+" : mailbox.get(String(a.id)).total}</Text>
+                    </View>
+                  </View>
+                )}
+                <TouchableOpacity onPress={() => openAlbumMenu(a)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 6 }}>
+                  <Text style={{ fontSize: 17, fontWeight: "600", color: C.textMuted, letterSpacing: 1 }}>···</Text>
+                </TouchableOpacity>
+              </View>
             }
             onPress={() => open({ section: "album", albumId: a.id })}
           />

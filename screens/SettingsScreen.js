@@ -196,6 +196,9 @@ export function SettingsScreen({ navigation, route }) {
         <RowSetting emoji="📬" label="Gérer mes abonnements" desc="Coups de cœur : dates, pause, résiliation"
           onPress={() => navigation.navigate("SubscriptionList")}
           right={<Text style={{ color: C.textMuted }}>›</Text>} />
+        <RowSetting emoji="🤝" label="Rejoindre un album" desc="Un proche t'a invité : tape son code"
+          onPress={() => navigation.navigate("JoinAlbum")}
+          right={<Text style={{ color: C.textMuted }}>›</Text>} />
         <RowSetting emoji="📍" label="Mes adresses" desc="Livraison de tes commandes, reprise automatiquement"
           onPress={() => navigation.navigate("Addresses")}
           right={<Text style={{ color: C.textMuted }}>›</Text>} />
