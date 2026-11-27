@@ -5,7 +5,7 @@ import { InteractionManager } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as PhotoLibrary from "../services/photoLibrary";
 import { loadGpsCache, saveGpsCache } from "../services/gpsCache";
-import { buildContext, reachedIds } from "../services/achievements";
+import { totalSortedOf, reachedIds } from "../services/achievements";
 import { dayKey } from "../services/dateKey";
 import { upgradeLegacyBook } from "../services/photoBook";
 
@@ -106,7 +106,7 @@ export const usePhotoStore = create(
       blurKeptIds: [], // PHOTOS FLOUES : ids des photos décochées puis confirmées « gardées » — plus jamais proposées comme floues
       dailyLog:  {}, // carnet de bord journalier (voir bumpLog en haut du fichier)
       lifetimeSorted: null, // total des photos triées depuis toujours (galons) — null = pas encore initialisé
-      achievements:   {},   // galons + badges débloqués : { "rank-3": timestamp, "clean-1": timestamp }
+      achievements:   {},   // galons débloqués : { "rank-3": timestamp }
       hesitated: [], // "Je déciderai plus tard" — l'user hésite entre garder et supprimer
       // Albums créés par l'utilisateur dans "Album souvenirs".
       // Format : [{ id, name, photoIds: [] }]
@@ -175,15 +175,6 @@ export const usePhotoStore = create(
       // Page de présentation des posters (Chambre noire) : montrée à la 1re création seulement.
       posterIntroSeen: false,
       setPosterIntroSeen: (v) => set({ posterIntroSeen: v }),
-      // Badges du Labo : plus grand pêle-mêle composé (nombre de photos) et réalité augmentée essayée.
-      posterCollageMax: 0,
-      posterArTried: false,
-      notePosterCollage: (n) => {
-        if (n > (get().posterCollageMax || 0)) { set({ posterCollageMax: n }); get().checkAchievements(); }
-      },
-      notePosterAr: () => {
-        if (!get().posterArTried) { set({ posterArTried: true }); get().checkAchievements(); }
-      },
 
       // ─── État de la photothèque (NON persisté — rechargé à chaque ouverture) ─
       permission:      "undetermined", // "undetermined" | "granted" | "denied"
@@ -472,22 +463,21 @@ export const usePhotoStore = create(
       // Nombre de photos définitivement supprimées (corbeille vidée). Elles sortent de la
       // photothèque : on les garde dans le calcul du % trié pour qu'il ne baisse pas.
       purgedCount: 0,
-      // Nombre de tris aléatoires lancés (badge « Joueur »).
+      // Nombre de tris aléatoires lancés (plus affiché ; gardé car synchronisé avec le serveur).
       shuffleLaunchCount: 0,
       // Record : temps le plus court (ms) pour 20 décisions d'affilée. null = pas encore de sprint.
       best20Ms: null,
-      bumpShuffleLaunch: () => set((st) => ({ shuffleLaunchCount: (st.shuffleLaunchCount || 0) + 1 })),
 
-      // ─── Galons & badges ────────────────────────────────────────────────
+      // ─── Galons ─────────────────────────────────────────────────────────
       // Compare ce qui est atteint avec ce qui est déjà débloqué, mémorise les
       // nouveautés (avec la date) et les RETOURNE (pour afficher une animation).
       // Les nouveautés sont aussi mises dans la file pendingUnlocks (animations).
       // 1re vérification de l'install : on enregistre sans animer (sinon avalanche
-      // de badges d'un coup pour un user qui avait déjà beaucoup trié).
+      // de galons d'un coup pour un user qui avait déjà beaucoup trié).
       checkAchievements: () => {
         const state = get();
         const have  = state.achievements || {};
-        const fresh = reachedIds(buildContext(state)).filter((id) => !have[id]);
+        const fresh = reachedIds(totalSortedOf(state)).filter((id) => !have[id]);
         if (fresh.length === 0) {
           if (!state.achievementsInit) set({ achievementsInit: true });
           return [];
@@ -522,7 +512,6 @@ export const usePhotoStore = create(
               // Carnet du jour : les Mo comptent le jour où la corbeille est vidée (place réellement libérée).
               dailyLog: bumpLog(get().dailyLog, "freedMo", freed),
             });
-            get().checkAchievements(); // badges ménage (Go libérés)
             // ⚠️ Recharger la photothèque : sans ça, les photos supprimées restent
             // dans libraryPhotos et réapparaissent dans la file de tri (écran noir).
             await get().loadLibrary();
@@ -705,8 +694,6 @@ export const usePhotoStore = create(
         swipeTutoSeen:           state.swipeTutoSeen,
         albumTutoSeen:           state.albumTutoSeen,
         posterIntroSeen:         state.posterIntroSeen,
-        posterCollageMax:        state.posterCollageMax,
-        posterArTried:           state.posterArTried,
         randomCount:            state.randomCount,
         shuffleOn:               state.shuffleOn,
         sortPriority:            state.sortPriority,

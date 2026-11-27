@@ -29,7 +29,6 @@ import { ZoomableImage } from "../components/ZoomableImage";
 import { SessionTutoOverlay } from "../components/SessionTutoOverlay";
 import { SwipeEdgeHints } from "../components/SwipeEdgeHints";
 import { DayValidatedToast } from "../components/DayValidatedToast";
-import { BadgeUnlockBanner } from "../components/AchievementUnlocks";
 import { sharePhoto, getShareableUri } from "../services/photoShare";
 import { photoDateLabel } from "../services/photoDate";
 
@@ -751,8 +750,6 @@ export function SwipeScreen({ navigation, route }) {
           Placé en dernier = dessiné au-dessus de tout le reste. */}
       <DayValidatedToast />
 
-      {/* Bandeau "Nouveau badge" (le nouveau galon, lui, attend le Bilan) */}
-      <BadgeUnlockBanner />
     </View>
   );
 }

@@ -38,7 +38,7 @@ import { useNotificationReminder } from "../hooks/useNotificationReminder";
 import { useBlurryPhotos } from "../hooks/useBlurryPhotos";
 import { ProgressCard } from "../components/ProgressCard";
 import TimePickerSheet from "../components/TimePickerSheet";
-import { BadgeUnlockBanner, RankUnlockModal } from "../components/AchievementUnlocks";
+import { RankUnlockModal } from "../components/AchievementUnlocks";
 
 // C_ALBUM utilise désormais la valeur centralisée dans theme.js
 const C_ALBUM = C.album;
@@ -437,7 +437,6 @@ export function HomeScreen({ navigation, route }) {
       const q = shuffleOn
         ? [...filteredPool].sort(() => Math.random() - 0.5).slice(0, randomCount)
         : queue;
-      if (shuffleOn) usePhotoStore.getState().bumpShuffleLaunch(); // badge « Joueur »
       navigation.navigate("Swipe", { queue: q, mode: "menage" });
     } else {
       // Album partagé présélectionné : pas de question, on trie pour lui.
@@ -1089,8 +1088,7 @@ export function HomeScreen({ navigation, route }) {
       </Modal>
 
 
-      {/* Galons & badges : bandeau badge + fenêtre nouveau galon */}
-      <BadgeUnlockBanner />
+      {/* Fenêtre nouveau galon */}
       <RankUnlockModal />
 
       {/* Heure du rappel (depuis la carte « Cette semaine ») */}

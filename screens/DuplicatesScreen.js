@@ -25,7 +25,6 @@ import BackButton from "../components/BackButton";
 import { ExitIcon } from "../components/ExitIcon";
 import { SwipeEdgeHints } from "../components/SwipeEdgeHints";
 import { DayValidatedToast } from "../components/DayValidatedToast";
-import { BadgeUnlockBanner } from "../components/AchievementUnlocks";
 
 let NavigationBar = null;
 try { NavigationBar = require("expo-navigation-bar"); } catch (e) {}
@@ -668,7 +667,6 @@ export function DuplicatesScreen({ navigation, route }) {
 
           {/* Bandeau "🔥 Journée validée !" — dans la Modal (sinon caché dessous), en dernier = au-dessus */}
           <DayValidatedToast />
-          <BadgeUnlockBanner />
         </GestureHandlerRootView>
       </Modal>
     </SafeAreaView>

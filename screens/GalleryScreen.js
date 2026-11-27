@@ -28,7 +28,6 @@ import { ZoomableImage } from "../components/ZoomableImage";
 import BackButton from "../components/BackButton";
 import Icon from "../components/Icons";
 import { ExitIcon } from "../components/ExitIcon";
-import { BadgeUnlockBanner } from "../components/AchievementUnlocks";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { sharePhoto } from "../services/photoShare";
 import { usePrintedPhotos } from "../hooks/usePrintedPhotos";
@@ -992,8 +991,6 @@ export function GalleryScreen({ navigation, route }) {
         </View>
       </Modal>
 
-      {/* Bandeau "Nouveau badge" (ex. badges ménage après avoir vidé la corbeille) */}
-      <BadgeUnlockBanner />
     </SafeAreaView>
   );
 }

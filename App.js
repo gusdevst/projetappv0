@@ -189,7 +189,7 @@ export default function App() {
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
       if (nextState === "background") {
-        usePhotoStore.getState().checkAchievements(); // mémorise les galons / badges atteints
+        usePhotoStore.getState().checkAchievements(); // mémorise les galons atteints
         refreshReminders();
         refreshSubscriptionNotifications(); // prochain 1er du mois (abonnement Coups de cœur)
         flushProgress(); // envoie la progression sans attendre le délai

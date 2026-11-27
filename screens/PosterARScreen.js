@@ -19,7 +19,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Text from "../components/AppText";
 import PosterTexture from "../components/poster/PosterTexture";
 import { C } from "../constants/theme";
-import { usePhotoStore } from "../store/usePhotoStore";
 import { formatEuro } from "../constants/subscription";
 import {
   POSTER_FORMATS, POSTER_FORMAT_KEYS, DEFAULT_POSTER_FORMAT, posterDims, posterSizeLabel, posterPriceCents, posterQualityLevel,
@@ -72,7 +71,6 @@ export function PosterARScreen({ navigation, route }) {
     ViroMaterials.createMaterials({ [matName]: { diffuseTexture: { uri: res.uri }, lightingModel: "Constant" } });
     setTex({ matName, landscape: !!res.landscape });
     setPhase("ar");
-    usePhotoStore.getState().notePosterAr(); // badge « Œil de décorateur »
   }, []);
 
   // Les événements AR arrivent très souvent : rangés dans une réf, l'écran n'est actualisé que 3 fois par seconde.

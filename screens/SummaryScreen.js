@@ -12,11 +12,13 @@ import Svg, { Ellipse, Rect, Circle, Path } from "react-native-svg";
 import Icon from "../components/Icons";
 import { usePhotoStore } from "../store/usePhotoStore";
 import { useNotificationReminder } from "../hooks/useNotificationReminder";
-import { BadgeUnlockBanner, RankUnlockModal } from "../components/AchievementUnlocks";
+import { RankUnlockModal } from "../components/AchievementUnlocks";
 import HeartsNudge from "../components/HeartsNudge";
 import { DeleteRatio } from "../components/DeleteRatio";
 import { deleteRatio } from "../services/progressStats";
-import { rankInfo, buildContext } from "../services/achievements";
+import { rankInfo } from "../services/achievements";
+import { printedMapOf } from "../services/printSelection";
+import { useSubscriptionStore } from "../store/useSubscriptionStore";
 import { RankShield } from "../components/RankShield";
 
 const { width: SW } = Dimensions.get("window");
@@ -132,6 +134,12 @@ export function SummaryScreen({ navigation, route }) {
   // Prochain galon (selon toutes les photos triées depuis le début) : sert au petit bloc « Mo libérés ».
   const lifetimeSorted = usePhotoStore((s) => s.lifetimeSorted);
   const rank = rankInfo(lifetimeSorted ?? 0);
+  // Coups de cœur pas encore imprimés (pour la relance « lot de tirages »).
+  const kept = usePhotoStore((s) => s.kept);
+  const printedPhotos = useSubscriptionStore((s) => s.printedPhotos);
+  const selections = useSubscriptionStore((s) => s.selections);
+  const printedMap = printedMapOf(printedPhotos, selections);
+  const keptToPrint = kept.filter((p) => !printedMap[p.id]).length;
 
   // Album créé pendant cette session (mode album uniquement)
   const createdAlbum = albumId ? albums.find((a) => a.id === albumId) : null;
@@ -266,8 +274,7 @@ export function SummaryScreen({ navigation, route }) {
         {/* ── Relance Labo : seulement si cette session a ajouté des coups de cœur ── */}
         {sessionKept.length > 0 && (
           <HeartsNudge
-            keptToPrint={buildContext(usePhotoStore.getState()).keptToPrint}
-            readyWon={!!usePhotoStore.getState().achievements?.["lab-ready"]}
+            keptToPrint={keptToPrint}
             onSeeHearts={() => navigation.navigate("Gallery", { section: "kept" })}
             onPrint={() => navigation.navigate("PrintNew")}
           />
@@ -442,7 +449,6 @@ export function SummaryScreen({ navigation, route }) {
       </ScrollView>
 
       {/* Fin de session : c'est ici qu'on fête un nouveau galon */}
-      <BadgeUnlockBanner />
       <RankUnlockModal />
     </SafeAreaView>
   );

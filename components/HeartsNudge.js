@@ -1,11 +1,11 @@
 // Ligne de relance du Bilan de tri : quand la session a ajouté des coups de cœur, dit où on en est vers un lot de tirages.
-// (maquette `maquette-badges-labo.html`, scène « Après un tri »). `readyWon` = badge « Prêt à développer » déjà gagné.
+// (maquette `maquette-badges-labo.html`, scène « Après un tri »).
 import { View, TouchableOpacity } from "react-native";
 import Text from "./AppText";
 import { FN_COLORS } from "../constants/theme";
 import { SUB_PHOTOS } from "../constants/subscription";
 
-export default function HeartsNudge({ keptToPrint, readyWon, onSeeHearts, onPrint }) {
+export default function HeartsNudge({ keptToPrint, onSeeHearts, onPrint }) {
   const col = FN_COLORS.labo;
   const left = SUB_PHOTOS - keptToPrint;
   const full = left <= 0;
@@ -14,7 +14,7 @@ export default function HeartsNudge({ keptToPrint, readyWon, onSeeHearts, onPrin
     : `Encore ${left} ❤️ et tu as un lot de ${SUB_PHOTOS} tirages`;
   const sub = full
     ? `De quoi remplir un lot de ${SUB_PHOTOS} tirages 10 × 15 cm.`
-    : readyWon ? "Pour ton prochain lot de tirages." : "Badge « Prêt à développer » à portée de main.";
+    : "Pour ton prochain lot de tirages.";
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: col.soft, borderRadius: 14, padding: 11, marginBottom: 12 }}>
       <Text style={{ fontSize: 24 }}>🎞️</Text>
